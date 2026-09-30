@@ -69,20 +69,28 @@ export default defineConfig({
             },
           },
           {
-            // Ricettario (UniTools World Recipes, ≈750 KB)
-            urlPattern: /\/recipes\.json$/,
+            // Ricettario italiano e tabella alimenti (dati statici dell'app)
+            urlPattern: /\/(ricette|foods)\.json$/,
             handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'recipes' },
+            options: { cacheName: 'food-data' },
           },
           {
-            // Foto delle ricette
-            urlPattern: /^https:\/\/theunitools\.com\/recipes\//,
+            // Foto delle ricette (Wikimedia Commons, salvate nell'app)
+            urlPattern: /\/recipe-img\//,
             handler: 'CacheFirst',
-            options: {
-              cacheName: 'recipe-images',
-              expiration: { maxEntries: 450, maxAgeSeconds: 60 * 60 * 24 * 90 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
+            options: { cacheName: 'recipe-images', expiration: { maxEntries: 700, maxAgeSeconds: 60 * 60 * 24 * 180 } },
+          },
+          {
+            // Lettore di codici a barre (WebAssembly, caricato solo quando serve)
+            urlPattern: /\.wasm$/,
+            handler: 'CacheFirst',
+            options: { cacheName: 'wasm' },
+          },
+          {
+            // Foto dei prodotti Open Food Facts
+            urlPattern: /^https:\/\/images\.openfoodfacts\.org\//,
+            handler: 'CacheFirst',
+            options: { cacheName: 'off-images', expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 60 }, cacheableResponse: { statuses: [0, 200] } },
           },
           {
             urlPattern: /^https:\/\/firestore\.googleapis\.com/,

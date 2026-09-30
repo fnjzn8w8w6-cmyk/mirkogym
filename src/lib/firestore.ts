@@ -12,7 +12,8 @@ import {
   type DocumentReference,
   type Unsubscribe,
 } from 'firebase/firestore';
-import type { ActiveSession, BackupFile, BodyLog, Day, Mesocycle, Schedule, Session, Settings } from '@/types';
+import type { ActiveSession, BackupFile, BodyLog, Day, FoodLog, Mesocycle, Schedule, Session, Settings, UserRecipe } from '@/types';
+import type { Food } from './foods';
 import { db } from './firebase';
 import { DEFAULT_SETTINGS, SEED_DAYS } from './seed-data';
 import { todayISO } from './date-utils';
@@ -26,6 +27,9 @@ const activeRef = (uid: string) => doc(userDoc(uid), 'config', 'activeSession');
 const sessionsCol = (uid: string) => collection(userDoc(uid), 'sessions');
 const bodyLogsCol = (uid: string) => collection(userDoc(uid), 'bodyLogs');
 const mesocyclesCol = (uid: string) => collection(userDoc(uid), 'mesocycles');
+const foodLogsCol = (uid: string) => collection(userDoc(uid), 'foodLogs');
+const recipesCol = (uid: string) => collection(userDoc(uid), 'recipes');
+const myFoodsRef = (uid: string) => doc(userDoc(uid), 'config', 'foods');
 
 export const newId = (uid: string): string => doc(sessionsCol(uid)).id;
 
@@ -164,15 +168,47 @@ export async function ensureSeed(uid: string): Promise<boolean> {
   return !sched.exists();
 }
 
+/* ---------- Alimentazione ---------- */
+
+export function subscribeFoodLog(uid: string, date: string, cb: (l: FoodLog) => void, onError: OnError): Unsubscribe {
+  return onSnapshot(
+    doc(foodLogsCol(uid), date),
+    (d) => cb({ date, entries: d.exists() ? ((d.data().entries as FoodLog['entries']) ?? []) : [] }),
+    onError,
+  );
+}
+export const saveFoodLog = (uid: string, log: FoodLog) =>
+  setDoc(doc(foodLogsCol(uid), log.date), clean({ date: log.date, entries: log.entries, updatedAt: Timestamp.now() }));
+
+export function subscribeRecipes(uid: string, cb: (r: UserRecipe[]) => void, onError: OnError): Unsubscribe {
+  return onSnapshot(
+    recipesCol(uid),
+    (snap) => cb(snap.docs.map((d) => ({ ...(d.data() as UserRecipe), id: d.id })).sort((a, b) => b.updatedAt - a.updatedAt)),
+    onError,
+  );
+}
+export const saveRecipe = (uid: string, r: UserRecipe) => setDoc(doc(recipesCol(uid), r.id), clean(r));
+export const deleteRecipe = (uid: string, id: string) => deleteDoc(doc(recipesCol(uid), id));
+export const newRecipeId = (uid: string): string => doc(recipesCol(uid)).id;
+
+/** I miei alimenti: creati a mano o scansionati (ultimi usati per primi). */
+export function subscribeMyFoods(uid: string, cb: (f: Food[]) => void, onError: OnError): Unsubscribe {
+  return onSnapshot(myFoodsRef(uid), (d) => cb(d.exists() ? ((d.data().items as Food[]) ?? []) : []), onError);
+}
+export const saveMyFoods = (uid: string, items: Food[]) => setDoc(myFoodsRef(uid), clean({ items: items.slice(0, 300) }));
+
 /* ---------- Backup / Reset ---------- */
 
 export async function exportAll(uid: string): Promise<BackupFile> {
-  const [sched, settings, sessions, bodyLogs, mesos] = await Promise.all([
+  const [sched, settings, sessions, bodyLogs, mesos, foodLogs, recipes, myFoods] = await Promise.all([
     getDoc(scheduleRef(uid)),
     getDoc(settingsRef(uid)),
     getDocs(sessionsCol(uid)),
     getDocs(bodyLogsCol(uid)),
     getDocs(mesocyclesCol(uid)),
+    getDocs(foodLogsCol(uid)),
+    getDocs(recipesCol(uid)),
+    getDoc(myFoodsRef(uid)),
   ]);
   return {
     app: 'mirkogym',
@@ -183,6 +219,9 @@ export async function exportAll(uid: string): Promise<BackupFile> {
     sessions: sessions.docs.map((d) => fromSession(d.id, d.data())),
     bodyLogs: bodyLogs.docs.map((d) => fromBodyLog(d.id, d.data())),
     mesocycles: mesos.docs.map((d) => fromMeso(d.id, d.data())),
+    foodLogs: foodLogs.docs.map((d) => ({ date: d.id, entries: (d.data().entries as FoodLog['entries']) ?? [] })),
+    recipes: recipes.docs.map((d) => ({ ...(d.data() as UserRecipe), id: d.id })),
+    myFoods: myFoods.exists() ? ((myFoods.data().items as Food[]) ?? []) : [],
   };
 }
 
@@ -200,9 +239,16 @@ async function commitInChunks(ops: Op[]): Promise<void> {
 }
 
 async function deletionOps(uid: string): Promise<Op[]> {
-  const cols = await Promise.all([getDocs(sessionsCol(uid)), getDocs(bodyLogsCol(uid)), getDocs(mesocyclesCol(uid))]);
+  const cols = await Promise.all([
+    getDocs(sessionsCol(uid)),
+    getDocs(bodyLogsCol(uid)),
+    getDocs(mesocyclesCol(uid)),
+    getDocs(foodLogsCol(uid)),
+    getDocs(recipesCol(uid)),
+  ]);
   return [
     ...cols.flatMap((c) => c.docs.map((d) => ({ ref: d.ref }))),
+    { ref: myFoodsRef(uid) },
     { ref: scheduleRef(uid) },
     { ref: settingsRef(uid) },
     { ref: activeRef(uid) },
@@ -229,6 +275,9 @@ export async function importAll(uid: string, backup: BackupFile): Promise<void> 
       data: { ...clean(m), createdAt: toTs(toMs(m.createdAt)) },
     })),
   ];
+  for (const l of backup.foodLogs ?? []) writes.push({ ref: doc(foodLogsCol(uid), l.date), data: clean({ date: l.date, entries: l.entries }) });
+  for (const r of backup.recipes ?? []) writes.push({ ref: doc(recipesCol(uid), r.id), data: clean(r) });
+  if (backup.myFoods?.length) writes.push({ ref: myFoodsRef(uid), data: clean({ items: backup.myFoods }) });
   if (backup.schedule) {
     writes.push({ ref: scheduleRef(uid), data: { id: 'current', days: clean(backup.schedule.days), updatedAt: Timestamp.now() } });
   }

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Apple, ChevronRight, RefreshCw, Settings2, ShoppingCart, Shuffle } from 'lucide-react';
+import { Apple, ChevronRight, Plus, RefreshCw, Settings2, ShoppingCart, Shuffle } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -27,7 +27,11 @@ import {
   type SimpleMeal,
   type WeekPlan,
 } from '@/lib/recipes';
-import { MacroLine, RecipeImage, useRecipes } from './shared';
+import { MacroBar, MacroLine, RecipeImage, fmtNum, useRecipes } from './shared';
+import { RecipeEditor } from './RecipeEditor';
+import { useFoodLog, useMyRecipes } from '@/hooks/use-food';
+import { todayISO } from '@/lib/date-utils';
+import type { DiaryMeal, UserRecipe } from '@/types';
 import { RecipeDetail } from './RecipeDetail';
 import { RecipeGallery } from './RecipeGallery';
 
@@ -38,24 +42,6 @@ const todayIdx = () => (new Date().getDay() + 6) % 7;
 
 export function planPrefs(p: NutritionPrefs, favorites: string[]): PlanPrefs {
   return { diet: p.diet, meals: p.meals, allergies: p.allergies, dislikes: p.dislikes, cooking: p.cooking, favorites, likes: p.likes };
-}
-
-export function MacroBar({ label, value, target, unit, color }: { label: string; value: number; target: number; unit: string; color: string }) {
-  const pct = target ? Math.min(1.3, value / target) : 0;
-  const off = target ? Math.round(((value - target) / target) * 100) : 0;
-  return (
-    <div>
-      <div className="flex justify-between text-sm">
-        <span className="text-fg-2">{label}</span>
-        <span className={cn('font-semibold', Math.abs(off) > 10 ? 'text-warning' : 'text-fg')}>
-          {Math.round(value)} / {target} {unit}
-        </span>
-      </div>
-      <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface-3">
-        <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct * 100)}%`, backgroundColor: color }} />
-      </div>
-    </div>
-  );
 }
 
 /* ---------- Scheda di un pasto ---------- */
@@ -344,7 +330,7 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
         <Card className="space-y-3 p-4">
           <div className="text-base font-semibold text-fg">Il tuo piano settimanale</div>
           <p className="text-sm text-fg-2">
-            7 giorni di pasti diversi scelti tra oltre 500 ricette con foto, con porzioni calcolate sulle tue calorie e proteine.
+            7 giorni di pasti diversi scelti tra centinaia di ricette italiane (e le tue), con porzioni calcolate sulle tue calorie e proteine.
           </p>
           <div>
             <div className="section-title">Alimentazione</div>
@@ -478,7 +464,7 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
         Preferenze alimentari
       </Button>
       <p className="text-xs text-fg-3">
-        Ricette e valori nutrizionali: UniTools — theunitools.com (CC BY-SA 4.0). Indicazioni generali, non sostituiscono un nutrizionista.
+        Ricette: FrigoDispensa e Wikibooks (CC BY-SA 4.0); valori nutrizionali calcolati con USDA FoodData Central. Indicazioni generali, non sostituiscono un nutrizionista.
       </p>
 
       {data && (
@@ -503,7 +489,7 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
         <p className="mb-3 text-sm text-fg-3">Tutti gli ingredienti dei 7 giorni, con le porzioni del tuo piano.</p>
         <ul className="divide-y divide-line-subtle">
           {shopping.map((i) => (
-            <li key={`${i.name}|${i.unit}`} className="flex justify-between gap-3 py-2 text-base">
+            <li key={i.name} className="flex justify-between gap-3 py-2 text-base">
               <span className="text-fg">{i.name}</span>
               <span className="shrink-0 font-semibold text-fg-2">{formatQty(i)}</span>
             </li>
@@ -519,9 +505,12 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
 export function RecipesTab({ profile }: { profile: UserProfile }) {
   const { settings, update } = useSettings();
   const toast = useToast();
-  const { data, error, retry } = useRecipes();
+  const { data, mine, error, retry } = useRecipes();
+  const { remove } = useMyRecipes();
   const [open, setOpen] = useState<Recipe | null>(null);
   const [placing, setPlacing] = useState<Recipe | null>(null);
+  const [editor, setEditor] = useState<{ recipe: UserRecipe | null } | null>(null);
+  const [diary, setDiary] = useState<Recipe | null>(null);
   const target = useMemo(() => nutrition(profile, settings.kcalAdjust ?? 0), [profile, settings.kcalAdjust]);
   const pp = planPrefs(settings.nutritionPrefs ?? DEFAULT_NUTRITION, settings.favoriteRecipes ?? []);
 
@@ -538,9 +527,12 @@ export function RecipesTab({ profile }: { profile: UserProfile }) {
 
   return (
     <div className="space-y-3">
+      <Button fullWidth icon={<Plus className="h-5 w-5" />} onClick={() => setEditor({ recipe: null })}>
+        Crea la tua ricetta
+      </Button>
       <p className="text-sm text-fg-2">
-        {data.recipes.length} ricette da tutto il mondo con foto e valori nutrizionali. Tocca quelle che ti ispirano: salvale con il ❤️ (il coach le
-        preferirà nel piano) o aggiungile a un giorno della settimana.
+        {data.recipes.length - mine.length} ricette italiane con calorie e macro calcolati dagli ingredienti. Salva con il ❤️ quelle che ti ispirano: il
+        piano le preferirà.
       </p>
       <RecipeGallery recipes={data.recipes} onOpen={setOpen} />
       <RecipeDetail
@@ -548,11 +540,24 @@ export function RecipesTab({ profile }: { profile: UserProfile }) {
         onClose={() => setOpen(null)}
         onAddToPlan={(r) => {
           if (!settings.weekPlan) {
-            toast.error('Prima crea il piano settimanale nella sezione Dieta');
+            toast.error('Prima crea il piano settimanale nella sezione Piano');
             return;
           }
           setOpen(null);
           setPlacing(r);
+        }}
+        onAddToDiary={(r) => {
+          setOpen(null);
+          setDiary(r);
+        }}
+        onEdit={(r) => {
+          setOpen(null);
+          setEditor({ recipe: mine.find((m) => `u:${m.id}` === r.id) ?? null });
+        }}
+        onDelete={(r) => {
+          setOpen(null);
+          void remove(r.id.slice(2));
+          toast.success('Ricetta eliminata');
         }}
       />
       <AddToPlanModal
@@ -567,6 +572,71 @@ export function RecipesTab({ profile }: { profile: UserProfile }) {
           toast.success(`Aggiunta a ${DAY_LONG[day]}`);
         }}
       />
+      <AddToDiaryModal recipe={diary} onClose={() => setDiary(null)} />
+      <RecipeEditor open={editor != null} recipe={editor?.recipe} onClose={() => setEditor(null)} />
     </div>
+  );
+}
+
+/** Aggiunge una ricetta al diario di oggi (pasto e porzioni a scelta). */
+function AddToDiaryModal({ recipe, onClose }: { recipe: Recipe | null; onClose: () => void }) {
+  const toast = useToast();
+  const { add } = useFoodLog(todayISO());
+  const [meal, setMeal] = useState<DiaryMeal>('pranzo');
+  const [sv, setSv] = useState(1);
+  const k = recipe?.k;
+  return (
+    <Modal open={Boolean(recipe)} onClose={onClose} title="Aggiungi al diario di oggi">
+      {recipe && k && (
+        <div className="space-y-4">
+          <div className="text-base text-fg">{recipe.t}</div>
+          <Segmented<DiaryMeal>
+            label="Pasto"
+            value={meal}
+            onChange={setMeal}
+            options={[
+              { value: 'colazione', label: 'Colaz.' },
+              { value: 'pranzo', label: 'Pranzo' },
+              { value: 'cena', label: 'Cena' },
+              { value: 'spuntini', label: 'Spunt.' },
+            ]}
+          />
+          <div className="flex items-center justify-between rounded-md bg-surface-2 p-2">
+            <Button variant="ghost" onClick={() => setSv(Math.max(0.25, sv - 0.25))} aria-label="Meno">
+              −
+            </Button>
+            <span className="text-lg text-fg">
+              {fmtNum(sv)} {sv === 1 ? 'porzione' : 'porzioni'}
+            </span>
+            <Button variant="ghost" onClick={() => setSv(Math.min(6, sv + 0.25))} aria-label="Più">
+              +
+            </Button>
+          </div>
+          <MacroLine kcal={k[0] * sv} protein={k[1] * sv} carbs={k[2] * sv} fat={k[3] * sv} className="block text-center" />
+          <Button
+            fullWidth
+            size="lg"
+            onClick={() => {
+              void add([
+                {
+                  id: `${Date.now().toString(36)}r`,
+                  meal,
+                  name: recipe.t,
+                  unit: 'porzione',
+                  qty: sv,
+                  per: { kcal: k[0], protein: k[1], carbs: k[2], fat: k[3] },
+                  recipeId: recipe.id,
+                  createdAt: Date.now(),
+                },
+              ]);
+              toast.success('Aggiunta al diario');
+              onClose();
+            }}
+          >
+            Aggiungi
+          </Button>
+        </div>
+      )}
+    </Modal>
   );
 }

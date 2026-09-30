@@ -6,7 +6,6 @@ on:
     branches: ['claude/**']
     paths:
       - scripts/find-recipe-photos.mjs
-      - scripts/recipe-photos-reject.json
       - .github/workflows/recipe-photos.yml
   workflow_dispatch:
 

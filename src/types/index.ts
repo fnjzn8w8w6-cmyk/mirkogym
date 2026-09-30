@@ -103,6 +103,7 @@ import type { CoachPrefs } from '@/lib/program-generator';
 import type { NutritionPrefs } from '@/lib/coach';
 import type { Lang } from '@/lib/exercise-i18n';
 import type { WeekPlan } from '@/lib/recipes';
+import type { Food, Macros } from '@/lib/foods';
 import type { CheckIn } from '@/lib/checkin';
 
 export interface Settings {
@@ -200,4 +201,55 @@ export interface BackupFile {
   bodyLogs: BodyLog[];
   mesocycles: Mesocycle[];
   settings: Settings | null;
+  foodLogs?: FoodLog[];
+  recipes?: UserRecipe[];
+  myFoods?: Food[];
+}
+
+/* ---------- Alimentazione ---------- */
+
+export type DiaryMeal = 'colazione' | 'pranzo' | 'cena' | 'spuntini';
+
+/** Voce del diario alimentare: alimento (grammi) o ricetta (porzioni). */
+export interface DiaryEntry {
+  id: string;
+  meal: DiaryMeal;
+  name: string;
+  brand?: string;
+  /** 'g' = grammi di un alimento (per = valori per 100 g); 'porzione' = porzioni di ricetta (per = valori a porzione) */
+  unit: 'g' | 'porzione';
+  qty: number;
+  per: Macros;
+  foodId?: string;
+  recipeId?: string;
+  createdAt: number;
+}
+
+export interface FoodLog {
+  /** YYYY-MM-DD (anche id del documento) */
+  date: string;
+  entries: DiaryEntry[];
+}
+
+export interface RecipeIngredient {
+  foodId: string;
+  name: string;
+  grams: number;
+  per100: Macros;
+}
+
+/** Ricetta creata dall'utente: i macro si calcolano dagli ingredienti. */
+export interface UserRecipe {
+  id: string;
+  name: string;
+  /** colazione / spuntino / principale */
+  kind: 'colazione' | 'spuntino' | 'principale';
+  servings: number;
+  minutes?: number;
+  ingredients: RecipeIngredient[];
+  steps: string;
+  /** foto ridimensionata (data URL JPEG, ~40 KB) */
+  photo?: string;
+  createdAt: number;
+  updatedAt: number;
 }

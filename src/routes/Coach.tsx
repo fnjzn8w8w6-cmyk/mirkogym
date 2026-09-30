@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Dumbbell, Library, MessageCircle, RefreshCw, Send, Sparkles } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
@@ -18,38 +18,29 @@ import { settle } from '@/lib/firestore';
 import { nutrition, type UserProfile } from '@/lib/metabolism';
 import { generateProgram, sessionMinutes, SLOT_LABEL, type CoachPrefs } from '@/lib/program-generator';
 import { askCoach, coachContext, interpretTrainingRequest, type ChatMessage } from '@/lib/coach';
-import { NutritionPlanner, RecipesTab } from '@/components/food/NutritionPlanner';
-import { WeeklyCheckIn } from '@/components/coach/WeeklyCheckIn';
+import { useEffectiveProfile } from '@/hooks/use-effective-profile';
 import { groupColor } from '@/lib/analytics';
 import { cn } from '@/lib/cn';
 import type { Day } from '@/types';
 
-type Tab = 'train' | 'food' | 'recipes' | 'chat';
-
-/** Profilo con peso e massa grassa più recenti registrati in "Corpo". */
-function useEffectiveProfile(): UserProfile | null {
-  const { settings } = useSettings();
-  const { bodyLogs } = useBodyLogs();
-  return useMemo(() => {
-    const p = settings.profile;
-    if (!p) return null;
-    const w = bodyLogs.find((b) => b.weight != null)?.weight;
-    const bf = bodyLogs.find((b) => b.bodyFat != null)?.bodyFat;
-    return { ...p, weightKg: w ?? p.weightKg, bodyFatPct: bf ?? p.bodyFatPct };
-  }, [settings.profile, bodyLogs]);
-}
+type Tab = 'train' | 'chat';
 
 export default function Coach() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const tab = (params.get('tab') as Tab | null) ?? 'train';
+  const raw = params.get('tab');
+  const tab: Tab = raw === 'chat' ? 'chat' : 'train';
+  // Vecchi collegamenti alla nutrizione: ora è nella pagina Dieta
+  useEffect(() => {
+    if (raw === 'food' || raw === 'recipes') navigate(`/food?tab=${raw === 'food' ? 'plan' : 'recipes'}${params.get('checkin') ? '&checkin=1' : ''}`, { replace: true });
+  }, [raw, navigate, params]);
   const profile = useEffectiveProfile();
 
   return (
     <div>
       <TopBar
         title="Coach"
-        subtitle="Personal trainer e dietologo su misura"
+        subtitle="Il tuo personal trainer su misura"
         large
         right={
           <IconButton label="Libreria esercizi" onClick={() => navigate('/exercises')} className="-mr-2">
@@ -63,10 +54,8 @@ export default function Coach() {
           value={tab}
           onChange={(t) => setParams({ tab: t }, { replace: true })}
           options={[
-            { value: 'train', label: 'Scheda' },
-            { value: 'food', label: 'Dieta' },
-            { value: 'recipes', label: 'Ricette' },
-            { value: 'chat', label: 'Chiedi' },
+            { value: 'train', label: 'Allenamento' },
+            { value: 'chat', label: 'Chiedi al coach' },
           ]}
         />
         <div className="mt-4">
@@ -78,10 +67,6 @@ export default function Coach() {
             />
           ) : tab === 'train' ? (
             <TrainingCoach profile={profile} />
-          ) : tab === 'food' ? (
-            <NutritionPlanner profile={profile} header={<WeeklyCheckIn profile={profile} autoOpen={params.get('checkin') === '1'} />} />
-          ) : tab === 'recipes' ? (
-            <RecipesTab profile={profile} />
           ) : (
             <ChatCoach profile={profile} />
           )}

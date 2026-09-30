@@ -196,6 +196,8 @@ writeFileSync(
     license: 'CC BY-SA 4.0',
     attribution:
       'Ricette: FrigoDispensa (dispensa-dati) e Wikibooks "Libro di cucina", CC BY-SA 4.0. Valori nutrizionali calcolati da USDA FoodData Central.',
+    // nomi degli alimenti usati (per la lista della spesa)
+    foods: Object.fromEntries(foods.filter((f) => recipes.some((r) => r.i.some((i) => i[2] === f.id))).map((f) => [f.id, f.n])),
     recipes,
   }),
 );

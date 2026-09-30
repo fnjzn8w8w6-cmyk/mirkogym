@@ -254,7 +254,7 @@ export default function Home() {
           <Card
             interactive
             className="flex items-center gap-3 border-accent-500/50 p-4"
-            onClick={() => navigate('/coach?tab=food&checkin=1')}
+            onClick={() => navigate('/food?tab=plan&checkin=1')}
             role="link"
             aria-label="Fai il check-in settimanale"
           >
@@ -269,17 +269,17 @@ export default function Home() {
           </Card>
         )}
 
-        {/* Coach AI */}
+        {/* Dieta */}
         {settings.profile && (
-          <Card interactive className="flex items-center gap-3 p-4" onClick={() => navigate('/coach')} role="link" aria-label="Apri il coach">
+          <Card interactive className="flex items-center gap-3 p-4" onClick={() => navigate('/food')} role="link" aria-label="Apri la dieta">
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-accent-glow text-accent-500">
               <Sparkles className="h-6 w-6" aria-hidden />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-base font-semibold text-fg">Il tuo coach</span>
+              <span className="block text-base font-semibold text-fg">Dieta di oggi</span>
               <span className="block text-sm text-fg-2">
                 Oggi: {nutrition({ ...settings.profile, weightKg: latestBody?.weight ?? settings.profile.weightKg }, settings.kcalAdjust ?? 0).target} kcal ·{' '}
-                {settings.weekPlan ? 'piano settimanale pronto' : 'crea il piano settimanale'}
+                {settings.weekPlan ? 'segna i pasti nel diario' : 'crea il piano settimanale'}
               </span>
             </span>
             <ChevronRight className="h-5 w-5 text-fg-3" aria-hidden />

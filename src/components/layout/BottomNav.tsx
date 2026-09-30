@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { BarChart3, Home, Scale, Sparkles, UserRound } from 'lucide-react';
+import { Apple, BarChart3, Home, Scale, Sparkles, UserRound } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 const items = [
   { to: '/', label: 'Home', icon: Home, end: true },
   { to: '/history', label: 'Storico', icon: BarChart3 },
+  { to: '/food', label: 'Dieta', icon: Apple },
   { to: '/coach', label: 'Coach', icon: Sparkles },
   { to: '/body', label: 'Corpo', icon: Scale },
   { to: '/profile', label: 'Profilo', icon: UserRound },

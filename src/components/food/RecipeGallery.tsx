@@ -2,62 +2,65 @@ import { useMemo, useState } from 'react';
 import { Clock, Search } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { cn } from '@/lib/cn';
-import { CATEGORY_IT, flag, recipeName, type Recipe } from '@/lib/recipes';
+import { normalize } from '@/lib/foods';
+import { CATEGORY_IT, photoUrl, type Recipe } from '@/lib/recipes';
 import { FavoriteButton, RecipeImage } from './shared';
 
-type Filter = 'protein' | 'quick' | 'fav' | 'vegan' | 'vegetarian' | 'gluten-free' | 'pescatarian';
+type Filter = 'protein' | 'quick' | 'fav' | 'photo' | 'vegan' | 'vegetarian' | 'gluten-free';
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'protein', label: '💪 Proteiche' },
   { value: 'quick', label: '⚡ ≤ 30 min' },
   { value: 'fav', label: '❤️ Preferite' },
+  { value: 'photo', label: '📷 Con foto' },
   { value: 'vegetarian', label: '🥚 Vegetariane' },
   { value: 'vegan', label: '🌱 Vegane' },
-  { value: 'pescatarian', label: '🐟 Pesce' },
   { value: 'gluten-free', label: '🌾 Senza glutine' },
 ];
-const CATS = ['main', 'soup', 'salad', 'breakfast', 'snack', 'dessert', 'bread', 'side'];
+const CATS = ['mie', 'primi', 'secondi', 'piatti-unici', 'zuppe', 'colazione', 'contorni', 'antipasti', 'dolci', 'salse'];
 const PAGE = 24;
-
-const proteinPct = (r: Recipe) => (r.k[0] ? (r.k[1] * 4) / r.k[0] : 0);
 
 function matches(r: Recipe, f: Filter, favs: string[]): boolean {
   switch (f) {
     case 'protein':
-      return proteinPct(r) >= 0.25 && r.k[1] >= 20;
+      return Boolean(r.k && r.k[0] && (r.k[1] * 4) / r.k[0] >= 0.25 && r.k[1] >= 20);
     case 'quick':
-      return r.t <= 30;
+      return r.min > 0 && r.min <= 30;
     case 'fav':
       return favs.includes(r.id);
-    case 'vegetarian':
-      return r.d.includes('vegetarian') || r.d.includes('vegan');
-    case 'pescatarian':
-      return r.d.includes('pescatarian');
+    case 'photo':
+      return Boolean(photoUrl(r));
     default:
       return r.d.includes(f);
   }
 }
 
-export function RecipeCard({ recipe, onOpen, badge }: { recipe: Recipe; onOpen: () => void; badge?: string }) {
+export function RecipeCard({ recipe, onOpen }: { recipe: Recipe; onOpen: () => void }) {
   return (
     <div className="relative overflow-hidden rounded-lg border border-line-subtle bg-surface">
-      <button type="button" onClick={onOpen} className="block w-full text-left" aria-label={`Apri ${recipeName(recipe)}`}>
+      <button type="button" onClick={onOpen} className="block w-full text-left" aria-label={`Apri ${recipe.t}`}>
         <RecipeImage recipe={recipe} className="aspect-square w-full" />
         <div className="p-2.5">
-          <div className="line-clamp-2 text-sm font-semibold leading-tight text-fg">{recipeName(recipe)}</div>
+          <div className="line-clamp-2 min-h-[2.5em] text-sm font-semibold leading-tight text-fg">{recipe.t}</div>
           <div className="mt-1 flex items-center gap-1.5 text-xs text-fg-3">
-            <span>{flag(recipe.co)}</span>
-            <span>{recipe.k[0]} kcal</span>
-            <span>·</span>
-            <span>P {recipe.k[1]}</span>
-            <span className="ml-auto flex items-center gap-0.5">
-              <Clock className="h-3 w-3" aria-hidden />
-              {recipe.t}′
-            </span>
+            {recipe.k ? (
+              <>
+                <span>{recipe.k[0]} kcal</span>
+                <span>·</span>
+                <span>P {recipe.k[1]}</span>
+              </>
+            ) : (
+              <span>{CATEGORY_IT[recipe.cat]}</span>
+            )}
+            {recipe.min > 0 && (
+              <span className="ml-auto flex items-center gap-0.5">
+                <Clock className="h-3 w-3" aria-hidden />
+                {recipe.min}′
+              </span>
+            )}
           </div>
         </div>
       </button>
       <FavoriteButton id={recipe.id} className="absolute right-2 top-2 h-9 w-9" />
-      {badge && <span className="absolute left-2 top-2 rounded-full bg-accent-500 px-2 py-0.5 text-xs font-bold text-white">{badge}</span>}
     </div>
   );
 }
@@ -78,16 +81,22 @@ export function RecipeGallery({ recipes, onOpen, categories = true }: Props) {
   const [limit, setLimit] = useState(PAGE);
 
   const list = useMemo(() => {
-    const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const words = normalize(q.trim()).split(/\s+/).filter(Boolean);
     return recipes
-      .filter((r) => !cat || r.c === cat)
+      .filter((r) => !cat || r.cat === cat)
       .filter((r) => filters.every((f) => matches(r, f, favs)))
       .filter((r) => {
         if (!words.length) return true;
-        const text = `${r.n} ${r.nn ?? ''} ${r.s} ${CATEGORY_IT[r.c] ?? ''} ${r.i.map((x) => x[1]).join(' ')}`.toLowerCase();
+        const text = normalize(`${r.t} ${CATEGORY_IT[r.cat] ?? ''} ${r.i.map((x) => x[0]).join(' ')}`);
         return words.every((w) => text.includes(w));
       })
-      .sort((a, b) => Number(Boolean(b.ph)) - Number(Boolean(a.ph)) || Number(favs.includes(b.id)) - Number(favs.includes(a.id)));
+      .sort(
+        (a, b) =>
+          Number(Boolean(b.user)) - Number(Boolean(a.user)) ||
+          Number(Boolean(photoUrl(b))) - Number(Boolean(photoUrl(a))) ||
+          Number(favs.includes(b.id)) - Number(favs.includes(a.id)) ||
+          Number(Boolean(b.k)) - Number(Boolean(a.k)),
+      );
   }, [recipes, q, cat, filters, favs]);
 
   const toggle = (f: Filter) => {
@@ -107,7 +116,7 @@ export function RecipeGallery({ recipes, onOpen, categories = true }: Props) {
             setQ(e.target.value);
             setLimit(PAGE);
           }}
-          placeholder="Cerca: pollo, curry, pasta, salmone…"
+          placeholder="Cerca: carbonara, pollo, zucchine…"
           aria-label="Cerca ricette"
           className="h-full flex-1 bg-transparent text-base text-fg outline-none"
         />
@@ -117,7 +126,7 @@ export function RecipeGallery({ recipes, onOpen, categories = true }: Props) {
           <button type="button" className={chip(cat == null)} onClick={() => setCat(null)}>
             Tutte
           </button>
-          {CATS.filter((c) => recipes.some((r) => r.c === c)).map((c) => (
+          {CATS.filter((c) => recipes.some((r) => r.cat === c)).map((c) => (
             <button key={c} type="button" className={chip(cat === c)} onClick={() => (setCat(cat === c ? null : c), setLimit(PAGE))}>
               {CATEGORY_IT[c]}
             </button>

@@ -136,7 +136,7 @@ Gli emulatori applicano anche `firestore.rules`.
 
 Pagina **Coach** (menu in basso). Approccio ibrido: **i numeri li calcola l'app** (calorie, macro,
 serie, ripetizioni, carichi, aggiustamenti) con formule verificate; **Gemini** (Firebase AI Logic,
-gratuito) interpreta il linguaggio naturale e compone pasti reali. Ogni risposta dell'AI è validata
+gratuito) interpreta il linguaggio naturale e scrive i commenti. Ogni risposta dell'AI è validata
 e, se l'AI non risponde, l'app continua a funzionare con le regole.
 
 - **Allenamento**: scrivi cosa vuoi ("spalle più larghe, male al ginocchio, max 50 minuti").
@@ -144,22 +144,35 @@ e, se l'AI non risponde, l'app continua a funzionare con le regole.
   volume ai muscoli prioritari, sostituisce i movimenti a rischio con alternative compatibili con la tua
   attrezzatura e riduce la seduta finché rientra nel tempo. Vedi l'anteprima prima di applicarla.
   Disponibile anche nel questionario iniziale ("Raccontalo al coach").
-- **Dieta**: obiettivi giornalieri (kcal e macro) e **piano settimanale**: 7 giorni con pasti tutti
-  diversi scelti dal ricettario (nessuna ricetta ripetuta nella settimana quando la dieta lo consente),
-  porzioni calcolate sulle calorie di ogni pasto, integrazione proteica automatica se mancano proteine.
-  Tiene conto di dieta, allergie, cibi non graditi, cibi preferiti e tempo per cucinare. "Cambia" per
-  sostituire un pasto (galleria filtrata o "Sorprendimi"), **lista della spesa** dei 7 giorni,
-  ricalcolo delle porzioni quando cambia l'obiettivo. Il piano è calcolato dall'app: zero quota AI.
-- **Ricette**: galleria di **501 ricette con foto** e valori nutrizionali per porzione, con ricerca e
-  filtri (categoria, proteiche, ≤30 min, vegetariane, vegane, senza glutine, preferite). Dal dettaglio:
-  ingredienti scalati sulle porzioni, passaggi con tempi, ❤️ preferiti (il piano li favorisce),
-  "Aggiungi al piano settimanale" e traduzione in italiano con l'AI (salvata sul dispositivo).
+- **Chiedi al coach**: chat con il coach, che conosce profilo, obiettivi e ultimi allenamenti.
+
+## Dieta: diario, piano settimanale e ricette
+
+Pagina **Dieta** (menu in basso), tre sezioni:
+
+- **Diario** (stile MyFitnessPal): per ogni giorno colazione, pranzo, cena e spuntini con totali di
+  calorie, proteine, carboidrati e grassi rispetto all'obiettivo. Aggiungi un alimento:
+  - cercandolo tra i **210 alimenti base** in italiano (valori per 100 g da USDA FoodData Central),
+  - tra i **prodotti confezionati** di [Open Food Facts](https://world.openfoodfacts.org) (ricerca online),
+  - **scansionando il codice a barre** con la fotocamera (su iPhone con un lettore WebAssembly incluso
+    nell'app, su Android con quello del sistema; si può anche digitare il codice),
+  - creando un alimento dall'etichetta (se il prodotto non è nel database),
+  - oppure scegliendo una ricetta (in porzioni).
+  Inserisci i grammi e l'app calcola subito kcal e macro. Gli alimenti usati restano tra i "recenti"
+  (disponibili anche offline). "Copia i pasti del piano" riempie il giorno con il piano settimanale.
+- **Piano**: 7 giorni di pasti diversi calcolati dall'app (nessuna quota AI) in base a dieta, allergie,
+  cibi non graditi e amati, tempo per cucinare e macro dell'obiettivo; porzioni calibrate, contorno di
+  verdure con i secondi, integrazione proteica se servono proteine. "Cambia" per un singolo pasto,
+  lista della spesa, rigenerazione, ricalcolo porzioni quando cambia l'obiettivo, check-in settimanale.
+- **Ricette**: **612 ricette italiane** (ricerca e filtri), con calorie e macro per porzione calcolati
+  dagli ingredienti; foto verificate una per una (184 ricette: dove non c'è una foto coerente l'app
+  non ne mostra una a caso). **Crea le tue ricette**: foto, porzioni, ingredienti con i grammi
+  (macro calcolati in automatico) e preparazione; il piano settimanale le usa.
 - **Check-in settimanale**: 6 domande veloci (energia, sonno, stress, dolori, fame, aderenza alla dieta)
   più i dati raccolti dall'app (allenamenti fatti/previsti, volume rispetto alla settimana prima, record,
   andamento del peso stile MacroFactor). L'app calcola indice di fatica, correzione calorica e
   consiglio di deload; l'AI scrive un commento (se non risponde restano i consigli calcolati).
   Applicando le modifiche le porzioni del piano vengono ricalcolate. Promemoria in Home ogni 7 giorni.
-- **Chiedi**: chat con il coach, che conosce profilo, obiettivi e ultimi allenamenti.
 - Sicurezza: mai sotto metabolismo basale né sotto 1500/1200 kcal; con dolori, patologie o disturbi
   alimentari il coach rimanda a medico/professionista.
 
@@ -170,10 +183,17 @@ La libreria esercizi si apre dall'icona in alto nella pagina Coach e dall'editor
 - **Istruzioni in lingua**: in italiano sono curate a mano per i ~100 esercizi più usati; per gli altri
   esercizi e per le altre lingue vengono tradotte automaticamente (servizio gratuito MyMemory) alla prima
   apertura e salvate sul dispositivo. Se la traduzione non è disponibile si mostra il testo originale.
-- **Ricette**: [UniTools World Recipes](https://theunitools.com) (501 ricette, licenza
-  [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), credit "UniTools — theunitools.com";
-  foto con autore e licenza indicati nel dettaglio). Dati compattati in `public/recipes.json` con
-  `npm run recipes`.
+- **Ricette**: [dispensa-dati](https://github.com/GenPocoto/dispensa-dati) — ricette originali FrigoDispensa e
+  [Wikibooks, Libro di cucina](https://it.wikibooks.org/wiki/Libro_di_cucina), licenza
+  [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/); fonte indicata su ogni ricetta.
+  `npm run recipes` rigenera `public/ricette.json` calcolando i macro dagli ingredienti.
+- **Alimenti base**: [USDA FoodData Central](https://fdc.nal.usda.gov) (pubblico dominio), tramite
+  [CodeJetNet/food-data](https://github.com/CodeJetNet/food-data); nomi italiani in
+  `scripts/foods-it.mjs`, `npm run foods` rigenera `public/foods.json`.
+- **Prodotti e codici a barre**: [Open Food Facts](https://world.openfoodfacts.org) (ODbL), interrogato dal telefono.
+- **Foto delle ricette**: Wikimedia Commons (licenze libere, autore e licenza nel dettaglio della ricetta),
+  cercate dal workflow `Recipe photos` (pagina Wikibooks della ricetta o voce Wikipedia del piatto) e
+  controllate a mano; quelle scartate sono in `scripts/recipe-photos-reject.json`.
 - **876 esercizi** da [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (pubblico dominio):
   foto di inizio/fine movimento alternate come **simulazione animata**, muscoli principali/secondari
   sulla figura del corpo, istruzioni passo-passo, livello, attrezzo e link al **video su YouTube**.
@@ -231,6 +251,9 @@ users/{uid}/bodyLogs/{id}           peso, BF%, sonno, energia, note
 users/{uid}/mesocycles/{id}         mesocicli
 users/{uid}/config/settings         impostazioni
 users/{uid}/config/activeSession    sessione in corso (bozza)
+users/{uid}/config/foods           alimenti personali e recenti
+users/{uid}/foodLogs/{YYYY-MM-DD}   diario alimentare del giorno
+users/{uid}/recipes/{id}            ricette create dall'utente
 ```
 
 `settings` e `activeSession` stanno nella sottocollezione `config` perché Firestore richiede un

@@ -1,24 +1,12 @@
-import { useEffect, useState } from 'react';
-import { CalendarPlus, Clock, Languages, Users } from 'lucide-react';
+import { BookOpen, CalendarPlus, Clock, NotebookPen, Pencil, Trash2, Users } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
-import { AIBusy, useAITask } from '@/components/coach/AIBusy';
-import { CATEGORY_IT, flag, ingredientIt, recipeName, recipeNative, type Recipe } from '@/lib/recipes';
-import { cachedTranslation, translateRecipe, type RecipeIt } from '@/lib/recipe-ai';
-import { FavoriteButton, MacroLine, RecipeImage } from './shared';
+import { CATEGORY_EMOJI, CATEGORY_IT, type Recipe } from '@/lib/recipes';
+import { FavoriteButton, MacroLine, RecipeImage, fmtNum } from './shared';
 
-const DIET_IT: Record<string, string> = { vegan: '🌱 Vegana', vegetarian: '🥚 Vegetariana', pescatarian: '🐟 Pescetariana', 'gluten-free': '🌾 Senza glutine' };
-const DIFF_IT: Record<string, string> = { easy: 'Facile', medium: 'Media', hard: 'Impegnativa' };
-const UNIT: Record<string, string> = { g: 'g', kg: 'kg', ml: 'ml', l: 'l', piece: 'pz', tbsp: 'cucchiai', tsp: 'cucchiaini', clove: 'spicchi', slice: 'fette', sprig: 'rametti', pinch: 'pizzico', cup: 'tazze' };
-
-function qty(q: number | null, unit: string, scaling: string, factor: number): string {
-  if (q == null || unit === 'toTaste') return 'q.b.';
-  const k = scaling === 'fixed' ? 1 : scaling === 'damped' ? factor ** 0.8 : factor;
-  const v = q * k;
-  const r = unit === 'g' || unit === 'ml' ? Math.round(v / 5) * 5 || Math.round(v) : Math.round(v * 4) / 4;
-  return `${String(r).replace('.', ',')} ${UNIT[unit] ?? unit}`;
-}
+const DIET_IT: Record<string, string> = { vegan: '🌱 Vegana', vegetarian: '🥚 Vegetariana', 'gluten-free': '🌾 Senza glutine' };
+const DIFF_IT = ['', 'Facile', 'Media', 'Impegnativa'];
 
 interface Props {
   recipe: Recipe | null;
@@ -26,24 +14,15 @@ interface Props {
   /** Porzioni previste nel piano (se aperta da un pasto del piano). */
   servings?: number;
   onAddToPlan?: (r: Recipe) => void;
+  onAddToDiary?: (r: Recipe) => void;
+  onEdit?: (r: Recipe) => void;
+  onDelete?: (r: Recipe) => void;
 }
 
-export function RecipeDetail({ recipe, onClose, servings, onAddToPlan }: Props) {
-  const ai = useAITask();
-  const [it, setIt] = useState<RecipeIt | null>(null);
-
-  useEffect(() => {
-    setIt(recipe ? cachedTranslation(recipe.id) : null);
-    ai.setError(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recipe?.id]);
-
-  const r = recipe;
-  const portions = servings ?? r?.sv ?? 1;
-  const factor = r ? portions / (r.sv || 1) : 1;
-
+export function RecipeDetail({ recipe: r, onClose, servings, onAddToPlan, onAddToDiary, onEdit, onDelete }: Props) {
+  const k = r?.k;
   return (
-    <Modal open={Boolean(r)} onClose={onClose} title={r ? (it?.name ?? recipeName(r)) : ''}>
+    <Modal open={Boolean(r)} onClose={onClose} title={r?.t ?? ''}>
       {r && (
         <div className="space-y-4">
           <div className="relative -mx-5 overflow-hidden">
@@ -52,99 +31,115 @@ export function RecipeDetail({ recipe, onClose, servings, onAddToPlan }: Props) 
           </div>
           {r.ph && (
             <p className="-mt-3 text-[11px] text-fg-3">
-              Foto: {r.ph[1] || 'UniTools'} · {r.ph[2] || 'CC BY-SA 4.0'}
+              Foto: {r.ph[1]} ·{' '}
+              <a href={r.ph[3]} target="_blank" rel="noreferrer" className="underline">
+                {r.ph[2]}
+              </a>
             </p>
           )}
-          <div>
-            {recipeNative(r) && <div className="text-sm italic text-fg-3">{recipeNative(r)}</div>}
-            <p className="mt-1 text-base text-fg-2">{it?.summary || r.s}</p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              <Chip>
-                {flag(r.co)} {CATEGORY_IT[r.c] ?? r.c}
-              </Chip>
-              <Chip icon={<Clock className="h-3.5 w-3.5" />}>{r.t} min</Chip>
-              <Chip>{DIFF_IT[r.df] ?? r.df}</Chip>
-              {r.d.map((d) => DIET_IT[d] && <Chip key={d} tone="success">{DIET_IT[d]}</Chip>)}
-            </div>
+          <div className="flex flex-wrap gap-1.5">
+            <Chip>
+              {CATEGORY_EMOJI[r.cat] ?? '🍽️'} {CATEGORY_IT[r.cat] ?? r.cat}
+            </Chip>
+            {r.min > 0 && <Chip icon={<Clock className="h-3.5 w-3.5" />}>{r.min} min</Chip>}
+            {!r.user && <Chip>{DIFF_IT[r.df] ?? ''}</Chip>}
+            {r.d.map((d) => DIET_IT[d] && <Chip key={d} tone="success">{DIET_IT[d]}</Chip>)}
           </div>
 
           <div className="rounded-lg bg-surface-2 p-3">
-            <div className="text-xs uppercase text-fg-3">Per porzione</div>
-            <MacroLine kcal={r.k[0]} protein={r.k[1]} carbs={r.k[2]} fat={r.k[3]} />
-            {servings != null && servings !== 1 && (
+            {k ? (
               <>
-                <div className="mt-2 text-xs uppercase text-fg-3">Nel tuo piano ({String(servings).replace('.', ',')} porzioni)</div>
-                <MacroLine kcal={r.k[0] * servings} protein={r.k[1] * servings} carbs={r.k[2] * servings} fat={r.k[3] * servings} />
+                <div className="text-xs uppercase text-fg-3">Per porzione</div>
+                <MacroLine kcal={k[0]} protein={k[1]} carbs={k[2]} fat={k[3]} />
+                {servings != null && servings !== 1 && (
+                  <>
+                    <div className="mt-2 text-xs uppercase text-fg-3">Nel tuo piano ({fmtNum(servings)} porzioni)</div>
+                    <MacroLine kcal={k[0] * servings} protein={k[1] * servings} carbs={k[2] * servings} fat={k[3] * servings} />
+                  </>
+                )}
+                <p className="mt-1 text-[11px] text-fg-3">
+                  {r.user ? 'Calcolati dagli ingredienti che hai inserito.' : 'Calcolati dagli ingredienti con i valori USDA FoodData Central.'}
+                </p>
               </>
+            ) : (
+              <p className="text-sm text-fg-3">Valori nutrizionali non calcolabili con precisione per questa ricetta (ingredienti senza quantità).</p>
             )}
           </div>
 
-          {onAddToPlan && (
-            <Button fullWidth icon={<CalendarPlus className="h-5 w-5" />} onClick={() => onAddToPlan(r)}>
-              Aggiungi al piano settimanale
-            </Button>
-          )}
+          <div className="grid grid-cols-2 gap-2">
+            {onAddToPlan && k && (
+              <Button variant="secondary" icon={<CalendarPlus className="h-5 w-5" />} onClick={() => onAddToPlan(r)}>
+                Al piano
+              </Button>
+            )}
+            {onAddToDiary && k && (
+              <Button variant="secondary" icon={<NotebookPen className="h-5 w-5" />} onClick={() => onAddToDiary(r)}>
+                Al diario
+              </Button>
+            )}
+            {onEdit && r.user && (
+              <Button variant="secondary" icon={<Pencil className="h-5 w-5" />} onClick={() => onEdit(r)}>
+                Modifica
+              </Button>
+            )}
+            {onDelete && r.user && (
+              <Button variant="danger" icon={<Trash2 className="h-5 w-5" />} onClick={() => onDelete(r)}>
+                Elimina
+              </Button>
+            )}
+          </div>
 
           <section>
             <div className="section-title flex items-center gap-1.5">
-              <Users className="h-4 w-4" aria-hidden /> Ingredienti · {String(portions).replace('.', ',')} {portions === 1 ? 'porzione' : 'porzioni'}
+              <Users className="h-4 w-4" aria-hidden /> Ingredienti · {r.sv} {r.sv === 1 ? 'porzione' : 'porzioni'}
             </div>
             <ul className="divide-y divide-line-subtle">
-              {r.i.map(([id, name, q, unit, scaling, note], j) => (
-                <li key={`${id}-${j}`} className="flex items-baseline justify-between gap-3 py-1.5 text-base">
-                  <span className="text-fg">
-                    {it ? it.ingredients[j]?.replace(/^[\d.,/\s]+(g|kg|ml|l|pz|cucchia\w*|q\.b\.)?\s*/i, '') || ingredientIt(name) : ingredientIt(name)}
-                    {!it && note && <span className="block text-xs text-fg-3">{note}</span>}
-                  </span>
-                  <span className="shrink-0 text-sm font-semibold text-fg-2">{qty(q, unit, scaling, factor)}</span>
+              {r.i.map(([name, qty], j) => (
+                <li key={`${name}-${j}`} className="flex items-baseline justify-between gap-3 py-1.5 text-base">
+                  <span className="text-fg">{name}</span>
+                  <span className="shrink-0 text-sm font-semibold text-fg-2">{qty}</span>
                 </li>
               ))}
             </ul>
+            {servings != null && servings !== 1 && (
+              <p className="mt-1 text-xs text-fg-3">
+                Dosi per {r.sv} porzioni: tu ne mangi {fmtNum(servings)} (circa {Math.round((servings / r.sv) * 100)}% della ricetta).
+              </p>
+            )}
           </section>
 
-          <section>
-            <div className="section-title">Preparazione</div>
-            <ol className="space-y-3">
-              {r.st.map(([text, min], j) => (
-                <li key={j} className="flex gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-glow text-sm font-bold text-accent-400">{j + 1}</span>
-                  <span className="text-base text-fg-2">
-                    {it?.steps[j] ?? text}
-                    {min > 0 && <span className="ml-1 text-xs text-fg-3">· {min} min</span>}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </section>
-
-          {!it && (
-            <div>
-              {ai.busy ? (
-                <AIBusy status={ai.status} onCancel={ai.cancel} />
-              ) : (
-                <Button
-                  variant="secondary"
-                  fullWidth
-                  icon={<Languages className="h-5 w-5" />}
-                  onClick={async () => {
-                    const t = await ai.run((o) => translateRecipe(r, o));
-                    if (t) setIt(t);
-                  }}
-                >
-                  Traduci la ricetta in italiano (AI)
-                </Button>
-              )}
-              {ai.error && (
-                <p className="mt-2 text-sm text-danger" role="alert">
-                  {ai.error}
-                </p>
-              )}
-            </div>
+          {r.st.length > 0 && (
+            <section>
+              <div className="section-title">Preparazione</div>
+              <ol className="space-y-3">
+                {r.st.map((text, j) => (
+                  <li key={j} className="flex gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-glow text-sm font-bold text-accent-400">{j + 1}</span>
+                    <span className="text-base text-fg-2">{text}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
           )}
 
-          <p className="text-[11px] text-fg-3">
-            Ricetta e valori nutrizionali: UniTools — theunitools.com (World Recipes, licenza CC BY-SA 4.0){it ? ' · traduzione automatica' : ''}.
-          </p>
+          {!r.user && (
+            <p className="flex items-start gap-1.5 text-[11px] text-fg-3">
+              <BookOpen className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span>
+                {r.src ? (
+                  <>
+                    Ricetta da Wikibooks,{' '}
+                    <a href={r.src[1]} target="_blank" rel="noreferrer" className="underline">
+                      “{r.src[0]}”
+                    </a>
+                  </>
+                ) : (
+                  'Ricetta FrigoDispensa (dispensa-dati)'
+                )}{' '}
+                · licenza CC BY-SA 4.0.
+              </span>
+            </p>
+          )}
         </div>
       )}
     </Modal>
