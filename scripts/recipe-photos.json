@@ -1,10 +1,647 @@
 {
+ "ant-007": {
+  "file": "recipe-img/ant-007.jpg",
+  "author": "Catia Giaccherini",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Starters_06.jpg",
+  "via": "wikipedia"
+ },
+ "ant-010": {
+  "file": "recipe-img/ant-010.jpg",
+  "author": "Nicholas Gemini",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Italian_Suppl%C3%AC.jpg",
+  "via": "wikipedia"
+ },
+ "pri-002": {
+  "file": "recipe-img/pri-002.jpg",
+  "author": "Elga Cappellari",
+  "license": "CC BY-SA 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Spaghetti_di_Gragnano_e_colatura_di_alici.jpg",
+  "via": "wikipedia"
+ },
+ "pri-004": {
+  "file": "recipe-img/pri-004.jpg",
+  "author": "Javier Somoza",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Espaguetis_carbonara.jpg",
+  "via": "wikipedia"
+ },
+ "pri-005": {
+  "file": "recipe-img/pri-005.jpg",
+  "author": "stu_spivack",
+  "license": "CC BY-SA 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Bucatini_(amatriciana_rossa).jpg",
+  "via": "wikipedia"
+ },
+ "pri-009": {
+  "file": "recipe-img/pri-009.jpg",
+  "author": "8w9d",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:Pasta_alla_Norma_-_Wiki_Loves_Sicilia.jpg",
+  "via": "wikipedia"
+ },
+ "pri-014": {
+  "file": "recipe-img/pri-014.jpg",
+  "author": "Sambawamba",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Lasagna_bolognese.jpg",
+  "via": "wikipedia"
+ },
+ "pri-016": {
+  "file": "recipe-img/pri-016.jpg",
+  "author": "grobery from Milano, Italy",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Sun-rice_(11027684905).jpg",
+  "via": "wikipedia"
+ },
+ "pri-021": {
+  "file": "recipe-img/pri-021.jpg",
+  "author": "Davide Zambelli",
+  "license": "CC BY 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Gnocchi_alla_sorrentina.jpg",
+  "via": "wikipedia"
+ },
+ "pri-027": {
+  "file": "recipe-img/pri-027.jpg",
+  "author": "cyclonebill",
+  "license": "CC BY-SA 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Flickr_-_cyclonebill_-_Spaghetti_med_muslinger.jpg",
+  "via": "wikipedia"
+ },
+ "zup-002": {
+  "file": "recipe-img/zup-002.jpg",
+  "author": "Spinoziano",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Pasta_e_fagioli_cannellini.jpg",
+  "via": "wikipedia"
+ },
+ "zup-003": {
+  "file": "recipe-img/zup-003.jpg",
+  "author": "spurekar",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Pasta_e_ceci_(49671162847).jpg",
+  "via": "wikipedia"
+ },
+ "zup-004": {
+  "file": "recipe-img/zup-004.jpg",
+  "author": "Matthias Lipinski",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:Linseneintopf.jpg",
+  "via": "wikipedia"
+ },
+ "zup-009": {
+  "file": "recipe-img/zup-009.jpg",
+  "author": "Ɱ",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:PappaPomodoro.png",
+  "via": "wikipedia"
+ },
+ "uni-007": {
+  "file": "recipe-img/uni-007.jpg",
+  "author": "Steven Depolo from Grand Rapids, MI, USA",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Bean_Rice_Salad.jpg",
+  "via": "wikipedia"
+ },
+ "sal-001": {
+  "file": "recipe-img/sal-001.jpg",
+  "author": "Ɱ",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:BasilPesto.JPG",
+  "via": "wikipedia"
+ },
+ "sal-002": {
+  "file": "recipe-img/sal-002.jpg",
+  "author": "Paul Arps",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Tagliatelle_al_ragu_(Bologna,_Italia_2025).jpg",
+  "via": "wikipedia"
+ },
+ "sal-004": {
+  "file": "recipe-img/sal-004.jpg",
+  "author": "Jacek Halicki",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:2021_Sos_beszamelowy.jpg",
+  "via": "wikipedia"
+ },
+ "sal-006": {
+  "file": "recipe-img/sal-006.jpg",
+  "author": "cyclonebill from Copenhagen, Denmark",
+  "license": "CC BY-SA 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Vitello_tonnato_(7169906567).jpg",
+  "via": "wikipedia"
+ },
+ "sec-008": {
+  "file": "recipe-img/sec-008.jpg",
+  "author": "Evan Joshua Swigart (TheCulinaryGeek) da Chicago, Illinois, USA; hometown of Ame",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Flickr_preppybyday_4618397089--Chicken_cacciatore.jpg",
+  "via": "wikipedia"
+ },
+ "sec-015": {
+  "file": "recipe-img/sec-015.jpg",
+  "author": "Catia Giaccherini",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Starters_06.jpg",
+  "via": "wikipedia"
+ },
+ "sec-018": {
+  "file": "recipe-img/sec-018.jpg",
+  "author": "Aplasia",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Fagioli_cannellini_all%27uccelletto.jpg",
+  "via": "wikipedia"
+ },
+ "con-004": {
+  "file": "recipe-img/con-004.jpg",
+  "author": "Kobako",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Peperonata22.jpg",
+  "via": "wikipedia"
+ },
+ "con-007": {
+  "file": "recipe-img/con-007.jpg",
+  "author": "sousvideguy",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Sous_vide_mashed_potatoes.jpg",
+  "via": "wikipedia"
+ },
+ "con-010": {
+  "file": "recipe-img/con-010.jpg",
+  "author": "10Rosso",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Melanzane_a_funghetto_1.jpg",
+  "via": "wikipedia"
+ },
+ "con-014": {
+  "file": "recipe-img/con-014.jpg",
+  "author": "Kobako",
+  "license": "CC BY-SA 2.5",
+  "source": "https://commons.wikimedia.org/wiki/File:Kartoffelsalat.jpg",
+  "via": "wikipedia"
+ },
+ "dol-001": {
+  "file": "recipe-img/dol-001.jpg",
+  "author": "procristination",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Home-made_tiramisu,_november_2008.jpg",
+  "via": "wikipedia"
+ },
+ "dol-002": {
+  "file": "recipe-img/dol-002.jpg",
+  "author": "The-Wuje",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Lattice_apple_pie.png",
+  "via": "wikipedia"
+ },
+ "dol-004": {
+  "file": "recipe-img/dol-004.jpg",
+  "author": "Renardo la vulpo",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Ciambella,_in_Papierform_gebacken,_1.jpeg",
+  "via": "wikipedia"
+ },
+ "dol-006": {
+  "file": "recipe-img/dol-006.jpg",
+  "author": "Insatiable Munchies",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Panna_cotta_with_chocolate_mousse.jpg",
+  "via": "wikipedia"
+ },
+ "dol-009": {
+  "file": "recipe-img/dol-009.jpg",
+  "author": "jppaguilar",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Salame_de_chocolate_-_Chocolat_Salami.jpg",
+  "via": "wikipedia"
+ },
+ "dol-010": {
+  "file": "recipe-img/dol-010.jpg",
+  "author": "Pink Sherbet Photography",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Sweet_Summer_Rainbow_Fruit_Salad.jpg",
+  "via": "wikipedia"
+ },
+ "col-001": {
+  "file": "recipe-img/col-001.jpg",
+  "author": "Mae Mu",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:Foodiesfeed.com_pouring-honey-on-pancakes-with-walnuts.jpg",
+  "via": "wikipedia"
+ },
+ "wb-011": {
+  "file": "recipe-img/wb-011.jpg",
+  "author": "Photo made by Daniel Spils and uploaded to flickr.com",
+  "license": "CC BY-SA 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Potato_pancakes.jpg",
+  "via": "wikipedia"
+ },
+ "wb-013": {
+  "file": "recipe-img/wb-013.jpg",
+  "author": "Manuela Zangara",
+  "license": "CC BY-SA 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Olive_all%27ascolana.jpg",
+  "via": "wikipedia"
+ },
+ "wb-019": {
+  "file": "recipe-img/wb-019.jpg",
+  "author": "LenaRaisch",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Brezel_l_B%C3%A4ckerei-Raisch.jpg",
+  "via": "wikipedia"
+ },
+ "wb-023": {
+  "file": "recipe-img/wb-023.jpg",
+  "author": "Scapece.bianco",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Scapece.JPG",
+  "via": "wikipedia"
+ },
+ "wb-024": {
+  "file": "recipe-img/wb-024.jpg",
+  "author": "nclm",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Seitan_slices_2.jpg",
+  "via": "wikipedia"
+ },
+ "wb-025": {
+  "file": "recipe-img/wb-025.jpg",
+  "author": "Filippo from Bergamo, Italy",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Sgabei.jpg",
+  "via": "wikipedia"
+ },
+ "wb-027": {
+  "file": "recipe-img/wb-027.jpg",
+  "author": "Luigib25",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:AgnolottiPavesi_2.jpg",
+  "via": "wikipedia"
+ },
+ "wb-030": {
+  "file": "recipe-img/wb-030.jpg",
+  "author": "Dèsirèe Tonus",
+  "license": "CC BY-SA 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Bigoli_alle_millepiume.jpg",
+  "via": "wikipedia"
+ },
+ "wb-031": {
+  "file": "recipe-img/wb-031.jpg",
+  "author": "Popo le Chien",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:Cannelloni2.png",
+  "via": "wikipedia"
+ },
+ "wb-039": {
+  "file": "recipe-img/wb-039.jpg",
+  "author": "Jorge Díaz from Madrid, Spain",
+  "license": "CC BY-SA 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Fideua_-_xurde.jpg",
+  "via": "wikipedia"
+ },
+ "wb-055": {
+  "file": "recipe-img/wb-055.jpg",
+  "author": "Christina Garofalo",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Moshe_Basson_serves_maklubah.jpg",
+  "via": "wikipedia"
+ },
  "wb-062": {
   "file": "recipe-img/wb-062.jpg",
   "author": "Jan Harenburg",
   "license": "CC BY-SA 4.0",
   "source": "https://commons.wikimedia.org/wiki/File:01_Paella_Valenciana_original.jpg",
   "via": "wikibooks"
+ },
+ "wb-064": {
+  "file": "recipe-img/wb-064.jpg",
+  "author": "Opera propria",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:Pastificio_Novella_-_Pansoti_Preboggion,_crop.jpg",
+  "via": "wikipedia"
+ },
+ "wb-067": {
+  "file": "recipe-img/wb-067.jpg",
+  "author": "Javier Somoza",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Espaguetis_carbonara.jpg",
+  "via": "wikipedia"
+ },
+ "wb-069": {
+  "file": "recipe-img/wb-069.jpg",
+  "author": "Generale Lee",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Pasta_peperoni_cruschi.jpg",
+  "via": "wikipedia"
+ },
+ "wb-079": {
+  "file": "recipe-img/wb-079.jpg",
+  "author": "Arnaud 25",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:Riz_cantonais.jpg",
+  "via": "wikipedia"
+ },
+ "wb-086": {
+  "file": "recipe-img/wb-086.jpg",
+  "author": "grobery from Milano, Italy",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Sun-rice_(11027684905).jpg",
+  "via": "wikipedia"
+ },
+ "wb-088": {
+  "file": "recipe-img/wb-088.jpg",
+  "author": "grobery from Milano, Italy",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Sun-rice_(11027684905).jpg",
+  "via": "wikipedia"
+ },
+ "wb-090": {
+  "file": "recipe-img/wb-090.jpg",
+  "author": "Pezzomn91 di Wikipedia in italiano",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Risotto_(1).jpg",
+  "via": "wikipedia"
+ },
+ "wb-095": {
+  "file": "recipe-img/wb-095.jpg",
+  "author": "stu_spivack",
+  "license": "CC BY-SA 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Bucatini_(amatriciana_rossa).jpg",
+  "via": "wikipedia"
+ },
+ "wb-096": {
+  "file": "recipe-img/wb-096.jpg",
+  "author": "Popo le Chien",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:Spaghetti_chitarra.png",
+  "via": "wikipedia"
+ },
+ "wb-099": {
+  "file": "recipe-img/wb-099.jpg",
+  "author": "Benreis",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Tirtln_Weisskohl_Zur_Sonne.jpg",
+  "via": "wikipedia"
+ },
+ "wb-100": {
+  "file": "recipe-img/wb-100.jpg",
+  "author": "Luca Vanzella from Milano, Italy",
+  "license": "CC BY-SA 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Tortelli.jpg",
+  "via": "wikipedia"
+ },
+ "wb-102": {
+  "file": "recipe-img/wb-102.jpg",
+  "author": "LazyBaby",
+  "license": "CC BY 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Trenette_al_pesto_con_patate_e_fagiolini.jpg",
+  "via": "wikipedia"
+ },
+ "wb-107": {
+  "file": "recipe-img/wb-107.jpg",
+  "author": "Jun",
+  "license": "CC BY-SA 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Bacalao_a_pil_pil,_Bar_Lo_Gueno,_Malaga.jpg",
+  "via": "wikipedia"
+ },
+ "wb-110": {
+  "file": "recipe-img/wb-110.jpg",
+  "author": "Palickap",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Vicenza,_Espressamente,_baccala_vicentina.jpg",
+  "via": "wikipedia"
+ },
+ "wb-111": {
+  "file": "recipe-img/wb-111.jpg",
+  "author": "Ben &amp; Lisa Waters [1]",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:%22_13_-_ITALY_-_Cicchetti_Venetian_cuisine_appetizers_restaurant_(_not_are_tapas_are_ciccheti_of_Venice)_in_this_pics_Baccal%C3%A0_mantecato_(Cod).jpg",
+  "via": "wikipedia"
+ },
+ "wb-117": {
+  "file": "recipe-img/wb-117.jpg",
+  "author": "LukeWiller",
+  "license": "CC BY 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Trippa_alla_milanese.JPG",
+  "via": "wikipedia"
+ },
+ "wb-118": {
+  "file": "recipe-img/wb-118.jpg",
+  "author": "Hana Gaon",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Cacciucco_alla_Livornese_19_34_55_234000.jpeg",
+  "via": "wikipedia"
+ },
+ "wb-119": {
+  "file": "recipe-img/wb-119.jpg",
+  "author": "demi",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Calamares_a_la_andaluza.jpg",
+  "via": "wikipedia"
+ },
+ "wb-134": {
+  "file": "recipe-img/wb-134.jpg",
+  "author": "WILO-MA",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:Cotoletta_alla_Bolognese_con_tartufo_nero.jpg",
+  "via": "wikipedia"
+ },
+ "wb-135": {
+  "file": "recipe-img/wb-135.jpg",
+  "author": "Vaselineeeeeeee",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Cotoletta_alla_milanese_in_milano.jpg",
+  "via": "wikipedia"
+ },
+ "wb-138": {
+  "file": "recipe-img/wb-138.jpg",
+  "author": "Görgött - Chris Nilson",
+  "license": "CC BY 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Fegato_alla_Veneziana.jpg",
+  "via": "wikipedia"
+ },
+ "wb-142": {
+  "file": "recipe-img/wb-142.jpg",
+  "author": "Io",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Fricotenero.jpg",
+  "via": "wikipedia"
+ },
+ "wb-152": {
+  "file": "recipe-img/wb-152.jpg",
+  "author": "WikiHes",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Lomo-saltado-perudelights.jpg",
+  "via": "wikipedia"
+ },
+ "wb-156": {
+  "file": "recipe-img/wb-156.jpg",
+  "author": "Pittaya Sroilong",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Beef_Stroganoff-02.jpg",
+  "via": "wikipedia"
+ },
+ "wb-162": {
+  "file": "recipe-img/wb-162.jpg",
+  "author": "Marica Massaro",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Pecora_ajo_cotturo_Antrosano.jpg",
+  "via": "wikipedia"
+ },
+ "wb-163": {
+  "file": "recipe-img/wb-163.jpg",
+  "author": "Villese92",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Barca_pescespada_3.jpg",
+  "via": "wikipedia"
+ },
+ "wb-167": {
+  "file": "recipe-img/wb-167.jpg",
+  "author": "Fredrik Andersson",
+  "license": "CC BY-SA 2.5",
+  "source": "https://commons.wikimedia.org/wiki/File:Pitepalt.jpg",
+  "via": "wikipedia"
+ },
+ "wb-169": {
+  "file": "recipe-img/wb-169.jpg",
+  "author": "T.Tseng",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Fried_chicken_(25163375255).jpg",
+  "via": "wikipedia"
+ },
+ "wb-171": {
+  "file": "recipe-img/wb-171.jpg",
+  "author": "James D Kirk",
+  "license": "CC BY-SA 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Stuffed_roast_chicken.jpg",
+  "via": "wikipedia"
+ },
+ "wb-191": {
+  "file": "recipe-img/wb-191.jpg",
+  "author": "Mutt Lunker",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Stovies_with_beef_leftovers_%26_oatcakes.jpg",
+  "via": "wikipedia"
+ },
+ "wb-193": {
+  "file": "recipe-img/wb-193.jpg",
+  "author": "orsorama",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Stufato.jpg",
+  "via": "wikipedia"
+ },
+ "wb-195": {
+  "file": "recipe-img/wb-195.jpg",
+  "author": "Pezzomn91 di Wikipedia in italiano",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Asino_stracotto.jpg",
+  "via": "wikipedia"
+ },
+ "wb-197": {
+  "file": "recipe-img/wb-197.jpg",
+  "author": "Makkodè",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Tacchino_alla_canzanese.jpg",
+  "via": "wikipedia"
+ },
+ "wb-198": {
+  "file": "recipe-img/wb-198.jpg",
+  "author": "F Ceragioli",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Tapulon_03.jpg",
+  "via": "wikipedia"
+ },
+ "wb-202": {
+  "file": "recipe-img/wb-202.jpg",
+  "author": "AnticoMu90",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:TonnoConiglio.jpg",
+  "via": "wikipedia"
+ },
+ "wb-203": {
+  "file": "recipe-img/wb-203.jpg",
+  "author": "Tamorlan",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Tortilla_de_Patatas_(Corte_transversal).jpg",
+  "via": "wikipedia"
+ },
+ "wb-208": {
+  "file": "recipe-img/wb-208.jpg",
+  "author": "Calabrotto",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Trippa_Alla_Romana.jpg",
+  "via": "wikipedia"
+ },
+ "wb-212": {
+  "file": "recipe-img/wb-212.jpg",
+  "author": "El Mono Español",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Caponata.jpg",
+  "via": "wikipedia"
+ },
+ "wb-214": {
+  "file": "recipe-img/wb-214.jpg",
+  "author": "C. Shen",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Carciofi_alla_Romana.jpg",
+  "via": "wikipedia"
+ },
+ "wb-217": {
+  "file": "recipe-img/wb-217.jpg",
+  "author": "yummyporky",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Falafel_balls.jpg",
+  "via": "wikipedia"
+ },
+ "wb-218": {
+  "file": "recipe-img/wb-218.jpg",
+  "author": "Popo le Chien",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:Friggione.jpg",
+  "via": "wikipedia"
+ },
+ "wb-224": {
+  "file": "recipe-img/wb-224.jpg",
+  "author": "Roger Ferrer Ibáñez",
+  "license": "CC BY-SA 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Alberg%C3%ADnies_farcides_estil_%22papoutsaki%22.jpg",
+  "via": "wikipedia"
+ },
+ "wb-225": {
+  "file": "recipe-img/wb-225.jpg",
+  "author": "Bin im Garten",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Musaka_Sofia_2012_PD_1.jpg",
+  "via": "wikipedia"
+ },
+ "wb-233": {
+  "file": "recipe-img/wb-233.jpg",
+  "author": "Gennaro Visciano from Torre del Greco (NA), Italy",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Polpette_di_melanzane.jpg",
+  "via": "wikipedia"
+ },
+ "wb-235": {
+  "file": "recipe-img/wb-235.jpg",
+  "author": "Koichi Oda",
+  "license": "CC BY-SA 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Ratatouille_-_Flickr_-_odako1.jpg",
+  "via": "wikipedia"
+ },
+ "wb-238": {
+  "file": "recipe-img/wb-238.jpg",
+  "author": "Luca Nebuloni from Milan, Italy",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Stuffed_zucchini_(12854173545).jpg",
+  "via": "wikipedia"
+ },
+ "wb-240": {
+  "file": "recipe-img/wb-240.jpg",
+  "author": "user:Enslin",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Pizza_Calzone.jpg",
+  "via": "wikipedia"
  },
  "wb-242": {
   "file": "recipe-img/wb-242.jpg",
@@ -13,12 +650,89 @@
   "source": "https://commons.wikimedia.org/wiki/File:Semmelkn%C3%B6del.jpg",
   "via": "wikibooks"
  },
+ "wb-245": {
+  "file": "recipe-img/wb-245.jpg",
+  "author": "Effems",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Casatiello_(Barcellona_Pozzo_di_Gotto)_09_04_2023_01.jpg",
+  "via": "wikipedia"
+ },
+ "wb-247": {
+  "file": "recipe-img/wb-247.jpg",
+  "author": "Xemenendura",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Cocido_de_%C3%81vila.jpg",
+  "via": "wikipedia"
+ },
+ "wb-248": {
+  "file": "recipe-img/wb-248.jpg",
+  "author": "Catia Giaccherini",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Crocch%C3%A9_di_patate_(Naples).jpg",
+  "via": "wikipedia"
+ },
+ "wb-250": {
+  "file": "recipe-img/wb-250.jpg",
+  "author": "Manfredonia di Wikipedia in italiano",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Farrata.JPG",
+  "via": "wikipedia"
+ },
+ "wb-251": {
+  "file": "recipe-img/wb-251.jpg",
+  "author": "Alessio Sbarbaro User_talk:Yoggysot",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Focaccette_con_il_formaggio_03.jpg",
+  "via": "wikipedia"
+ },
+ "wb-252": {
+  "file": "recipe-img/wb-252.jpg",
+  "author": "Fred Benenson",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Focaccia_with_Crumb.jpg",
+  "via": "wikipedia"
+ },
+ "wb-254": {
+  "file": "recipe-img/wb-254.jpg",
+  "author": "Roger469",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Focaccia_con_le_cipolle.jpg",
+  "via": "wikipedia"
+ },
+ "wb-257": {
+  "file": "recipe-img/wb-257.jpg",
+  "author": "JHG (Julien29)",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Swiss_fondue_2.jpg",
+  "via": "wikipedia"
+ },
+ "wb-259": {
+  "file": "recipe-img/wb-259.jpg",
+  "author": "Stefania Curci",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Gatt%C3%B2_di_patate.jpg",
+  "via": "wikipedia"
+ },
  "wb-261": {
   "file": "recipe-img/wb-261.jpg",
   "author": "Ericd (talk · contribs)",
   "license": "CC BY-SA 3.0",
   "source": "https://commons.wikimedia.org/wiki/File:Hamburger_sandwich.jpg",
   "via": "wikibooks"
+ },
+ "wb-263": {
+  "file": "recipe-img/wb-263.jpg",
+  "author": "Cpaolo79",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Mallone.jpg",
+  "via": "wikipedia"
+ },
+ "wb-264": {
+  "file": "recipe-img/wb-264.jpg",
+  "author": "Osps7",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Mujaddara_Palestinian.jpg",
+  "via": "wikipedia"
  },
  "wb-265": {
   "file": "recipe-img/wb-265.jpg",
@@ -27,12 +741,26 @@
   "source": "https://commons.wikimedia.org/wiki/File:Miassa_1.JPG",
   "via": "wikibooks"
  },
+ "wb-269": {
+  "file": "recipe-img/wb-269.jpg",
+  "author": "Andy Li",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:Parmiggiana_-_Pizza_500_2024-11-16.jpg",
+  "via": "wikipedia"
+ },
  "wb-270": {
   "file": "recipe-img/wb-270.jpg",
   "author": "Generale Lee",
   "license": "CC BY-SA 4.0",
   "source": "https://commons.wikimedia.org/wiki/File:Patate_alla_laurenzanese.jpg",
   "via": "wikibooks"
+ },
+ "wb-273": {
+  "file": "recipe-img/wb-273.jpg",
+  "author": "Florixc",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:Focaccia_patate_2d.jpg",
+  "via": "wikipedia"
  },
  "wb-280": {
   "file": "recipe-img/wb-280.jpg",
@@ -41,6 +769,118 @@
   "source": "https://commons.wikimedia.org/wiki/File:Sfiha.jpg",
   "via": "wikibooks"
  },
+ "wb-281": {
+  "file": "recipe-img/wb-281.jpg",
+  "author": "Rino Porrovecchio",
+  "license": "CC BY-SA 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Sfincione_palermitano.jpg",
+  "via": "wikipedia"
+ },
+ "wb-284": {
+  "file": "recipe-img/wb-284.jpg",
+  "author": "Inkwina",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Maltese_Timpana.JPG",
+  "via": "wikipedia"
+ },
+ "wb-289": {
+  "file": "recipe-img/wb-289.jpg",
+  "author": "Peggy Greb",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Pumpkin_Pie.jpg",
+  "via": "wikipedia"
+ },
+ "wb-292": {
+  "file": "recipe-img/wb-292.jpg",
+  "author": "Emigiorg di Wikipedia in italiano",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Brodetto_di_Porto_Recanati.jpg",
+  "via": "wikipedia"
+ },
+ "wb-296": {
+  "file": "recipe-img/wb-296.jpg",
+  "author": "RiccardoP1983",
+  "license": "CC BY 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Minestrone_alla_genovese.jpg",
+  "via": "wikipedia"
+ },
+ "wb-298": {
+  "file": "recipe-img/wb-298.jpg",
+  "author": "Roger469",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Polenta_taragna_tavola_e_coltella.jpg",
+  "via": "wikipedia"
+ },
+ "wb-300": {
+  "file": "recipe-img/wb-300.jpg",
+  "author": "P.Lechien",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:Salmorejo_cordouan.JPG",
+  "via": "wikipedia"
+ },
+ "wb-301": {
+  "file": "recipe-img/wb-301.jpg",
+  "author": "Clop",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Tortelli_d%27erbetta.jpg",
+  "via": "wikipedia"
+ },
+ "wb-305": {
+  "file": "recipe-img/wb-305.jpg",
+  "author": "Sol Octobris",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:GraupensuppeL1150809_(4).jpg",
+  "via": "wikipedia"
+ },
+ "wb-306": {
+  "file": "recipe-img/wb-306.jpg",
+  "author": "Ludovic Péron",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Soupe_%C3%A0_l%27oignon.jpg",
+  "via": "wikipedia"
+ },
+ "wb-307": {
+  "file": "recipe-img/wb-307.jpg",
+  "author": "Annibale Carracci",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Annibale_Carracci_-_The_Beaneater_-_WGA04408.jpg",
+  "via": "wikipedia"
+ },
+ "wb-308": {
+  "file": "recipe-img/wb-308.jpg",
+  "author": "Nostrix",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Zuppa_Imperiale_(Royale_Bolognese).jpg",
+  "via": "wikipedia"
+ },
+ "wb-311": {
+  "file": "recipe-img/wb-311.jpg",
+  "author": "Breville USA",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Baba_Ganoush_05of05_(8735238183).jpg",
+  "via": "wikipedia"
+ },
+ "wb-312": {
+  "file": "recipe-img/wb-312.jpg",
+  "author": "Lombroso",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Bagna_c%C3%A0uda_(2016-01-30).jpg",
+  "via": "wikipedia"
+ },
+ "wb-313": {
+  "file": "recipe-img/wb-313.jpg",
+  "author": "AnticoMu90",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:BagnetRossRev.jpg",
+  "via": "wikipedia"
+ },
+ "wb-314": {
+  "file": "recipe-img/wb-314.jpg",
+  "author": "F Ceragioli",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Anciove_al_verd.jpg",
+  "via": "wikipedia"
+ },
  "wb-317": {
   "file": "recipe-img/wb-317.jpg",
   "author": "Wikimedia Commons",
@@ -48,11 +888,452 @@
   "source": "https://commons.wikimedia.org/wiki/File:Tomato_gazpacho.jpg",
   "via": "wikibooks"
  },
+ "wb-318": {
+  "file": "recipe-img/wb-318.jpg",
+  "author": "Nikodem Nijaki",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Guacamole_IMGP1271.jpg",
+  "via": "wikipedia"
+ },
+ "wb-319": {
+  "file": "recipe-img/wb-319.jpg",
+  "author": "Ella Olsson from Stockholm, Sweden",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Hummus_Dip_(30863436677).jpg",
+  "via": "wikipedia"
+ },
+ "wb-320": {
+  "file": "recipe-img/wb-320.jpg",
+  "author": "Garrett Ziegler",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Ac%C4%B1l%C4%B1_Ezme.jpg",
+  "via": "wikipedia"
+ },
+ "wb-321": {
+  "file": "recipe-img/wb-321.jpg",
+  "author": "Kim Holger Kelting",
+  "license": "CC BY 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Ketchup_20160918_181342_(cropped).jpg",
+  "via": "wikipedia"
+ },
+ "wb-322": {
+  "file": "recipe-img/wb-322.jpg",
+  "author": "jules",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Mayonnaise_(1).jpg",
+  "via": "wikipedia"
+ },
  "wb-323": {
   "file": "recipe-img/wb-323.jpg",
   "author": "Randhirreddy at English Wikipedia",
   "license": "CC BY-SA 3.0",
   "source": "https://commons.wikimedia.org/wiki/File:Mirchi_ka_salan_and_Dahi_chutney.jpg",
   "via": "wikibooks"
+ },
+ "wb-325": {
+  "file": "recipe-img/wb-325.jpg",
+  "author": "8w9d",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:Pesto_alla_Trapanese_-_Wiki_Loves_Sicilia.jpg",
+  "via": "wikipedia"
+ },
+ "wb-328": {
+  "file": "recipe-img/wb-328.jpg",
+  "author": "Alexander Guy",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:B%C3%A9arnaise_sauce_with_Tarragon_garnish.jpeg",
+  "via": "wikipedia"
+ },
+ "wb-329": {
+  "file": "recipe-img/wb-329.jpg",
+  "author": "Photograph by Dixy52, edited with ChatGPT 5",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Pansoti_in_salsa_di_noci.png",
+  "via": "wikipedia"
+ },
+ "wb-331": {
+  "file": "recipe-img/wb-331.jpg",
+  "author": "Dennis Klein klein2",
+  "license": "CC0",
+  "source": "https://commons.wikimedia.org/wiki/File:Fresh_Tomato_Sauce_(Unsplash).jpg",
+  "via": "wikipedia"
+ },
+ "wb-338": {
+  "file": "recipe-img/wb-338.jpg",
+  "author": "Klearchos Kapoutsis from Santorini, Greece",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Tzatziki_(4824624030).jpg",
+  "via": "wikipedia"
+ },
+ "wb-341": {
+  "file": "recipe-img/wb-341.jpg",
+  "author": "The-Wuje",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Lattice_apple_pie.png",
+  "via": "wikipedia"
+ },
+ "wb-342": {
+  "file": "recipe-img/wb-342.jpg",
+  "author": "Caravita81",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Baci_di_dama_casalinghi.jpg",
+  "via": "wikipedia"
+ },
+ "wb-346": {
+  "file": "recipe-img/wb-346.jpg",
+  "author": "Regione Emilia-Romagna",
+  "license": "CC BY 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Bensone,_balsone,_bals%C3%B2n.jpg",
+  "via": "wikipedia"
+ },
+ "wb-347": {
+  "file": "recipe-img/wb-347.jpg",
+  "author": "DinaBenedettoFerrandina",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Berlingozzo.jpg",
+  "via": "wikipedia"
+ },
+ "wb-354": {
+  "file": "recipe-img/wb-354.jpg",
+  "author": "Andre86",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Biscottilagaccio.jpg",
+  "via": "wikipedia"
+ },
+ "wb-361": {
+  "file": "recipe-img/wb-361.jpg",
+  "author": "Giacomino Timillero",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Brasadelo.png",
+  "via": "wikipedia"
+ },
+ "wb-365": {
+  "file": "recipe-img/wb-365.jpg",
+  "author": "92bari",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Cartellate.JPG",
+  "via": "wikipedia"
+ },
+ "wb-366": {
+  "file": "recipe-img/wb-366.jpg",
+  "author": "92bari",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Cartellate.JPG",
+  "via": "wikipedia"
+ },
+ "wb-367": {
+  "file": "recipe-img/wb-367.jpg",
+  "author": "Gordon Joly",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Castagnaccio_with_pine_nuts.jpg",
+  "via": "wikipedia"
+ },
+ "wb-368": {
+  "file": "recipe-img/wb-368.jpg",
+  "author": "Patafisik",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Certosino_abc1.jpg",
+  "via": "wikipedia"
+ },
+ "wb-380": {
+  "file": "recipe-img/wb-380.jpg",
+  "author": "David Monniaux",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Creme_anglaise_p1050159.jpg",
+  "via": "wikipedia"
+ },
+ "wb-381": {
+  "file": "recipe-img/wb-381.jpg",
+  "author": "SKopp",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Pastry_cream.jpg",
+  "via": "wikipedia"
+ },
+ "wb-383": {
+  "file": "recipe-img/wb-383.jpg",
+  "author": "Recipetaster",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Crispelle_di_Riso_-_St_Joseph%27s_Rice_fritters.jpg",
+  "via": "wikipedia"
+ },
+ "wb-389": {
+  "file": "recipe-img/wb-389.jpg",
+  "author": "dags 1974",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Delizia_al_limone.jpg",
+  "via": "wikipedia"
+ },
+ "wb-392": {
+  "file": "recipe-img/wb-392.jpg",
+  "author": "Dirk Ingo Franke",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Hausgemachte_dulce_de_leche_07.04.2012_17-30-13.jpg",
+  "via": "wikipedia"
+ },
+ "wb-393": {
+  "file": "recipe-img/wb-393.jpg",
+  "author": "Cantalamessa",
+  "license": "CC BY 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Fave_dei_morti.JPG",
+  "via": "wikipedia"
+ },
+ "wb-394": {
+  "file": "recipe-img/wb-394.jpg",
+  "author": "Lasacrasillaba",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Ferratella_aquilana.jpg",
+  "via": "wikipedia"
+ },
+ "wb-395": {
+  "file": "recipe-img/wb-395.jpg",
+  "author": "NiteshDubs",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Chocolate_Fondue_-_Canto_Cafe_%26_Bar_Resturant,_Mumbai_-_Maharashtra_-_ND002.jpg",
+  "via": "wikipedia"
+ },
+ "wb-399": {
+  "file": "recipe-img/wb-399.jpg",
+  "author": "User:Managementboy",
+  "license": "CC BY 1.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Ice_cream_cone_(cropped).jpg",
+  "via": "wikipedia"
+ },
+ "wb-401": {
+  "file": "recipe-img/wb-401.jpg",
+  "author": "Wikimedia Commons",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Giurgule_s.jpg",
+  "via": "wikipedia"
+ },
+ "wb-402": {
+  "file": "recipe-img/wb-402.jpg",
+  "author": "Clop",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Chiacchiere.jpg",
+  "via": "wikipedia"
+ },
+ "wb-403": {
+  "file": "recipe-img/wb-403.jpg",
+  "author": "Fanny Schertzer",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Kouign_amann_2.jpg",
+  "via": "wikipedia"
+ },
+ "wb-404": {
+  "file": "recipe-img/wb-404.jpg",
+  "author": "Sebastian Koppehel",
+  "license": "CC BY 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Berliner_Pfannkuchen_2.jpg",
+  "via": "wikipedia"
+ },
+ "wb-405": {
+  "file": "recipe-img/wb-405.jpg",
+  "author": "davide vizzini from Milano, Italy",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Krumiri_(4085416867).jpg",
+  "via": "wikipedia"
+ },
+ "wb-406": {
+  "file": "recipe-img/wb-406.jpg",
+  "author": "Vszhuba",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:K%C3%BCrt%C5%91skal%C3%A1cs_megbontott.jpg",
+  "via": "wikipedia"
+ },
+ "wb-409": {
+  "file": "recipe-img/wb-409.jpg",
+  "author": "jules",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Lemon_curd-2.jpg",
+  "via": "wikipedia"
+ },
+ "wb-411": {
+  "file": "recipe-img/wb-411.jpg",
+  "author": "File:Kue_Lidah_Kucing_1.jpg: Gunawan Kartapranata\nFile:Katzenzungen 7441.jpg: As",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Cat_tongues.jpg",
+  "via": "wikipedia"
+ },
+ "wb-416": {
+  "file": "recipe-img/wb-416.jpg",
+  "author": "Georges Seguin (Okki)",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Mille-feuille_20100916.jpg",
+  "via": "wikipedia"
+ },
+ "wb-418": {
+  "file": "recipe-img/wb-418.jpg",
+  "author": "Montan82",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Ostie_ripiene_di_Monte_Sant%27Angelo.jpg",
+  "via": "wikipedia"
+ },
+ "wb-420": {
+  "file": "recipe-img/wb-420.jpg",
+  "author": "Wander Umbria",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Panpepato_di_Terni.jpg",
+  "via": "wikipedia"
+ },
+ "wb-423": {
+  "file": "recipe-img/wb-423.jpg",
+  "author": "Mattia Luigi Nappi",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Pastiera_slice_-_ready_to_eat.jpg",
+  "via": "wikipedia"
+ },
+ "wb-428": {
+  "file": "recipe-img/wb-428.jpg",
+  "author": "Tamorlan",
+  "license": "CC BY 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Palmeras_de_hojaldre.jpg",
+  "via": "wikipedia"
+ },
+ "wb-431": {
+  "file": "recipe-img/wb-431.jpg",
+  "author": "Rollopack",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Roccoc%C3%B2_-_1.JPG",
+  "via": "wikipedia"
+ },
+ "wb-433": {
+  "file": "recipe-img/wb-433.jpg",
+  "author": "Picture: Ville KoistinenModified by -Majestic-",
+  "license": "CC BY 2.5",
+  "source": "https://commons.wikimedia.org/wiki/File:Runebergintorttu.jpg",
+  "via": "wikipedia"
+ },
+ "wb-434": {
+  "file": "recipe-img/wb-434.jpg",
+  "author": "Illustratedjc",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:SacherTorta-Ribizli.jpg",
+  "via": "wikipedia"
+ },
+ "wb-436": {
+  "file": "recipe-img/wb-436.jpg",
+  "author": "Forzaruvo94",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Scarcelle2013.JPG",
+  "via": "wikipedia"
+ },
+ "wb-437": {
+  "file": "recipe-img/wb-437.jpg",
+  "author": "WILO-MA",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Schiacciata_alla_fiorentina_quattro.jpg",
+  "via": "wikipedia"
+ },
+ "wb-442": {
+  "file": "recipe-img/wb-442.jpg",
+  "author": "User:Dave souza",
+  "license": "CC BY-SA 2.5",
+  "source": "https://commons.wikimedia.org/wiki/File:Shortbread_fingers.jpg",
+  "via": "wikipedia"
+ },
+ "wb-443": {
+  "file": "recipe-img/wb-443.jpg",
+  "author": "Lungoleno",
+  "license": "CC BY-SA 2.5",
+  "source": "https://commons.wikimedia.org/wiki/File:01_Tiroler_Strauben.jpg",
+  "via": "wikipedia"
+ },
+ "wb-445": {
+  "file": "recipe-img/wb-445.jpg",
+  "author": "Takeaway",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:2015_0723_Apfelstrudel_Gaislachalm_S%C3%B6lden.jpg",
+  "via": "wikipedia"
+ },
+ "wb-446": {
+  "file": "recipe-img/wb-446.jpg",
+  "author": "Burkhard Mücke",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Wiener_Apfelstrudel.jpg",
+  "via": "wikipedia"
+ },
+ "wb-447": {
+  "file": "recipe-img/wb-447.jpg",
+  "author": "Steve-081",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Struffoli2.JPG",
+  "via": "wikipedia"
+ },
+ "wb-448": {
+  "file": "recipe-img/wb-448.jpg",
+  "author": "Rei Momo",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Susumelle_calabrian_cake.JPG",
+  "via": "wikipedia"
+ },
+ "wb-449": {
+  "file": "recipe-img/wb-449.jpg",
+  "author": "M0tty",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Chocolate_truffle_-_Delacre.jpg",
+  "via": "wikipedia"
+ },
+ "wb-457": {
+  "file": "recipe-img/wb-457.jpg",
+  "author": "Aron and Gianina",
+  "license": "CC BY 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Torta_caprese_with_Faraglioni.png",
+  "via": "wikipedia"
+ },
+ "wb-460": {
+  "file": "recipe-img/wb-460.jpg",
+  "author": "M&amp;A",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Torta_paesana_della_Brianza.jpg",
+  "via": "wikipedia"
+ },
+ "wb-464": {
+  "file": "recipe-img/wb-464.jpg",
+  "author": "Michael Kelley",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Blueberry_bday,_May_2009.jpg",
+  "via": "wikipedia"
+ },
+ "wb-470": {
+  "file": "recipe-img/wb-470.jpg",
+  "author": "Albarubescens",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Italian_cake,_Torta_margherita_(daisy).jpg",
+  "via": "wikipedia"
+ },
+ "wb-471": {
+  "file": "recipe-img/wb-471.jpg",
+  "author": "Sciking",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Torta_del_Paradiso.jpg",
+  "via": "wikipedia"
+ },
+ "wb-472": {
+  "file": "recipe-img/wb-472.jpg",
+  "author": "Renano",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Pasticciotto.jpg",
+  "via": "wikipedia"
+ },
+ "wb-477": {
+  "file": "recipe-img/wb-477.jpg",
+  "author": "Wagner Tamanaha",
+  "license": "CC BY-SA 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Crustuli,_Padaria_S%C3%A3o_Domingos.jpg",
+  "via": "wikipedia"
+ },
+ "wb-479": {
+  "file": "recipe-img/wb-479.jpg",
+  "author": "Jonathunder",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Fruitcake.jpg",
+  "via": "wikipedia"
+ },
+ "wb-480": {
+  "file": "recipe-img/wb-480.jpg",
+  "author": "Lucas81",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Zeppole_di_San_Giuseppe.jpg",
+  "via": "wikipedia"
  }
 }
