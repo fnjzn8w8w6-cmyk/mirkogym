@@ -101,6 +101,9 @@ export const DEFAULT_SETTINGS: Settings = {
   deloadFrequency: 4,
   deloadPercentage: 40,
   autoDeload: true,
+  keepScreenOn: true,
+  weeklySetsMin: 10,
+  weeklySetsMax: 20,
   onboardingCompleted: false,
   startingLoadsPrompted: false,
 };

@@ -34,7 +34,11 @@ export interface Schedule {
   days: Day[];
 }
 
+/** Tipo di serie: le serie di riscaldamento non contano per volume, PR e progressione. */
+export type SetType = 'normal' | 'warmup' | 'drop' | 'failure';
+
 export interface SetLog {
+  type?: SetType;
   weight: number;
   reps: number;
   rir?: number;
@@ -101,6 +105,11 @@ export interface Settings {
   deloadFrequency: number;
   deloadPercentage: number;
   autoDeload: boolean;
+  /** Mantiene lo schermo acceso durante la sessione (Screen Wake Lock). */
+  keepScreenOn: boolean;
+  /** Obiettivo di serie settimanali per gruppo muscolare (volume landmarks). */
+  weeklySetsMin: number;
+  weeklySetsMax: number;
   onboardingCompleted: boolean;
   startingLoadsPrompted: boolean;
 }
@@ -108,6 +117,7 @@ export interface Settings {
 /* ---------- Sessione in corso (bozza sincronizzata) ---------- */
 
 export interface DraftSet {
+  type?: SetType;
   weight: string;
   reps: string;
   rir: string;

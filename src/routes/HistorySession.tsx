@@ -106,7 +106,15 @@ export default function HistorySession() {
                     <tr key={j} className="border-b border-line-subtle last:border-0">
                       <td className="py-2.5 pl-4 text-fg-2">
                         <span className="inline-flex items-center gap-1">
-                          {j + 1}
+                          {set.type === 'warmup' ? (
+                            <span className="font-bold text-warning">W</span>
+                          ) : set.type === 'drop' ? (
+                            <span className="font-bold text-info">D</span>
+                          ) : set.type === 'failure' ? (
+                            <span className="font-bold text-danger">F</span>
+                          ) : (
+                            j + 1 - l.sets.slice(0, j).filter((x) => x.type === 'warmup').length
+                          )}
                           {set.isPersonalRecord && <Trophy className="h-4 w-4 text-warning" aria-label="PR" />}
                         </span>
                       </td>

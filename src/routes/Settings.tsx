@@ -177,6 +177,12 @@ export default function Settings() {
           />
           <Toggle label="Suono a fine recupero" checked={settings.soundEnabled} onChange={(v) => set({ soundEnabled: v })} />
           <Toggle
+            label="Schermo sempre acceso"
+            description="Durante l'allenamento lo schermo non si spegne"
+            checked={settings.keepScreenOn}
+            onChange={(v) => set({ keepScreenOn: v })}
+          />
+          <Toggle
             label="Vibrazione"
             description="Non supportata da Safari su iPhone"
             checked={settings.vibrationEnabled}
@@ -185,7 +191,7 @@ export default function Settings() {
         </Section>
 
         <section>
-          <h2 className="section-title">Deload</h2>
+          <h2 className="section-title">Programmazione e deload</h2>
           <Card className="space-y-4 p-4">
             <div>
               <div className="mb-2 text-base text-fg">Frequenza</div>
@@ -203,6 +209,19 @@ export default function Settings() {
                 value={settings.deloadPercentage}
                 onChange={(v) => set({ deloadPercentage: v })}
                 options={[30, 40, 50].map((n) => ({ value: n, label: `-${n}%` }))}
+              />
+            </div>
+            <div>
+              <div className="mb-1 text-base text-fg">Serie settimanali per muscolo</div>
+              <p className="mb-2 text-sm text-fg-3">Fascia obiettivo mostrata in Home (volume di mantenimento → massimo recuperabile).</p>
+              <Segmented<string>
+                label="Obiettivo serie settimanali"
+                value={`${settings.weeklySetsMin}-${settings.weeklySetsMax}`}
+                onChange={(v) => {
+                  const [a, b] = v.split('-').map(Number);
+                  set({ weeklySetsMin: a, weeklySetsMax: b });
+                }}
+                options={['6-12', '10-20', '12-24'].map((v) => ({ value: v, label: v }))}
               />
             </div>
             <Toggle

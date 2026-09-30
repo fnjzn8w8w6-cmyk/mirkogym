@@ -114,6 +114,27 @@ npm run dev
 
 Gli emulatori applicano anche `firestore.rules`.
 
+## Funzioni in sessione
+
+Ispirate alle migliori app del 2026 (Hevy, Strong, Alpha Progression, Fitbod):
+
+- **Colonna "Prec."**: peso×reps della stessa serie l'ultima volta; un tocco li copia nella serie.
+- **Obiettivo reps per serie**: dopo un aumento di carico si riparte dal fondo del range, altrimenti +1 rep
+  rispetto all'ultima volta (placeholder nel campo reps).
+- **Tipi di serie**: tocca il numero della serie per passare a **W** riscaldamento, **D** drop set,
+  **F** cedimento. Il riscaldamento non conta per volume, PR e progressione.
+- **Riscaldamento automatico** (multiarticolari): 40/60/80% del carico di lavoro, arrotondato a 2,5 kg.
+- **Calcolatore dischi**: dischi per lato con disegno del bilanciere (20/15/10 kg o nessuno).
+- **Note fisse** per esercizio (es. "sedile 4"): restano sulla scheda e compaiono ogni volta.
+- **Sostituisci esercizio** (macchina occupata): scegli dalla scheda o scrivine uno nuovo.
+- **Schermo sempre acceso** durante l'allenamento (disattivabile in Impostazioni).
+- A fine sessione: confronto del volume con l'ultima volta dello stesso giorno.
+
+In Home, la card **Questa settimana** mostra sessioni, serie e volume (vs settimana scorsa), le
+**serie per muscolo** rispetto alla fascia obiettivo (impostabile: 6–12, 10–20, 12–24) e lo
+**stato di recupero** di ogni muscolo. Nel dettaglio esercizio c'è la tabella dei **carichi stimati
+per 1–15 ripetizioni**.
+
 ## Come funziona
 
 - **Progressione** (`src/lib/progression.ts`): se in tutte le serie dell'ultima sessione hai

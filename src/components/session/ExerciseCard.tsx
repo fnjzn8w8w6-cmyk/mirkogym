@@ -1,12 +1,13 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, ChevronDown, Clock, Minus, Plus, Target, Trash2 } from 'lucide-react';
+import { ArrowLeftRight, Check, ChevronDown, Clock, Disc3, Flame, Minus, Plus, StickyNote, Target, Trash2 } from 'lucide-react';
 import type { DraftExercise, DraftSet, Exercise, Suggestion } from '@/types';
 import { formatKg, groupColor } from '@/lib/analytics';
-import { parseRirNumbers } from '@/lib/progression';
+import { isCompound, parseRirNumbers, warmupSets } from '@/lib/progression';
+import { parseNum } from '@/hooks/use-active-session';
 import { cn } from '@/lib/cn';
 import { Chip } from '../ui/Chip';
 import { IconButton } from '../ui/Button';
-import { SetRow } from './SetRow';
+import { SET_GRID, SetRow } from './SetRow';
 import { SuggestionBox } from './SuggestionBox';
 
 /** RIR previsto per la serie i: "2/1/1" → per-serie; "1-2, ult. 0-1" → ultima diversa. */
@@ -31,6 +32,15 @@ interface ExerciseCardProps {
   onAddSet: () => void;
   onRemoveSet: () => void;
   onRemoveExercise?: () => void;
+  /** Serie allenanti dell'ultima volta (per la colonna "Prec."). */
+  prevSets: { weight: string; reps: number }[];
+  /** Obiettivo di reps per ciascuna serie allenante. */
+  repTargets: string[];
+  onCycleType: (setIdx: number) => void;
+  onAddWarmups: (sets: { weight: number; reps: number }[]) => void;
+  onPlates: (weight: number | null) => void;
+  onNote: () => void;
+  onSwap: () => void;
 }
 
 export function ExerciseCard({
@@ -46,12 +56,26 @@ export function ExerciseCard({
   onAddSet,
   onRemoveSet,
   onRemoveExercise,
+  prevSets,
+  repTargets,
+  onCycleType,
+  onAddWarmups,
+  onPlates,
+  onNote,
+  onSwap,
 }: ExerciseCardProps) {
   const color = groupColor(draft.group);
   const doneCount = draft.sets.filter((s) => s.done).length;
   const allDone = draft.sets.length > 0 && doneCount === draft.sets.length;
   const weightPh = suggestion.weight != null ? formatKg(suggestion.weight, 2) : 'kg';
   const lastSet = draft.sets[draft.sets.length - 1];
+  // Numerazione delle sole serie allenanti (le W di riscaldamento non contano)
+  const workingIdx: number[] = [];
+  let n = 0;
+  for (const st of draft.sets) workingIdx.push(st.type === 'warmup' ? -1 : n++);
+  const workWeight = parseNum(draft.sets.find((st) => st.type !== 'warmup' && st.weight)?.weight ?? '') ?? suggestion.weight;
+  const hasWarmups = draft.sets.some((st) => st.type === 'warmup');
+  const canWarmup = !hasWarmups && isCompound(exercise) && workWeight != null && workWeight >= 20;
 
   // Riepilogo compatto quando tutte le serie sono completate
   if (allDone && !expanded) {
@@ -110,14 +134,41 @@ export function ExerciseCard({
           {draft.extra && <Chip tone="info">Extra</Chip>}
         </div>
 
-        {exercise.notes && <p className="mt-2 text-sm text-fg-2">{exercise.notes}</p>}
+        {exercise.notes && (
+          <button
+            type="button"
+            onClick={onNote}
+            className="mt-2 flex w-full items-start gap-2 rounded-md bg-surface-2 px-3 py-2 text-left text-sm text-fg-2"
+          >
+            <StickyNote className="mt-0.5 h-4 w-4 shrink-0 text-accent-400" aria-hidden />
+            <span className="whitespace-pre-wrap">{exercise.notes}</span>
+          </button>
+        )}
+
+        <div className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4">
+          {canWarmup && (
+            <ToolBtn icon={<Flame className="h-4 w-4" />} onClick={() => workWeight != null && onAddWarmups(warmupSets(workWeight))}>
+              Riscaldamento
+            </ToolBtn>
+          )}
+          <ToolBtn icon={<Disc3 className="h-4 w-4" />} onClick={() => onPlates(workWeight)}>
+            Dischi
+          </ToolBtn>
+          <ToolBtn icon={<StickyNote className="h-4 w-4" />} onClick={onNote}>
+            {exercise.notes ? 'Nota' : 'Aggiungi nota'}
+          </ToolBtn>
+          <ToolBtn icon={<ArrowLeftRight className="h-4 w-4" />} onClick={onSwap}>
+            Sostituisci
+          </ToolBtn>
+        </div>
 
         <div className="mt-3">
           <SuggestionBox suggestion={suggestion} lastText={lastText} />
         </div>
 
-        <div className="mt-3 grid grid-cols-[36px_1fr_1fr_0.8fr_48px] gap-2 px-1 text-center text-xs uppercase tracking-wide text-fg-3" aria-hidden>
+        <div className={cn(SET_GRID, 'mt-3 px-1 text-center text-xs uppercase tracking-wide text-fg-3')} aria-hidden>
           <span>Set</span>
+          <span>Prec.</span>
           <span>Kg</span>
           <span>Reps</span>
           <span>RIR</span>
@@ -135,11 +186,22 @@ export function ExerciseCard({
               >
                 <SetRow
                   index={i}
+                  workingNumber={workingIdx[i] + 1}
+                  prev={workingIdx[i] >= 0 ? prevSets[workingIdx[i]] : undefined}
+                  onUsePrev={() => {
+                    const p = workingIdx[i] >= 0 ? prevSets[workingIdx[i]] : undefined;
+                    if (p) onSetChange(i, { weight: p.weight, reps: String(p.reps) });
+                  }}
+                  onCycleType={() => onCycleType(i)}
                   set={s}
                   exerciseName={draft.name}
-                  weightPlaceholder={weightPh}
-                  repsPlaceholder={`${exercise.repMin}-${exercise.repMax}`}
-                  rirPlaceholder={rirForSet(exercise.rirTarget, i, draft.sets.length)}
+                  weightPlaceholder={s.type === 'warmup' ? 'kg' : weightPh}
+                  repsPlaceholder={
+                    s.type === 'warmup'
+                      ? ''
+                      : (repTargets[workingIdx[i]] ?? `${exercise.repMin}-${exercise.repMax}`)
+                  }
+                  rirPlaceholder={s.type === 'warmup' ? '' : rirForSet(exercise.rirTarget, Math.max(0, workingIdx[i]), n)}
                   onChange={(patch) => onSetChange(i, patch)}
                   onToggleDone={() => onToggleDone(i)}
                 />
@@ -171,5 +233,18 @@ export function ExerciseCard({
         </div>
       </div>
     </motion.section>
+  );
+}
+
+function ToolBtn({ icon, children, onClick }: { icon: React.ReactNode; children: React.ReactNode; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface-2 px-3 text-sm font-semibold text-fg-2 transition-colors hover:text-fg"
+    >
+      <span aria-hidden>{icon}</span>
+      {children}
+    </button>
   );
 }

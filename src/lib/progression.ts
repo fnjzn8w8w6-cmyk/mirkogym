@@ -11,7 +11,9 @@ export const progressionStep = (exercise: Pick<Exercise, 'name'>): number => (LI
 export const parseRirNumbers = (rirTarget: string): number[] => (rirTarget.match(/\d+/g) ?? []).map(Number);
 
 const validSetsOf = (log: ExerciseLog | undefined): SetLog[] =>
-  (log?.sets ?? []).filter((s) => Number.isFinite(s.weight) && Number.isFinite(s.reps) && s.reps > 0);
+  (log?.sets ?? []).filter(
+    (s) => s.type !== 'warmup' && Number.isFinite(s.weight) && Number.isFinite(s.reps) && s.reps > 0,
+  );
 
 export interface PreviousLog extends ExerciseLog {
   date: number;
@@ -98,8 +100,9 @@ export function calculateSuggestion(
 
 /** "70×8, 70×8, 70×7 · RIR 2, 1, 1" */
 export function describeLog(log: ExerciseLog): string {
-  const sets = log.sets.map((s) => `${formatKg(s.weight, 2)}×${s.reps}`).join(', ');
-  const rirs = log.sets.map((s) => s.rir);
+  const working = log.sets.filter((s) => s.type !== 'warmup');
+  const sets = working.map((s) => `${formatKg(s.weight, 2)}×${s.reps}`).join(', ');
+  const rirs = working.map((s) => s.rir);
   const rirText = rirs.some((r) => r != null) ? ` · RIR ${rirs.map((r) => (r == null ? '–' : r)).join(', ')}` : '';
   return sets + rirText;
 }
@@ -112,3 +115,33 @@ export function parseRestSeconds(rest: string): number {
   const isMin = /min|'/i.test(rest) && !/sec|"/i.test(rest);
   return Math.round(isMin ? avg * 60 : avg);
 }
+
+/**
+ * Obiettivo di ripetizioni per ogni serie (stile Alpha Progression):
+ * - carico aumentato → si riparte dal fondo del range
+ * - stesso carico → +1 rep rispetto alla stessa serie dell'ultima volta (max top range)
+ */
+export function repTargets(exercise: Exercise, lastLog: ExerciseLog | undefined, suggestion: Suggestion, count: number): string[] {
+  const range = `${exercise.repMin}-${exercise.repMax}`;
+  const last = lastLog ? validSetsOf(lastLog) : [];
+  return Array.from({ length: count }, (_, i) => {
+    if (suggestion.type === 'progress' || suggestion.type === 'exercise-deload' || suggestion.type === 'deload') {
+      return String(exercise.repMin);
+    }
+    const prev = last[i] ?? last[last.length - 1];
+    if (suggestion.type === 'maintain' && prev) return String(Math.min(exercise.repMax, Math.max(exercise.repMin, prev.reps + 1)));
+    return range;
+  });
+}
+
+/** Serie di riscaldamento per un carico di lavoro (arrotondate a 2.5 kg). */
+export function warmupSets(workWeight: number): { weight: number; reps: number }[] {
+  const r = (x: number) => Math.max(0, Math.round(x / 2.5) * 2.5);
+  const scheme: [number, number][] =
+    workWeight >= 60 ? [[0.4, 10], [0.6, 5], [0.8, 3]] : workWeight >= 30 ? [[0.5, 8], [0.75, 4]] : [[0.5, 10]];
+  const out = scheme.map(([p, reps]) => ({ weight: r(workWeight * p), reps }));
+  return out.filter((s, i) => s.weight > 0 && s.weight < workWeight && (i === 0 || s.weight !== out[i - 1].weight));
+}
+
+/** Esercizi multiarticolari (per proporre il riscaldamento). */
+export const isCompound = (exercise: Pick<Exercise, 'name'>): boolean => !LIGHT_ISO.test(exercise.name);

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ProgressionChart } from '@/components/charts/ProgressionChart';
 import { VolumeChart } from '@/components/charts/VolumeChart';
-import { computeRecords, epley1RM, exerciseHistory, exerciseKey, formatKg, groupColor } from '@/lib/analytics';
+import { computeRecords, epley1RM, exerciseHistory, exerciseKey, formatKg, groupColor, weightForReps } from '@/lib/analytics';
 import { formatDayMonth, formatShortDate } from '@/lib/date-utils';
 
 export default function HistoryExercise() {
@@ -78,6 +78,23 @@ export default function HistoryExercise() {
           <PRBadge icon={<Repeat className="h-4 w-4" />} label="Reps max" value={`${bestReps.reps}`} sub={`@ ${formatKg(bestReps.weight, 2)}kg`} />
           <PRBadge icon={<Gauge className="h-4 w-4" />} label="1RM max" value={`${records.best1RM}`} sub="kg stimati" />
         </div>
+
+        <Card className="p-4">
+          <h2 className="section-title">Carichi stimati per ripetizioni</h2>
+          <p className="-mt-1 mb-3 text-sm text-fg-3">Dal 1RM stimato di {current1RM} kg (Epley). Utile per scegliere il carico del giorno.</p>
+          <div className="grid grid-cols-4 gap-2 text-center">
+            {[1, 3, 5, 6, 8, 10, 12, 15].map((r) => {
+              const w = Math.round(weightForReps(current1RM, r) / 1.25) * 1.25;
+              return (
+                <div key={r} className="rounded-md bg-surface-2 py-2">
+                  <div className="text-xs uppercase text-fg-3">{r} rep</div>
+                  <div className="text-base font-bold text-fg">{formatKg(w, 2)}</div>
+                  <div className="text-xs text-fg-3">{Math.round((w / current1RM) * 100)}%</div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
 
         {history.length > 1 ? (
           <>

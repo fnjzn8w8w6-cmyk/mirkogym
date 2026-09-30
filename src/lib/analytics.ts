@@ -8,10 +8,14 @@ export const epley1RM = (weight: number, reps: number): number => Math.round(wei
 /** Chiave stabile di un esercizio per lo storico (per nome, così Day diversi si sommano). */
 export const exerciseKey = (name: string): string => name.trim().toLowerCase().replace(/\s+/g, ' ');
 
-export const setVolume = (s: SetLog): number => (s.weight || 0) * (s.reps || 0);
+/** Serie allenanti (esclude il riscaldamento). */
+export const isWorkingSet = (s: { type?: SetLog['type'] }): boolean => s.type !== 'warmup';
+export const workingSets = <T extends { type?: SetLog['type'] }>(sets: T[]): T[] => sets.filter(isWorkingSet);
+
+export const setVolume = (s: SetLog): number => (isWorkingSet(s) ? (s.weight || 0) * (s.reps || 0) : 0);
 export const logVolume = (l: ExerciseLog): number => l.sets.reduce((a, s) => a + setVolume(s), 0);
 export const sessionTonnage = (s: Session): number => s.logs.reduce((a, l) => a + logVolume(l), 0);
-export const sessionSetCount = (s: Session): number => s.logs.reduce((a, l) => a + l.sets.length, 0);
+export const sessionSetCount = (s: Session): number => s.logs.reduce((a, l) => a + workingSets(l.sets).length, 0);
 
 export function formatKg(n: number, digits = 1): string {
   const v = Math.round(n * 10 ** digits) / 10 ** digits;
@@ -27,7 +31,7 @@ export function formatTonnage(kg: number): string {
 /** Top set = peso più alto (a parità, più reps). */
 export function topSet(sets: SetLog[]): SetLog | null {
   let best: SetLog | null = null;
-  for (const s of sets) {
+  for (const s of workingSets(sets)) {
     if (!best || s.weight > best.weight || (s.weight === best.weight && s.reps > best.reps)) best = s;
   }
   return best;
@@ -48,7 +52,8 @@ export function exerciseHistory(sessions: Session[], key: string, nameOf: (l: Ex
   const out: ExerciseHistoryEntry[] = [];
   for (const s of [...sessions].sort((a, b) => a.date - b.date)) {
     for (const l of s.logs) {
-      if (exerciseKey(nameOf(l)) !== key || l.sets.length === 0) continue;
+      const ws = workingSets(l.sets);
+      if (exerciseKey(nameOf(l)) !== key || ws.length === 0) continue;
       out.push({
         sessionId: s.id,
         date: s.date,
@@ -56,7 +61,7 @@ export function exerciseHistory(sessions: Session[], key: string, nameOf: (l: Ex
         sets: l.sets,
         top: topSet(l.sets),
         volume: logVolume(l),
-        best1RM: Math.max(...l.sets.map((x) => epley1RM(x.weight, x.reps))),
+        best1RM: Math.max(...ws.map((x) => epley1RM(x.weight, x.reps))),
       });
     }
   }
@@ -74,7 +79,7 @@ export function computeRecords(sets: SetLog[]): ExerciseRecords {
   const repsAtWeight = new Map<number, number>();
   let maxWeight = 0;
   let best1RM = 0;
-  for (const s of sets) {
+  for (const s of workingSets(sets)) {
     if (!(s.weight > 0) || !(s.reps > 0)) continue;
     maxWeight = Math.max(maxWeight, s.weight);
     best1RM = Math.max(best1RM, epley1RM(s.weight, s.reps));
@@ -88,7 +93,7 @@ export function computeRecords(sets: SetLog[]): ExerciseRecords {
  * Senza storico non si considera PR (la prima volta non è un record).
  */
 export function detectPR(previous: SetLog[], set: { weight: number; reps: number }): PRFlags {
-  const valid = previous.filter((s) => s.weight > 0 && s.reps > 0);
+  const valid = workingSets(previous).filter((s) => s.weight > 0 && s.reps > 0);
   if (valid.length === 0 || !(set.weight > 0) || !(set.reps > 0)) {
     return { weightPR: false, repsPR: false, estimated1RMPR: false };
   }
@@ -243,3 +248,69 @@ const GROUP_COLORS: Record<string, string> = {
 };
 
 export const groupColor = (group: string): string => GROUP_COLORS[group.trim().toLowerCase()] ?? '#A8A8AD';
+
+/* ---------- Muscoli: serie settimanali e recupero ---------- */
+
+export interface MuscleStatus {
+  group: string;
+  /** Serie allenanti nella settimana corrente (lun–dom). */
+  weekSets: number;
+  lastTrained: number | null;
+  /** 0..1 — stima del recupero (1 = pronto). */
+  recovery: number;
+  hoursSince: number | null;
+}
+
+/**
+ * Stato per gruppo muscolare. Recupero stimato (stile Fitbod): servono ~48h dopo una seduta
+ * normale, fino a ~96h se il volume della seduta è alto.
+ */
+export function muscleStatus(sessions: Session[], groupOf: (l: ExerciseLog) => string, groups: string[]): MuscleStatus[] {
+  const now = Date.now();
+  const wStart = weekStart(new Date()).getTime();
+  const map = new Map<string, MuscleStatus & { lastSets: number }>();
+  for (const g of groups) map.set(g, { group: g, weekSets: 0, lastTrained: null, recovery: 1, hoursSince: null, lastSets: 0 });
+  for (const s of [...sessions].sort((a, b) => a.date - b.date)) {
+    const perGroup = new Map<string, number>();
+    for (const l of s.logs) {
+      const g = groupOf(l);
+      perGroup.set(g, (perGroup.get(g) ?? 0) + workingSets(l.sets).length);
+    }
+    for (const [g, n] of perGroup) {
+      if (n === 0) continue;
+      const m = map.get(g) ?? { group: g, weekSets: 0, lastTrained: null, recovery: 1, hoursSince: null, lastSets: 0 };
+      if (s.date >= wStart) m.weekSets += n;
+      m.lastTrained = s.date;
+      m.lastSets = n;
+      map.set(g, m);
+    }
+  }
+  return [...map.values()].map(({ lastSets, ...m }) => {
+    if (m.lastTrained == null) return m;
+    const hours = (now - m.lastTrained) / 3600000;
+    const needed = Math.min(96, 48 + Math.max(0, lastSets - 6) * 6);
+    return { ...m, hoursSince: hours, recovery: Math.min(1, Math.max(0, hours / needed)) };
+  });
+}
+
+/** Riepilogo della settimana corrente vs precedente. */
+export function weekSummary(sessions: Session[]) {
+  const thisStart = weekStart(new Date()).getTime();
+  const prevStart = weekStart(subDays(new Date(thisStart), 1)).getTime();
+  const cur = sessions.filter((s) => s.date >= thisStart);
+  const prev = sessions.filter((s) => s.date >= prevStart && s.date < thisStart);
+  const vol = (list: Session[]) => list.reduce((a, s) => a + sessionTonnage(s), 0);
+  const sets = (list: Session[]) => list.reduce((a, s) => a + sessionSetCount(s), 0);
+  return {
+    sessions: cur.length,
+    sets: sets(cur),
+    volume: vol(cur),
+    prevVolume: vol(prev),
+    prevSessions: prev.length,
+  };
+}
+
+/** Ripetizioni massime stimate a un dato carico (Epley inverso). */
+export const repsAtWeight = (oneRM: number, weight: number): number => Math.max(0, Math.floor(30 * (oneRM / weight - 1)));
+/** Carico stimato per N ripetizioni massimali (Epley inverso). */
+export const weightForReps = (oneRM: number, reps: number): number => (reps <= 1 ? oneRM : oneRM / (1 + reps / 30));

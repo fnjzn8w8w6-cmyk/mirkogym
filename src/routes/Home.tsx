@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronRight, Dumbbell, Pencil, Play, ShieldAlert, Timer } from 'lucide-react';
 import { useData } from '@/hooks/data-context';
+import { WeekCard } from '@/components/home/MuscleCard';
 import { TrendLine } from '@/components/ui/Trend';
 import { useSchedule } from '@/hooks/use-schedule';
 import { useSessions } from '@/hooks/use-sessions';
@@ -219,6 +220,8 @@ export default function Home() {
             ))}
           </div>
         </Card>
+
+        {sessions.length > 0 && <WeekCard />}
 
         {/* Peso corporeo */}
         {showBody && latestBody?.weight != null && (

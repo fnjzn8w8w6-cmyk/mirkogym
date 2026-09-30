@@ -1,11 +1,24 @@
 import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy } from 'lucide-react';
-import type { DraftSet } from '@/types';
+import type { DraftSet, SetType } from '@/types';
 import { cn } from '@/lib/cn';
+
+export const SET_GRID = 'grid grid-cols-[34px_42px_1fr_1fr_44px_46px] items-center gap-1.5';
+
+const TYPE_STYLE: Record<Exclude<SetType, 'normal'>, { label: string; cls: string; name: string }> = {
+  warmup: { label: 'W', cls: 'bg-warning-bg text-warning', name: 'riscaldamento' },
+  drop: { label: 'D', cls: 'bg-info-bg text-info', name: 'drop set' },
+  failure: { label: 'F', cls: 'bg-danger-bg text-danger', name: 'a cedimento' },
+};
 
 interface SetRowProps {
   index: number;
+  /** Numero mostrato per le serie allenanti (le serie W non vengono numerate). */
+  workingNumber: number;
+  prev?: { weight: string; reps: number };
+  onUsePrev?: () => void;
+  onCycleType: () => void;
   set: DraftSet;
   weightPlaceholder: string;
   repsPlaceholder: string;
@@ -19,6 +32,10 @@ interface SetRowProps {
 /** Riga serie: peso → reps → ✓ (3 tap). Il peso vuoto usa il suggerimento. */
 export function SetRow({
   index,
+  workingNumber,
+  prev,
+  onUsePrev,
+  onCycleType,
   set,
   weightPlaceholder,
   repsPlaceholder,
@@ -44,25 +61,45 @@ export function SetRow({
       : 'border-line bg-surface-2 text-fg focus:border-accent-500 focus:bg-surface-3',
   );
   const label = `${exerciseName}, serie ${index + 1}`;
+  const typeStyle = set.type && set.type !== 'normal' ? TYPE_STYLE[set.type] : null;
 
   return (
     <motion.div
       key={shake}
       animate={shake ? { x: [0, -6, 6, -4, 4, 0] } : undefined}
       transition={{ duration: 0.3 }}
-      className={cn('grid grid-cols-[36px_1fr_1fr_0.8fr_48px] items-center gap-2 rounded-md px-1 py-1', set.done && 'bg-success/5')}
+      className={cn(SET_GRID, 'rounded-md px-1 py-1', set.done && 'bg-success/5')}
     >
-      <span
+      <button
+        type="button"
+        onClick={onCycleType}
+        aria-label={`${label}: tipo ${typeStyle?.name ?? 'normale'} (tocca per cambiare)`}
         className={cn(
           'relative flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold',
-          set.done ? 'bg-success/20 text-success' : 'bg-surface-3 text-fg-2',
+          typeStyle ? typeStyle.cls : set.done ? 'bg-success/20 text-success' : 'bg-surface-3 text-fg-2',
         )}
       >
-        {index + 1}
+        {typeStyle?.label ?? workingNumber}
         {set.isPersonalRecord && (
           <Trophy className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-base p-0.5 text-warning" aria-label="Record personale" />
         )}
-      </span>
+      </button>
+      <button
+        type="button"
+        onClick={onUsePrev}
+        disabled={!prev}
+        aria-label={prev ? `${label}: usa la volta precedente ${prev.weight}×${prev.reps}` : `${label}: nessun dato precedente`}
+        className="flex h-12 flex-col items-center justify-center rounded-md text-xs leading-tight text-fg-3 enabled:hover:bg-surface-2"
+      >
+        {prev ? (
+          <>
+            <span className="font-semibold text-fg-2">{prev.weight}</span>
+            <span>×{prev.reps}</span>
+          </>
+        ) : (
+          '—'
+        )}
+      </button>
       <input
         aria-label={`${label}: peso kg`}
         inputMode="decimal"

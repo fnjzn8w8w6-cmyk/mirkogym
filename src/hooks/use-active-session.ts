@@ -152,6 +152,25 @@ export function useSessionDraft(initial: ActiveSession) {
 
   const setNotes = (notes: string) => commit((d) => ({ ...d, notes }));
 
+  /** Inserisce serie di riscaldamento (tipo W) in testa all'esercizio. */
+  const insertWarmups = (exIdx: number, sets: { weight: number; reps: number }[]) =>
+    mapExercise(exIdx, (e) => ({
+      ...e,
+      sets: [
+        ...sets.map((w): DraftSet => ({ ...emptySet(), type: 'warmup', weight: String(w.weight).replace('.', ','), reps: String(w.reps) })),
+        ...e.sets,
+      ],
+    }));
+
+  /** Sostituisce l'esercizio (es. macchina occupata) mantenendo le serie già impostate. */
+  const replaceExercise = (exIdx: number, next: { exerciseId: string; name: string; group: string; extra?: boolean }) =>
+    mapExercise(exIdx, (e) => ({
+      ...e,
+      ...next,
+      extra: next.extra,
+      sets: e.sets.map((st) => (st.done ? st : { ...st, weight: '', isPersonalRecord: false })),
+    }));
+
   /** Salva la sessione definitiva (solo serie completate) e chiude la bozza. */
   const finish = useCallback(async (): Promise<Session | null> => {
     if (!uid) return null;
@@ -170,7 +189,13 @@ export function useSessionDraft(initial: ActiveSession) {
             const reps = parseNum(s.reps);
             if (weight == null || reps == null) return null;
             const rir = parseNum(s.rir);
-            return { weight, reps, rir: rir ?? undefined, isPersonalRecord: s.isPersonalRecord || undefined };
+            return {
+              type: s.type && s.type !== 'normal' ? s.type : undefined,
+              weight,
+              reps,
+              rir: rir ?? undefined,
+              isPersonalRecord: s.isPersonalRecord || undefined,
+            };
           })
           .filter((s): s is SetLog => s !== null),
       }))
@@ -191,7 +216,19 @@ export function useSessionDraft(initial: ActiveSession) {
     return session;
   }, [uid, draft, bodyLogs]);
 
-  return { draft, updateSet, addSet, removeSet, addExercise, removeExercise, setNotes, finish, cancelSync };
+  return {
+    draft,
+    updateSet,
+    addSet,
+    removeSet,
+    addExercise,
+    removeExercise,
+    setNotes,
+    insertWarmups,
+    replaceExercise,
+    finish,
+    cancelSync,
+  };
 }
 
 export const clearLocalActiveSession = () => writeLocal(null);

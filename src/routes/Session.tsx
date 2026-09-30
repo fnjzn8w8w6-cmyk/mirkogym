@@ -18,7 +18,10 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { OfflineBadge } from '@/components/layout/TopBar';
 import { ExerciseCard } from '@/components/session/ExerciseCard';
 import { Confetti } from '@/components/celebration/Confetti';
-import { calculateSuggestion, describeLog, parseRestSeconds, previousLogsFor } from '@/lib/progression';
+import { calculateSuggestion, describeLog, parseRestSeconds, previousLogsFor, repTargets } from '@/lib/progression';
+import { useWakeLock } from '@/hooks/use-wake-lock';
+import { ExerciseNoteModal, PlateCalculatorModal, SwapExerciseModal } from '@/components/modals/SessionTools';
+import type { SetType } from '@/types';
 import { detectPR, exerciseKey, formatKg, formatTonnage, isAnyPR, sessionTonnage } from '@/lib/analytics';
 import { formatClock, formatDuration } from '@/lib/date-utils';
 import { haptics, unlockAudio } from '@/lib/haptics';
@@ -85,12 +88,23 @@ function SessionView({ initial }: { initial: ActiveSession }) {
   const navigate = useNavigate();
   const toast = useToast();
   const timer = useRestTimer();
-  const { getDay, exerciseIndex } = useSchedule();
+  const { getDay, exerciseIndex, days, save: saveSchedule } = useSchedule();
   const { sessions } = useSessions();
   const { settings } = useSettings();
   const { discard } = useActiveSession();
-  const { draft, updateSet, addSet, removeSet, addExercise, removeExercise, setNotes, finish, cancelSync } =
-    useSessionDraft(initial);
+  const {
+    draft,
+    updateSet,
+    addSet,
+    removeSet,
+    addExercise,
+    removeExercise,
+    setNotes,
+    insertWarmups,
+    replaceExercise,
+    finish,
+    cancelSync,
+  } = useSessionDraft(initial);
 
   const day = getDay(draft.dayId);
   const [now, setNow] = useState(Date.now());
@@ -101,6 +115,11 @@ function SessionView({ initial }: { initial: ActiveSession }) {
   const [confirmFinish, setConfirmFinish] = useState<string | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [result, setResult] = useState<SessionT | null>(null);
+  const [plates, setPlates] = useState<{ weight: number | null } | null>(null);
+  const [noteFor, setNoteFor] = useState<number | null>(null);
+  const [swapFor, setSwapFor] = useState<number | null>(null);
+
+  useWakeLock(settings.keepScreenOn && !result);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000);
@@ -123,9 +142,13 @@ function SessionView({ initial }: { initial: ActiveSession }) {
       exercises.map((ex) => {
         const prev = previousLogsFor(ex, sessions);
         const last = prev[prev.length - 1];
+        const suggestion = calculateSuggestion(ex, prev, draft.deload, settings.deloadPercentage);
+        const lastWorking = (last?.sets ?? []).filter((x) => x.type !== 'warmup');
         return {
-          suggestion: calculateSuggestion(ex, prev, draft.deload, settings.deloadPercentage),
+          suggestion,
           lastText: last ? describeLog(last) : undefined,
+          prevSets: lastWorking.map((x) => ({ weight: formatKg(x.weight, 2), reps: x.reps })),
+          repTargets: repTargets(ex, last, suggestion, Math.max(ex.sets, 10)),
         };
       }),
     [exercises, sessions, draft.deload, settings.deloadPercentage],
@@ -155,8 +178,9 @@ function SessionView({ initial }: { initial: ActiveSession }) {
       updateSet(exIdx, setIdx, { done: false, isPersonalRecord: false });
       return true;
     }
+    const isWarmup = set.type === 'warmup';
     const sugg = suggestions[exIdx]?.suggestion;
-    const weightStr = set.weight || (sugg?.weight != null ? String(sugg.weight).replace('.', ',') : '');
+    const weightStr = set.weight || (!isWarmup && sugg?.weight != null ? String(sugg.weight).replace('.', ',') : '');
     const weight = parseNum(weightStr);
     const reps = parseNum(set.reps);
     if (weight == null || reps == null || reps <= 0 || weight < 0) {
@@ -164,12 +188,17 @@ function SessionView({ initial }: { initial: ActiveSession }) {
       return false;
     }
     unlockAudio();
+    if (isWarmup) {
+      updateSet(exIdx, setIdx, { done: true, weight: weightStr, isPersonalRecord: false });
+      haptics.setDone();
+      return true;
+    }
 
     // PR: storico + serie già completate in questa sessione per lo stesso esercizio
     const key = exerciseKey(ex.name);
     const sessionPrev: SetLog[] = draft.exercises
       .filter((e) => exerciseKey(e.name) === key)
-      .flatMap((e) => e.sets.filter((s) => s.done).map((s) => ({ weight: parseNum(s.weight) ?? 0, reps: parseNum(s.reps) ?? 0 })));
+      .flatMap((e) => e.sets.filter((s) => s.done && s.type !== 'warmup').map((s) => ({ weight: parseNum(s.weight) ?? 0, reps: parseNum(s.reps) ?? 0 })));
     // Senza storico precedente la prima volta non è un record (nemmeno rispetto alle serie di oggi)
     const history = historyByKey.get(key) ?? [];
     const flags = history.length ? detectPR([...history, ...sessionPrev], { weight, reps }) : detectPR([], { weight, reps });
@@ -179,7 +208,7 @@ function SessionView({ initial }: { initial: ActiveSession }) {
     updateSet(exIdx, setIdx, patch);
     // Precompila il peso della serie successiva
     const nextSet = ex.sets[setIdx + 1];
-    if (nextSet && !nextSet.done && nextSet.weight === '') updateSet(exIdx, setIdx + 1, { weight: weightStr });
+    if (nextSet && !nextSet.done && nextSet.type !== 'warmup' && nextSet.weight === '') updateSet(exIdx, setIdx + 1, { weight: weightStr });
 
     if (isPR) {
       haptics.pr();
@@ -228,6 +257,12 @@ function SessionView({ initial }: { initial: ActiveSession }) {
   };
 
   const prCount = result ? result.logs.reduce((a, l) => a + l.sets.filter((s) => s.isPersonalRecord).length, 0) : 0;
+  // Confronto con l'ultima sessione dello stesso giorno (sessions è ordinato dal più recente)
+  const prevSameDay = result ? sessions.find((s) => s.dayId === result.dayId && s.id !== result.id) : undefined;
+  const volumeDelta =
+    result && prevSameDay && sessionTonnage(prevSameDay) > 0
+      ? Math.round(((sessionTonnage(result) - sessionTonnage(prevSameDay)) / sessionTonnage(prevSameDay)) * 100)
+      : null;
 
   return (
     <div>
@@ -282,6 +317,22 @@ function SessionView({ initial }: { initial: ActiveSession }) {
             onAddSet={() => addSet(i)}
             onRemoveSet={() => removeSet(i, ex.sets.length - 1)}
             onRemoveExercise={ex.extra ? () => removeExercise(i) : undefined}
+            prevSets={suggestions[i].prevSets}
+            repTargets={suggestions[i].repTargets}
+            onCycleType={(j) => {
+              const order: SetType[] = ['normal', 'warmup', 'drop', 'failure'];
+              const cur = ex.sets[j].type ?? 'normal';
+              const next = order[(order.indexOf(cur) + 1) % order.length];
+              updateSet(i, j, { type: next === 'normal' ? undefined : next, isPersonalRecord: false });
+              haptics.tap();
+            }}
+            onAddWarmups={(w) => {
+              insertWarmups(i, w);
+              toast.info(`${w.length} serie di riscaldamento aggiunte`);
+            }}
+            onPlates={(w) => setPlates({ weight: w })}
+            onNote={() => setNoteFor(i)}
+            onSwap={() => setSwapFor(i)}
           />
         ))}
 
@@ -366,6 +417,41 @@ function SessionView({ initial }: { initial: ActiveSession }) {
         }}
       />
 
+      <PlateCalculatorModal open={Boolean(plates)} initial={plates?.weight ?? null} onClose={() => setPlates(null)} />
+      <ExerciseNoteModal
+        open={noteFor != null}
+        name={noteFor != null ? draft.exercises[noteFor]?.name ?? '' : ''}
+        initial={noteFor != null ? exercises[noteFor]?.notes ?? '' : ''}
+        onClose={() => setNoteFor(null)}
+        onSave={(note) => {
+          const target = noteFor != null ? draft.exercises[noteFor] : undefined;
+          setNoteFor(null);
+          if (!target || !exerciseIndex.has(target.exerciseId)) {
+            toast.info('Le note si salvano solo sugli esercizi della scheda');
+            return;
+          }
+          // Nota fissa: salvata sulla scheda, visibile in tutte le sessioni future
+          const next = days.map((d) => ({
+            ...d,
+            exercises: d.exercises.map((e) => (e.id === target.exerciseId ? { ...e, notes: note || undefined } : e)),
+          }));
+          void saveSchedule(next);
+          toast.success('Nota salvata');
+        }}
+      />
+      <SwapExerciseModal
+        open={swapFor != null}
+        days={days}
+        current={swapFor != null ? draft.exercises[swapFor] ?? null : null}
+        onClose={() => setSwapFor(null)}
+        onPick={(c) => {
+          if (swapFor == null) return;
+          replaceExercise(swapFor, c);
+          setSwapFor(null);
+          toast.success(`Sostituito con ${c.name}`);
+        }}
+      />
+
       {/* Celebrazione */}
       {result && <Confetti />}
       <Modal open={Boolean(result)} onClose={() => navigate('/')} variant="center" dismissible={false}>
@@ -383,6 +469,12 @@ function SessionView({ initial }: { initial: ActiveSession }) {
               <Stat icon={<Dumbbell className="h-4 w-4" />} label="Volume" value={formatTonnage(sessionTonnage(result))} />
               <Stat icon={<Trophy className="h-4 w-4" />} label="PR" value={String(prCount)} highlight={prCount > 0} />
             </div>
+            {volumeDelta != null && (
+              <p className={`mt-4 text-base font-semibold ${volumeDelta >= 0 ? 'text-success' : 'text-fg-2'}`}>
+                Volume {volumeDelta >= 0 ? '+' : ''}
+                {volumeDelta}% rispetto all'ultimo {day?.name}
+              </p>
+            )}
             {prCount > 0 && (
               <p className="mt-4 text-base font-semibold text-warning">
                 Hai stabilito {prCount} {prCount === 1 ? 'nuovo PR' : 'nuovi PR'}! 🔥
