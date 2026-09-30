@@ -51,10 +51,11 @@ function MealCard({ meal, byId, onOpen, onSwap }: { meal: PlannedMeal; byId: Map
   return (
     <Card className="overflow-hidden">
       <button type="button" onClick={onOpen} className="flex w-full gap-3 p-3 text-left" aria-label={`${SLOT_LABEL[meal.slot]}: ${info.name}`}>
-        <RecipeImage recipe={info.recipe} emoji={info.simple?.emoji} className="h-20 w-20 shrink-0 rounded-md" />
+        <RecipeImage recipe={info.recipe} emoji={meal.kind === 'custom' ? '🍕' : info.simple?.emoji} className="h-20 w-20 shrink-0 rounded-md" />
         <span className="min-w-0 flex-1">
           <span className="block text-xs font-semibold uppercase tracking-wide text-accent-400">{SLOT_LABEL[meal.slot]}</span>
           <span className="line-clamp-2 block text-base font-semibold leading-snug text-fg">{info.name}</span>
+          {meal.kind === 'custom' && <span className="block text-xs text-fg-3">Pasto libero · valori stimati</span>}
           {meal.kind === 'recipe' && (
             <span className="block text-xs text-fg-3">
               {String(meal.servings).replace('.', ',')} {meal.servings === 1 ? 'porzione' : 'porzioni'}

@@ -67,6 +67,7 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
     for (const m of planDay) {
       const meal = SLOT_TO_MEAL[m.slot];
       const info = mealInfo(m, byId);
+      if (m.kind === 'custom' && m.fixed) out.push({ id: uid(), meal, name: info.name, unit: 'porzione', qty: 1, per: m.fixed, createdAt: now });
       if (m.kind === 'recipe' && info.recipe?.k) {
         const k = info.recipe.k;
         out.push({ id: uid(), meal, name: info.recipe.t, unit: 'porzione', qty: m.servings, per: { kcal: k[0], protein: k[1], carbs: k[2], fat: k[3] }, recipeId: info.recipe.id, createdAt: now });

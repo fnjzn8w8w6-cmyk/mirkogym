@@ -139,17 +139,20 @@ serie, ripetizioni, carichi, aggiustamenti) con formule verificate; **Gemini** (
 gratuito) interpreta il linguaggio naturale e scrive i commenti. Ogni risposta dell'AI è validata
 e, se l'AI non risponde, l'app continua a funzionare con le regole.
 
-- **Allenamento**: scrivi cosa vuoi ("spalle più larghe, male al ginocchio, max 50 minuti").
-  L'AI lo traduce in priorità muscolari, movimenti da evitare, tempo massimo; il generatore aggiunge
-  volume ai muscoli prioritari, sostituisce i movimenti a rischio con alternative compatibili con la tua
-  attrezzatura e riduce la seduta finché rientra nel tempo. Vedi l'anteprima prima di applicarla.
-  Disponibile anche nel questionario iniziale ("Raccontalo al coach").
-- **Dieta**: scrivi come vuoi cambiare l'alimentazione ("voglio dimagrire più in fretta, sono intollerante
-  al lattosio, ho poco tempo, adoro il salmone"). L'AI la traduce in modifiche validate: dieta, numero di
+- **Allenamento**: scrivi cosa vuoi ("togli l'hack squat, mi fa male il ginocchio", "max 50 minuti").
+  Il coach vede la tua scheda attuale e fa **modifiche mirate**: sostituisce, toglie o aggiunge esercizi,
+  cambia le serie o accorcia le sedute troppo lunghe; il resto resta invariato. Le sostituzioni evitano i
+  movimenti a rischio (es. ginocchio → niente squat/affondi). L'anteprima mostra ogni modifica
+  (vecchio → nuovo); una scheda nuova da zero solo se la chiedi. Dolori ed esercizi da evitare restano
+  memorizzati per le schede future.
+- **Dieta**: scrivi cosa vuoi. Per un pasto preciso ("domani a cena mangio una pizza", "giovedì a pranzo
+  qualcosa col pollo") cambia solo quel pasto (pasto libero con valori stimati, oppure una ricetta adatta)
+  e ricalcola gli altri pasti di quel giorno; il resto della settimana non cambia. Per le preferenze
+  permanenti ("sono intollerante al lattosio, ho poco tempo, adoro il salmone") L'AI la traduce in modifiche validate: dieta, numero di
   pasti, allergie, cibi graditi/sgraditi, tempo per cucinare, stile dei macro (bilanciata, più proteine,
   pochi carboidrati, più carboidrati) e correzione calorica (massimo ±400 kcal per volta, ±600 in totale,
-  mai sotto il minimo di sicurezza). Vedi obiettivi prima/dopo e un'anteprima del nuovo piano settimanale
-  prima di applicare.
+  mai sotto il minimo di sicurezza); nel piano cambiano solo i pasti che non rispettano più le preferenze.
+  L'anteprima mostra i pasti realmente cambiati prima di applicare.
 - **Chiedi al coach**: chat con il coach, che conosce profilo, obiettivi e ultimi allenamenti.
 
 ## Dieta: diario, piano settimanale e ricette

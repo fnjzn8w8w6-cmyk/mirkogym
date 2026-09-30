@@ -17,7 +17,8 @@ import { AIBusy, AINote, useAITask } from '@/components/coach/AIBusy';
 import { settle } from '@/lib/firestore';
 import type { UserProfile } from '@/lib/metabolism';
 import { generateProgram, sessionMinutes, SLOT_LABEL, type CoachPrefs } from '@/lib/program-generator';
-import { askCoach, coachContext, interpretTrainingRequest, userNutrition, type ChatMessage } from '@/lib/coach';
+import { askCoach, coachContext, userNutrition, type ChatMessage } from '@/lib/coach';
+import { applyTrainingChange, interpretTrainingChange, type TrainingDiff } from '@/lib/training-edits';
 import { useEffectiveProfile } from '@/hooks/use-effective-profile';
 import { DietCoach } from '@/components/coach/DietCoach';
 import { groupColor } from '@/lib/analytics';
@@ -88,6 +89,7 @@ const TRAIN_EXAMPLES = [
   'Voglio spalle più larghe e braccia più grosse',
   'Ho male al ginocchio destro, niente squat',
   'Ho al massimo 45 minuti a seduta',
+  'Togli l’hack squat, mi fa male il ginocchio',
   'Voglio migliorare i glutei e il core',
 ];
 
@@ -144,18 +146,25 @@ function ProgramPreview({ days }: { days: Day[] }) {
 
 function TrainingCoach({ profile }: { profile: UserProfile }) {
   const { settings, update } = useSettings();
-  const { save } = useSchedule();
+  const { save, days: currentDays } = useSchedule();
   const toast = useToast();
   const ai = useAITask();
   const [request, setRequest] = useState('');
-  const [proposal, setProposal] = useState<{ prefs: CoachPrefs; days: Day[] } | null>(null);
+  const [proposal, setProposal] = useState<{ prefs: CoachPrefs; days: Day[]; diff: TrainingDiff[]; rebuild: boolean } | null>(null);
   const current = settings.coachPrefs;
 
   const submit = async () => {
     const text = request.trim();
     if (text.length < 5) return;
-    const prefs = await ai.run((o) => interpretTrainingRequest(text, profile, o));
-    if (prefs) setProposal({ prefs, days: generateProgram(profile, prefs) });
+    const change = await ai.run((o) => interpretTrainingChange(text, profile, currentDays, current, o));
+    if (!change) return;
+    if (change.scope === 'rebuild' || currentDays.length === 0) {
+      setProposal({ prefs: change.prefs, days: generateProgram(profile, change.prefs), diff: [], rebuild: true });
+      return;
+    }
+    // Modifiche mirate: il resto della scheda resta com'è
+    const res = applyTrainingChange(currentDays, change, profile);
+    setProposal({ prefs: change.prefs, days: res.days, diff: res.diff, rebuild: false });
   };
 
   const apply = async (prefs: CoachPrefs | null, days: Day[]) => {
@@ -245,11 +254,57 @@ function TrainingCoach({ profile }: { profile: UserProfile }) {
                 diagnosi.
               </p>
             )}
-            <ProgramPreview days={proposal.days} />
-            <p className="text-xs text-fg-3">La scheda attuale verrà sostituita; lo storico degli allenamenti resta.</p>
+            {proposal.rebuild ? (
+              <>
+                <ProgramPreview days={proposal.days} />
+                <p className="text-xs text-fg-3">La scheda attuale verrà sostituita con una nuova; lo storico degli allenamenti resta.</p>
+              </>
+            ) : proposal.diff.length === 0 ? (
+              <p className="text-sm text-fg-2">Nessuna modifica necessaria alla scheda: salvo solo le tue preferenze per le prossime schede.</p>
+            ) : (
+              <div>
+                <div className="section-title">Modifiche alla tua scheda</div>
+                <ul className="space-y-2">
+                  {proposal.diff.map((d, i) => (
+                    <li key={i} className="rounded-md bg-surface-2 p-2.5 text-sm">
+                      <div className="text-xs uppercase text-fg-3">{d.day}</div>
+                      <div className="text-base text-fg">
+                        {d.kind === 'replace' && (
+                          <>
+                            <span className="text-fg-3 line-through">{d.before}</span> → <strong>{d.after}</strong>
+                          </>
+                        )}
+                        {d.kind === 'remove' && (
+                          <>
+                            Tolto: <span className="line-through">{d.before}</span>
+                          </>
+                        )}
+                        {d.kind === 'add' && <>Aggiunto: <strong>{d.after}</strong></>}
+                        {(d.kind === 'sets' || d.kind === 'time') && (
+                          <>
+                            {d.before} → <strong>{d.after}</strong>
+                          </>
+                        )}
+                      </div>
+                      {d.reason && <div className="text-xs text-fg-3">{d.reason}</div>}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-xs text-fg-3">Tutto il resto della scheda resta invariato. Serie, ripetizioni e recuperi vengono mantenuti.</p>
+              </div>
+            )}
             <Button size="lg" fullWidth onClick={() => void apply(proposal.prefs, proposal.days)}>
-              Applica questa scheda
+              {proposal.rebuild ? 'Applica la nuova scheda' : 'Applica le modifiche'}
             </Button>
+            {!proposal.rebuild && (
+              <Button
+                variant="ghost"
+                fullWidth
+                onClick={() => setProposal({ ...proposal, days: generateProgram(profile, proposal.prefs), diff: [], rebuild: true })}
+              >
+                Preferisco una scheda nuova da zero
+              </Button>
+            )}
           </div>
         )}
       </Modal>

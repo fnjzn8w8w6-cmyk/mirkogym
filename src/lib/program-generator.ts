@@ -100,7 +100,7 @@ const SUBSTITUTES: Partial<Record<SlotId, string[]>> = {
 };
 
 /** L'esercizio è eseguibile con l'attrezzatura dell'utente? */
-function availableFor(id: string, equipment: Equipment): boolean {
+export function availableFor(id: string, equipment: Equipment): boolean {
   if (equipment === 'gym') return true;
   const bw = /Pushups|Push-Up|Plank|Bodyweight|Single_Leg|Superman|Bench_Dips|Crunch|Inverted|Pullups|Chin-Up|Handstand/;
   return equipment === 'bodyweight' ? bw.test(id) : bw.test(id) || /Dumbbell|Goblet|Step_Ups|Lunges|Split_Squat/.test(id);
@@ -310,3 +310,41 @@ function fitToTime(day: Day, maxMinutes: number, priorities: Set<PriorityKey>): 
 /** Fascia di serie settimanali per muscolo consigliata per livello. */
 export const weeklySetsFor = (exp: Experience): { min: number; max: number } =>
   exp === 'beginner' ? { min: 6, max: 12 } : exp === 'intermediate' ? { min: 10, max: 20 } : { min: 12, max: 24 };
+
+/** Movimento (slot) a cui appartiene un esercizio della libreria, se noto. */
+export function slotOfExercise(libraryId: string): SlotId | null {
+  for (const id of SLOT_IDS) {
+    const s = SLOTS[id];
+    if ([...s.gym, s.dumbbells, s.bodyweight].includes(libraryId)) return id;
+  }
+  for (const id of SLOT_IDS) if (SUBSTITUTES[id]?.includes(libraryId)) return id;
+  return null;
+}
+
+/** Gruppo muscolare di uno slot. */
+export const slotGroup = (slot: SlotId): string => SLOTS[slot].group;
+export const slotCompound = (slot: SlotId): boolean => SLOTS[slot].compound;
+
+/**
+ * Alternative per sostituire un esercizio (stesso movimento o movimenti sicuri), escludendo quelli da
+ * evitare, quelli già presenti nel giorno e quelli non eseguibili con l'attrezzatura.
+ */
+export function alternativesFor(libraryId: string, opts: { avoidSlots: SlotId[]; avoidIds: string[]; used: string[]; equipment: Equipment }): string[] {
+  const slot = slotOfExercise(libraryId);
+  const avoided = new Set(opts.avoidSlots);
+  const pool: string[] = [];
+  if (slot) {
+    if (!avoided.has(slot)) pool.push(...SLOTS[slot].gym, SLOTS[slot].dumbbells ?? '', SLOTS[slot].bodyweight ?? '');
+    pool.push(...(SUBSTITUTES[slot] ?? []));
+  }
+  // un candidato non deve appartenere a un movimento da evitare (es. ginocchio → niente squat/affondi)
+  const bad = (id: string) => {
+    const s = slotOfExercise(id);
+    return s != null && avoided.has(s);
+  };
+  return [...new Set(pool)].filter(
+    (id) => id && id !== libraryId && !opts.avoidIds.includes(id) && !opts.used.includes(id) && availableFor(id, opts.equipment) && !bad(id),
+  );
+}
+
+export { fitToTime };

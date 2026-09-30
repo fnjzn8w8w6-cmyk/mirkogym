@@ -300,7 +300,11 @@ export interface Macros {
 
 export interface PlannedMeal {
   slot: SlotKey;
-  kind: 'recipe' | 'simple';
+  /** recipe = ricetta, simple = pasto semplice, custom = pasto libero scelto dall'utente (es. pizza fuori) */
+  kind: 'recipe' | 'simple' | 'custom';
+  /** nome e valori fissi del pasto libero */
+  name?: string;
+  fixed?: Macros;
   refId: string;
   /** porzioni della ricetta (kind=recipe) */
   servings: number;
@@ -339,7 +343,12 @@ function recipeMacros(r: Recipe | undefined, servings: number): Macros {
 }
 
 function withMacros(m: Omit<PlannedMeal, 'macros'>, recipes: Map<string, Recipe>): PlannedMeal {
-  const base = m.kind === 'recipe' ? recipeMacros(recipes.get(m.refId), m.servings) : sumMacros(m.items.map(portionMacros));
+  const base =
+    m.kind === 'custom'
+      ? (m.fixed ?? { kcal: 0, protein: 0, carbs: 0, fat: 0 })
+      : m.kind === 'recipe'
+        ? recipeMacros(recipes.get(m.refId), m.servings)
+        : sumMacros(m.items.map(portionMacros));
   return { ...m, macros: sumMacros([base, ...m.extras.map(portionMacros)]) };
 }
 
@@ -502,7 +511,9 @@ function balanceDay(day: PlannedMeal[], target: Nutrition, diet: DietKey, excl: 
     const [p] = FOODS[source].per100;
     const maxG = source === 'Proteine whey' ? 40 : source === 'Yogurt greco 0%' ? 300 : 200;
     const grams = Math.min(maxG, Math.round(((gap / p) * 100) / 10) * 10);
-    const idx = meals.reduce((best, m, i) => (m.slot !== 'colazione' && m.macros.protein < meals[best].macros.protein ? i : best), meals.length - 1);
+    const cands = meals.map((_, i) => i).filter((i) => meals[i].slot !== 'colazione' && meals[i].kind !== 'custom');
+    if (!cands.length) break;
+    const idx = cands.reduce((best, i) => (meals[i].macros.protein < meals[best].macros.protein ? i : best), cands[cands.length - 1]);
     meals[idx] = { ...meals[idx], extras: [...meals[idx].extras, portion(source, grams)] };
     recompute();
   }
@@ -515,8 +526,9 @@ function balanceDay(day: PlannedMeal[], target: Nutrition, diet: DietKey, excl: 
       const [p, c, f] = FOODS[source].per100;
       const per100 = p * 4 + c * 4 + f * 9;
       const grams = Math.min(150, Math.round(((kcalGap / per100) * 100) / 10) * 10);
-      const idx = Math.max(0, meals.findIndex((m) => m.slot === 'pranzo'));
-      meals[idx] = { ...meals[idx], extras: [...meals[idx].extras, portion(source, grams)] };
+      const lunch = meals.findIndex((m) => m.slot === 'pranzo' && m.kind !== 'custom');
+      const idx = lunch >= 0 ? lunch : meals.findIndex((m) => m.kind !== 'custom');
+      if (idx >= 0) meals[idx] = { ...meals[idx], extras: [...meals[idx].extras, portion(source, grams)] };
       recompute();
     }
   }
@@ -569,7 +581,7 @@ export function rescalePlan(plan: WeekPlan, data: RecipeData, target: Nutrition,
   const excl = exclusionPatterns(`${prefs.allergies},${prefs.dislikes}`);
   const days = plan.days.map((day) => ({
     meals: balanceDay(
-      day.meals.map((m) => buildMeal(m.slot, { kind: m.kind, id: m.refId }, slotKcal(prefs.meals, m.slot, target.target), byId) ?? m),
+      day.meals.map((m) => (m.kind === 'custom' ? m : (buildMeal(m.slot, { kind: m.kind, id: m.refId }, slotKcal(prefs.meals, m.slot, target.target), byId) ?? m))),
       target,
       prefs.diet,
       excl,
@@ -581,12 +593,140 @@ export function rescalePlan(plan: WeekPlan, data: RecipeData, target: Nutrition,
 
 /** Dettaglio del pasto per la UI. */
 export function mealInfo(m: PlannedMeal, byId: Map<string, Recipe>): { name: string; recipe?: Recipe; simple?: SimpleMeal } {
+  if (m.kind === 'custom') return { name: m.name ?? 'Pasto libero' };
   if (m.kind === 'recipe') {
     const r = byId.get(m.refId);
     return { name: r ? r.t : 'Ricetta non più disponibile', recipe: r };
   }
   const sm = SIMPLE_MEALS.find((x) => x.id === m.refId);
   return { name: sm?.name ?? 'Pasto', simple: sm };
+}
+
+/* ---------- Modifiche mirate (coach) ---------- */
+
+/** Pasto del giorno corrispondente a uno slot richiesto (merenda/spuntino si equivalgono). */
+function mealIndexFor(day: PlannedMeal[], slot: SlotKey): number {
+  const exact = day.findIndex((m) => m.slot === slot);
+  if (exact >= 0) return exact;
+  const snack = (s: SlotKey) => s === 'merenda' || s === 'spuntino';
+  if (snack(slot)) return day.findIndex((m) => snack(m.slot));
+  return -1;
+}
+
+/** Ricalcola le porzioni degli altri pasti del giorno intorno ai pasti liberi (che restano fissi). */
+function rebalanceAround(day: PlannedMeal[], data: RecipeData, target: Nutrition, prefs: PlanPrefs): PlannedMeal[] {
+  const byId = new Map(data.recipes.map((r) => [r.id, r]));
+  const fixed = day.filter((m) => m.kind === 'custom').reduce((a, m) => a + (m.fixed?.kcal ?? 0), 0);
+  const others = day.filter((m) => m.kind !== 'custom');
+  const shares = others.reduce((a, m) => a + slotKcal(prefs.meals, m.slot, 1), 0) || 1;
+  const remaining = Math.max(others.length * 150, target.target - fixed);
+  const rebuilt = day.map((m) =>
+    m.kind === 'custom'
+      ? m
+      : (buildMeal(m.slot, { kind: m.kind, id: m.refId }, (remaining * slotKcal(prefs.meals, m.slot, 1)) / shares, byId) ?? m),
+  );
+  return balanceDay(rebuilt, target, prefs.diet, exclusionPatterns(`${prefs.allergies},${prefs.dislikes}`), byId);
+}
+
+/** Mette un pasto libero (es. pizza fuori) in un giorno e ribilancia SOLO quel giorno. */
+export function setCustomMeal(
+  plan: WeekPlan,
+  dayIdx: number,
+  slot: SlotKey,
+  name: string,
+  fixed: Macros,
+  data: RecipeData,
+  target: Nutrition,
+  prefs: PlanPrefs,
+): WeekPlan {
+  const day = plan.days[dayIdx]?.meals;
+  if (!day) return plan;
+  let idx = mealIndexFor(day, slot);
+  const custom: PlannedMeal = { slot, kind: 'custom', refId: `custom:${Date.now().toString(36)}`, servings: 1, items: [], extras: [], name, fixed, macros: fixed };
+  const next = [...day];
+  if (idx < 0) {
+    // pasto non previsto quel giorno (es. uno spuntino in più): lo aggiungo
+    next.push(custom);
+    idx = next.length - 1;
+  } else next[idx] = { ...custom, slot: day[idx].slot };
+  return { ...plan, days: plan.days.map((d, i) => (i === dayIdx ? { meals: rebalanceAround(next, data, target, prefs) } : d)) };
+}
+
+/** Sceglie una ricetta del catalogo per un pasto in base a parole chiave (es. "pollo", "pesce leggero"). */
+export function recipeForQuery(data: RecipeData, prefs: PlanPrefs, slot: SlotKey, query: string, avoid: string[] = []): Recipe | null {
+  const words = query
+    .toLowerCase()
+    .split(/[\s,]+/)
+    .filter((w) => w.length > 2 && !['con', 'una', 'qualcosa', 'piatto', 'ricetta', 'del', 'della', 'alla', 'allo'].includes(w));
+  const { recipes } = mealCandidates(data, prefs, slot);
+  const scored = recipes
+    .filter((r) => !avoid.includes(r.id))
+    .map((r) => {
+      const text = recipeText(r).toLowerCase();
+      const hits = words.filter((w) => text.includes(w.replace(/[aeio]$/, ''))).length;
+      return { r, s: hits * 2 + (r.t.toLowerCase().includes(words[0] ?? '#') ? 1 : 0) + Math.random() * 0.3 };
+    })
+    .filter((x) => x.s >= 1)
+    .sort((a, b) => b.s - a.s);
+  return scored[0]?.r ?? null;
+}
+
+/** Mette una ricetta scelta in un pasto e ribilancia solo quel giorno. */
+export function setRecipeMeal(plan: WeekPlan, dayIdx: number, slot: SlotKey, recipeId: string, data: RecipeData, target: Nutrition, prefs: PlanPrefs): WeekPlan {
+  const day = plan.days[dayIdx]?.meals;
+  if (!day) return plan;
+  const idx = mealIndexFor(day, slot);
+  if (idx < 0) return plan;
+  const next = day.map((m, i) => (i === idx ? { ...m, kind: 'recipe' as const, refId: recipeId, name: undefined, fixed: undefined, items: [] } : m));
+  return { ...plan, days: plan.days.map((d, i) => (i === dayIdx ? { meals: rebalanceAround(next, data, target, prefs) } : d)) };
+}
+
+/**
+ * Adatta il piano a nuove preferenze cambiando SOLO i pasti che non le rispettano più
+ * (dieta, allergie, cibi sgraditi, tempo); poi ricalcola le porzioni sui nuovi obiettivi.
+ * Se cambia il numero di pasti al giorno il piano va rifatto.
+ */
+export function adaptPlanToPrefs(plan: WeekPlan, data: RecipeData, target: Nutrition, prefs: PlanPrefs): { plan: WeekPlan; rebuilt: boolean } {
+  const perDay = (SPLITS[prefs.meals] ?? SPLITS[4]).length;
+  if (plan.days.some((d) => d.meals.filter((m) => m.kind !== 'custom').length !== perDay && d.meals.length !== perDay))
+    return { plan: planWeek(data, target, prefs, Date.now()), rebuilt: true };
+  const used = new Set(plan.days.flatMap((d) => d.meals.filter((m) => m.kind === 'recipe').map((m) => m.refId)));
+  const likes = prefs.likes ? exclusionPatterns(prefs.likes) : [];
+  const days = plan.days.map((d) => ({
+    meals: d.meals.map((m) => {
+      if (m.kind === 'custom') return m;
+      const { recipes, simple } = mealCandidates(data, prefs, m.slot);
+      const ok = m.kind === 'recipe' ? recipes.some((r) => r.id === m.refId) : simple.some((x) => x.id === m.refId);
+      if (ok) return m;
+      // sostituisco con una ricetta non ancora usata, preferendo preferiti e cibi amati
+      const pool = recipes.filter((r) => !used.has(r.id));
+      const best = [...(pool.length ? pool : recipes)]
+        .map((r) => ({ r, s: (prefs.favorites.includes(r.id) ? 2 : 0) + (likes.some((re) => re.test(recipeText(r))) ? 1 : 0) + Math.random() }))
+        .sort((a, b) => b.s - a.s)[0]?.r;
+      if (best && (m.kind === 'recipe' || !simple.length)) {
+        used.add(best.id);
+        return { ...m, kind: 'recipe' as const, refId: best.id, items: [] };
+      }
+      const alt = simple[Math.floor(Math.random() * simple.length)];
+      return alt ? { ...m, kind: 'simple' as const, refId: alt.id } : m;
+    }),
+  }));
+  return { plan: rescalePlan({ ...plan, days }, data, target, prefs), rebuilt: false };
+}
+
+/** Differenze tra due piani (pasti cambiati), per l'anteprima delle modifiche. */
+export function planDiff(before: WeekPlan | undefined, after: WeekPlan, data: RecipeData): { day: number; slot: SlotKey; before?: string; after: string }[] {
+  const byId = new Map(data.recipes.map((r) => [r.id, r]));
+  const out: { day: number; slot: SlotKey; before?: string; after: string }[] = [];
+  after.days.forEach((d, i) =>
+    d.meals.forEach((m, j) => {
+      const old = before?.days[i]?.meals[j];
+      const a = mealInfo(m, byId).name;
+      const b = old ? mealInfo(old, byId).name : undefined;
+      if (a !== b) out.push({ day: i, slot: m.slot, before: b, after: a });
+    }),
+  );
+  return out;
 }
 
 /* ---------- Lista della spesa settimanale ---------- */
@@ -607,6 +747,7 @@ export function weeklyShopping(plan: WeekPlan, data: RecipeData): ShoppingItem[]
     map.set(key, cur);
   };
   for (const m of plan.days.flatMap((d) => d.meals)) {
+    if (m.kind === 'custom') continue;
     if (m.kind === 'recipe') {
       const r = byId.get(m.refId);
       if (!r) continue;
