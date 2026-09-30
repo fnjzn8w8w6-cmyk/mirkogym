@@ -40,15 +40,15 @@ import { cn } from '@/lib/cn';
 
 type Tab = 'sessions' | 'exercises' | 'analytics';
 
-export default function History() {
+export default function History({ embedded }: { embedded?: boolean } = {}) {
   const [params, setParams] = useSearchParams();
   const tab = (params.get('tab') as Tab | null) ?? 'sessions';
   const { loading } = useSessions();
 
   return (
     <div>
-      <TopBar title="Storico" large />
-      <div className="page pt-3">
+      {!embedded && <TopBar title="Storico" large />}
+      <div className={embedded ? '' : 'page pt-3'}>
         <Segmented<Tab>
           label="Sezione storico"
           value={tab}

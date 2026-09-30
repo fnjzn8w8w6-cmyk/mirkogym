@@ -19,7 +19,7 @@ export function Splash() {
       <motion.div animate={{ scale: [1, 1.06, 1] }} transition={{ repeat: Infinity, duration: 1.4, ease: 'easeInOut' }}>
         <Logo />
       </motion.div>
-      <div className="text-lg text-fg">MirkoGym</div>
+      <div className="text-lg text-fg">HowToGym</div>
       <div className="h-1 w-24 overflow-hidden rounded-full bg-surface-3">
         <motion.div
           className="h-full w-1/2 rounded-full bg-accent-500"
@@ -51,7 +51,7 @@ export function FatalError({ error }: { error: Error }) {
       <button
         type="button"
         onClick={() => window.location.reload()}
-        className="mt-6 h-11 rounded-md bg-accent-500 px-5 font-semibold text-white"
+        className="mt-6 h-11 rounded-md bg-accent-500 px-5 font-semibold text-onaccent"
       >
         Riprova
       </button>

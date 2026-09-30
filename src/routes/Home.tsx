@@ -102,7 +102,7 @@ export default function Home() {
           initial={{ y: -40, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           onClick={() => navigate(`/session/${activeSession.dayId}`)}
-          className="sticky top-0 z-30 flex w-full items-center gap-3 bg-accent-500 px-4 text-left text-white shadow-lg"
+          className="sticky top-0 z-30 flex w-full items-center gap-3 bg-accent-500 px-4 text-left text-onaccent shadow-lg"
           style={{ paddingTop: 'calc(var(--safe-top) + 10px)', paddingBottom: 10 }}
         >
           <span className="relative flex h-3 w-3">
@@ -111,7 +111,7 @@ export default function Home() {
           </span>
           <span className="flex-1">
             <span className="block text-base font-bold">Sessione in corso — Riprendi</span>
-            <span className="block text-sm text-white/85">
+            <span className="block text-sm text-onaccent/80">
               {activeDay ? `${activeDay.name} · ${activeDay.subtitle}` : 'Allenamento'} · iniziata {formatAgo(activeSession.startedAt)}
             </span>
           </span>
@@ -129,7 +129,7 @@ export default function Home() {
             🏋️
           </span>
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl text-fg">MirkoGym</h1>
+            <h1 className="font-display text-xl font-extrabold text-fg">How<span className="text-accent-500">To</span>Gym</h1>
             <p className="text-sm text-fg-3">{formatLongDate(new Date())}</p>
           </div>
           <OfflineBadge />
@@ -139,7 +139,7 @@ export default function Home() {
             aria-label={`Livello ${level.level}, ${level.title}: apri profilo`}
             className="flex h-11 items-center gap-2 rounded-full border border-accent-500/40 bg-accent-glow pl-1 pr-3"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-500 text-sm font-extrabold text-white">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-500 text-sm font-extrabold text-onaccent">
               {level.level}
             </span>
             <span className="text-left leading-tight">
@@ -258,7 +258,7 @@ export default function Home() {
             role="link"
             aria-label="Fai il check-in settimanale"
           >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-accent-500 text-white">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-accent-500 text-onaccent">
               <ClipboardCheck className="h-6 w-6" aria-hidden />
             </span>
             <span className="min-w-0 flex-1">
@@ -307,7 +307,7 @@ export default function Home() {
                     <span
                       className={cn(
                         'flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-base font-bold',
-                        d.id === next?.id ? 'bg-accent-500 text-white' : 'bg-surface-2 text-fg-2',
+                        d.id === next?.id ? 'bg-accent-500 text-onaccent' : 'bg-surface-2 text-fg-2',
                       )}
                     >
                       {d.order}

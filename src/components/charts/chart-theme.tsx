@@ -5,7 +5,7 @@ export const chart = {
   grid: 'rgba(255,255,255,0.06)',
   axis: '#8A8A90',
   surface: '#141416',
-  accent: '#F97316',
+  accent: '#39FF88',
   accentSoft: 'rgba(249,115,22,0.35)',
   secondary: '#A8A8AD',
   tick: { fill: '#8A8A90', fontSize: 11, fontWeight: 600 },

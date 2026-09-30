@@ -155,6 +155,21 @@ e, se l'AI non risponde, l'app continua a funzionare con le regole.
   L'anteprima mostra i pasti realmente cambiati prima di applicare.
 - **Chiedi al coach**: chat con il coach, che conosce profilo, obiettivi e ultimi allenamenti.
 
+## Aspetto e navigazione
+
+Nell'app il nome è **HowToGym** (repository e indirizzo restano invariati). Tema "Toxic": viola notte e
+verde fluo, titoli in Unbounded. Barra in basso: Home · Allenamento (scheda, storico, mappa muscolare) ·
+Dieta · Coach · Corpo · Profilo. La mappa muscolare è anatomica (contorni da
+[react-body-highlighter](https://github.com/giavinh79/react-body-highlighter), MIT), con proporzioni
+maschili o femminili in base al profilo e nel colore dell'app.
+
+**Dettatura vocale**: il pulsante 🎙 nei campi del coach, del check-in e dei resoconti usa il
+riconoscimento vocale del telefono; se non è disponibile (web app su iPhone) registra l'audio e lo
+trascrive Gemini. **Resoconti**: a fine allenamento (voto, energia, dolori, nota) e in fondo al diario
+(aderenza, fame, sgarri, nota) si inviano al coach, che li salva per il resoconto personale.
+**Corpo**: composizione corporea, avviso sull'andamento (nell'obiettivo / sgarro da recuperare), grafici
+di peso e massa grassa (1M-1A), misurazioni. **Rimani connesso** nella schermata di accesso.
+
 ## Dieta: diario, piano settimanale e ricette
 
 Pagina **Dieta** (menu in basso), tre sezioni:

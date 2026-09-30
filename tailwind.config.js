@@ -4,10 +4,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        base: '#0A0A0B',
-        surface: '#141416',
-        'surface-2': '#1E1E22',
-        'surface-3': '#2A2A2F',
+        base: '#0B0714',
+        surface: '#150F22',
+        'surface-2': '#1D1530',
+        'surface-3': '#2A1F3D',
+        onaccent: '#0B0714',
+        violet: { 400: '#C084FC', 500: '#8B5CF6', 600: '#6D28D9' },
         line: {
           subtle: 'var(--border-subtle)',
           DEFAULT: 'var(--border-default)',
@@ -20,9 +22,9 @@ export default {
           disabled: 'var(--text-disabled)',
         },
         accent: {
-          400: '#FB923C',
-          500: '#F97316',
-          600: '#EA580C',
+          400: '#6BFFA8',
+          500: '#39FF88',
+          600: '#1FD86A',
           glow: 'var(--accent-glow)',
         },
         success: { DEFAULT: '#22C55E', bg: 'var(--success-bg)' },
@@ -40,6 +42,7 @@ export default {
       },
       fontFamily: {
         sans: ['"Inter Variable"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['Unbounded', '"Inter Variable"', 'sans-serif'],
       },
       fontSize: {
         xs: ['11px', { lineHeight: '14px', fontWeight: '600' }],

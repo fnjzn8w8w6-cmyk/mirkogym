@@ -322,7 +322,13 @@ export interface ChatMessage {
 }
 
 export function coachContext(profile: UserProfile | undefined, target: Nutrition | null, sessions: Session[], bodyLogs: BodyLog[]): string {
-  const last = sessions.slice(0, 5).map((s) => `${new Date(s.date).toLocaleDateString('it-IT')}: ${s.logs.length} esercizi, ${Math.round(sessionTonnage(s))} kg di volume`);
+  const last = sessions.slice(0, 5).map(
+    (s) =>
+      `${new Date(s.date).toLocaleDateString('it-IT')}: ${s.logs.length} esercizi, ${Math.round(sessionTonnage(s))} kg di volume` +
+      (s.recap
+        ? ` (voto ${s.recap.rating}/5, energia ${s.recap.energy}/5${s.recap.pain.length ? `, dolori: ${s.recap.pain.join(', ')}` : ''}${s.recap.note ? `, nota: "${s.recap.note.slice(0, 120)}"` : ''})`
+        : ''),
+  );
   const w = bodyLogs.filter((b) => b.weight != null).slice(0, 5).map((b) => `${b.date}: ${b.weight} kg${b.bodyFat ? `, BF ${b.bodyFat}%` : ''}`);
   return [
     profile
@@ -341,7 +347,7 @@ export async function askCoach(question: string, history: ChatMessage[], context
     .slice(-8)
     .map((m) => `${m.role === 'user' ? 'Utente' : 'Coach'}: ${m.text}`)
     .join('\n');
-  const prompt = `Sei il coach di MirkoGym: personal trainer e nutrizionista sportivo. Rispondi in italiano, in modo pratico e motivante, massimo 150 parole, con elenchi brevi se utile. Basati sulle evidenze scientifiche. Se la domanda riguarda dolori, patologie, farmaci o disturbi alimentari, dai indicazioni generali e consiglia di rivolgersi a un medico o professionista. Non proporre diete sotto 1200 kcal né pratiche pericolose.
+  const prompt = `Sei il coach di HowToGym: personal trainer e nutrizionista sportivo. Rispondi in italiano, in modo pratico e motivante, massimo 150 parole, con elenchi brevi se utile. Basati sulle evidenze scientifiche. Se la domanda riguarda dolori, patologie, farmaci o disturbi alimentari, dai indicazioni generali e consiglia di rivolgersi a un medico o professionista. Non proporre diete sotto 1200 kcal né pratiche pericolose.
 CONTESTO UTENTE:
 ${context}
 ${convo ? `CONVERSAZIONE:\n${convo}\n` : ''}Utente: ${question.slice(0, 1000)}

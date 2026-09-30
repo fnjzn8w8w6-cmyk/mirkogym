@@ -11,6 +11,8 @@ import { useRestTimer } from '@/hooks/use-rest-timer';
 import { useToast } from '@/components/ui/Toast';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
+import { settle } from '@/lib/firestore';
+import { WorkoutRecapForm } from '@/components/coach/Recaps';
 import { Modal } from '@/components/ui/Modal';
 import { Input, TextArea } from '@/components/ui/Input';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -98,7 +100,7 @@ function SessionView({ initial }: { initial: ActiveSession }) {
   const toast = useToast();
   const timer = useRestTimer();
   const { getDay, exerciseIndex, days, save: saveSchedule } = useSchedule();
-  const { sessions, nameOf } = useSessions();
+  const { sessions, nameOf, save: saveSessionRecap } = useSessions();
   const { bodyLogs } = useBodyLogs();
   const { settings } = useSettings();
   const { discard } = useActiveSession();
@@ -603,6 +605,16 @@ function SessionView({ initial }: { initial: ActiveSession }) {
                 ))}
               </div>
             )}
+            <div className="mt-5">
+              <WorkoutRecapForm
+                initial={result.recap}
+                onSend={async (recap) => {
+                  const next = { ...result, recap };
+                  setResult(next);
+                  await settle(saveSessionRecap(next));
+                }}
+              />
+            </div>
             <div className="mt-6 grid grid-cols-[auto_1fr] gap-3">
               <Button size="lg" variant="secondary" loading={sharing} icon={<Share2 className="h-5 w-5" />} onClick={share}>
                 Condividi

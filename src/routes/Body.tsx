@@ -19,6 +19,15 @@ import { WeightChart, type WeightPoint } from '@/components/charts/WeightChart';
 import { BodyLogModal, ENERGY } from '@/components/modals/BodyLogModal';
 import { formatKg, movingAverage7d, trendDelta } from '@/lib/analytics';
 import { formatRelativeDay, fromISODate, toISODate } from '@/lib/date-utils';
+import { cn } from '@/lib/cn';
+import { CompositionCard, GoalStatus, Measurements } from '@/components/body/BodyOverview';
+
+const PERIODS: [number, string][] = [
+  [30, '1M'],
+  [90, '3M'],
+  [180, '6M'],
+  [365, '1A'],
+];
 
 function series(logs: BodyLog[], field: 'weight' | 'bodyFat', days: number): WeightPoint[] {
   const avg = movingAverage7d(logs, field);
@@ -40,11 +49,11 @@ export default function Body() {
   const [editing, setEditing] = useState<BodyLog | null>(null);
   const [toDelete, setToDelete] = useState<BodyLog | null>(null);
 
-  const weightData = useMemo(() => series(bodyLogs, 'weight', 30), [bodyLogs]);
-  const bfData = useMemo(() => series(bodyLogs, 'bodyFat', 30), [bodyLogs]);
+  const [period, setPeriod] = useState(90);
+  const weightData = useMemo(() => series(bodyLogs, 'weight', period), [bodyLogs, period]);
+  const bfData = useMemo(() => series(bodyLogs, 'bodyFat', period), [bodyLogs, period]);
   const wTrend = useMemo(() => trendDelta(bodyLogs, 'weight', 7), [bodyLogs]);
   const bfTrend = useMemo(() => trendDelta(bodyLogs, 'bodyFat', 30), [bodyLogs]);
-  const leanTrend = useMemo(() => trendDelta(bodyLogs, 'lean', 30), [bodyLogs]);
 
   const openNew = () => {
     setEditing(null);
@@ -93,39 +102,40 @@ export default function Body() {
           />
         ) : (
           <>
-            <div className="grid grid-cols-3 gap-2">
-              <StatBox label="Peso" value={wTrend ? `${formatKg(wTrend.current)}` : '—'} unit="kg">
-                <TrendLine delta={wTrend?.delta ?? null} label="7gg" unit="" />
-              </StatBox>
-              <StatBox label="Body fat" value={bfTrend ? `${formatKg(bfTrend.current)}` : '—'} unit="%">
-                <TrendLine delta={bfTrend?.delta ?? null} label="30gg" unit="" polarity="down-good" />
-              </StatBox>
-              <StatBox label="Massa magra" value={leanTrend ? `${formatKg(leanTrend.current)}` : '—'} unit="kg">
-                <TrendLine delta={leanTrend?.delta ?? null} label="30gg" unit="" polarity="up-good" />
-              </StatBox>
-            </div>
+            <CompositionCard />
+            <GoalStatus />
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card className="p-4">
-                <h2 className="section-title">Peso — ultimi 30 giorni</h2>
-                {weightData.length > 1 ? (
-                  <WeightChart data={weightData} unit=" kg" label="Peso" />
-                ) : (
-                  <p className="text-base text-fg-3">Servono almeno 2 misurazioni.</p>
-                )}
-              </Card>
-              <Card className="p-4">
-                <h2 className="section-title">Body fat — ultimi 30 giorni</h2>
-                {bfData.length > 1 ? (
-                  <WeightChart data={bfData} unit="%" label="BF" />
-                ) : (
-                  <p className="text-base text-fg-3">Servono almeno 2 misurazioni.</p>
-                )}
-              </Card>
+            <div className="flex justify-end gap-1.5">
+              {PERIODS.map(([d, l]) => (
+                <button
+                  key={d}
+                  type="button"
+                  aria-pressed={period === d}
+                  onClick={() => setPeriod(d)}
+                  className={cn('h-8 rounded-full px-3 text-sm font-semibold', period === d ? 'bg-accent-500 text-onaccent' : 'text-fg-3')}
+                >
+                  {l}
+                </button>
+              ))}
             </div>
+            <Card className="p-4">
+              <div className="flex items-baseline justify-between">
+                <h2 className="section-title !mb-0">Peso</h2>
+                {wTrend && <TrendLine delta={wTrend.delta} label="7gg" unit=" kg" />}
+              </div>
+              {weightData.length > 1 ? <WeightChart data={weightData} unit=" kg" label="Peso" /> : <p className="mt-2 text-base text-fg-3">Servono almeno 2 pesate nel periodo.</p>}
+            </Card>
+            <Card className="p-4">
+              <div className="flex items-baseline justify-between">
+                <h2 className="section-title !mb-0">Massa grassa</h2>
+                {bfTrend && <TrendLine delta={bfTrend.delta} label="30gg" unit="%" polarity="down-good" />}
+              </div>
+              {bfData.length > 1 ? <WeightChart data={bfData} unit="%" label="BF" /> : <p className="mt-2 text-base text-fg-3">Servono almeno 2 misure della massa grassa nel periodo.</p>}
+            </Card>
+            <Measurements logs={bodyLogs} />
 
             <section>
-              <h2 className="section-title">Log</h2>
+              <h2 className="section-title">Tutte le registrazioni</h2>
               <ul className="card divide-y divide-line-subtle">
                 {bodyLogs.map((l) => (
                   <li key={l.id} className="flex items-center gap-2 pr-2">
@@ -170,7 +180,7 @@ export default function Body() {
         onClick={openNew}
         whileTap={{ scale: 0.92 }}
         aria-label="Aggiungi log"
-        className="fixed right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-accent-500 text-white shadow-glow shadow-lg"
+        className="fixed right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-accent-500 text-onaccent shadow-glow shadow-lg"
         style={{ bottom: 'calc(var(--nav-h) + var(--safe-bottom) + 16px)' }}
       >
         <Plus className="h-7 w-7" aria-hidden />
@@ -193,18 +203,6 @@ export default function Body() {
   );
 }
 
-function StatBox({ label, value, unit, children }: { label: string; value: string; unit: string; children: React.ReactNode }) {
-  return (
-    <Card className="p-3">
-      <div className="text-xs uppercase tracking-wide text-fg-3">{label}</div>
-      <div className="mt-1 text-2xl text-fg">
-        {value}
-        <span className="text-sm text-fg-3"> {unit}</span>
-      </div>
-      <div className="mt-0.5 [&>div]:text-xs">{children}</div>
-    </Card>
-  );
-}
 
 function EnergyDots({ value }: { value: number }) {
   return (

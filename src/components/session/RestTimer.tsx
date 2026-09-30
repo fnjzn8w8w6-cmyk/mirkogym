@@ -73,7 +73,7 @@ function TimerBtn({ label, onClick, children, accent }: { label: string; onClick
       whileTap={{ scale: 0.92 }}
       onClick={onClick}
       className={`flex h-11 min-w-[44px] items-center justify-center gap-0.5 rounded-md px-2 text-sm font-bold ${
-        accent ? 'bg-accent-500 text-white' : 'bg-surface-3 text-fg'
+        accent ? 'bg-accent-500 text-onaccent' : 'bg-surface-3 text-fg'
       }`}
     >
       {children}

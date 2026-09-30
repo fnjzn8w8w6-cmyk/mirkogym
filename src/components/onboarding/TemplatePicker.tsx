@@ -42,7 +42,7 @@ export function TemplatePicker({ value, onChange }: { value: string | null; onCh
               <span
                 className={cn(
                   'mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2',
-                  active ? 'border-accent-500 bg-accent-500 text-white' : 'border-line',
+                  active ? 'border-accent-500 bg-accent-500 text-onaccent' : 'border-line',
                 )}
                 aria-hidden
               >

@@ -23,6 +23,7 @@ import { useEffectiveProfile } from '@/hooks/use-effective-profile';
 import { DietCoach } from '@/components/coach/DietCoach';
 import { groupColor } from '@/lib/analytics';
 import { cn } from '@/lib/cn';
+import { MicButton, appendText } from '@/components/ui/MicButton';
 import type { Day } from '@/types';
 
 type Tab = 'train' | 'diet' | 'chat';
@@ -184,13 +185,10 @@ function TrainingCoach({ profile }: { profile: UserProfile }) {
         <p className="mt-1 text-sm text-fg-2">
           Scrivi cosa vuoi, come parleresti a un trainer: muscoli da migliorare, dolori, tempo a disposizione, esercizi che non ti piacciono.
         </p>
-        <TextArea
-          className="mt-3"
-          label="Cosa vuoi dal tuo allenamento?"
-          rows={3}
-          value={request}
-          onChange={(e) => setRequest(e.target.value)}
-        />
+        <div className="relative mt-3 [&_textarea]:pr-14">
+          <TextArea label="Cosa vuoi dal tuo allenamento?" rows={3} value={request} onChange={(e) => setRequest(e.target.value)} />
+          <MicButton size="sm" className="absolute right-2 top-2" onText={(t) => setRequest((r) => appendText(r, t))} />
+        </div>
         <div className="no-scrollbar -mx-4 mt-2 flex gap-2 overflow-x-auto px-4">
           {TRAIN_EXAMPLES.map((ex) => (
             <button
@@ -381,7 +379,7 @@ function ChatCoach({ profile }: { profile: UserProfile }) {
           key={i}
           className={cn(
             'max-w-[88%] whitespace-pre-wrap rounded-xl px-4 py-3 text-base',
-            m.role === 'user' ? 'self-end bg-accent-500 text-white' : 'self-start border border-line-subtle bg-surface text-fg',
+            m.role === 'user' ? 'self-end bg-accent-500 text-onaccent' : 'self-start border border-line-subtle bg-surface text-fg',
           )}
         >
           {m.text}
@@ -409,6 +407,7 @@ function ChatCoach({ profile }: { profile: UserProfile }) {
           aria-label="Domanda per il coach"
           className="h-12 flex-1 rounded-full border border-line bg-surface-2 px-4 text-base text-fg outline-none focus:border-accent-500"
         />
+        <MicButton className="!h-12 !w-12" onText={(t) => setInput((r) => appendText(r, t))} />
         <Button type="submit" className="!h-12 !w-12 !rounded-full !px-0" disabled={!input.trim() || ai.busy} aria-label="Invia">
           <Send className="h-5 w-5" />
         </Button>

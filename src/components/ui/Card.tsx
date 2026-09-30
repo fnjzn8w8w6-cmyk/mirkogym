@@ -15,7 +15,7 @@ export function Card({ variant = 'surface', interactive, className, children, ..
       transition={{ duration: 0.1 }}
       className={cn(
         'rounded-lg border',
-        variant === 'surface' ? 'border-line-subtle bg-surface' : 'border-line bg-surface-2 shadow-md',
+        variant === 'surface' ? 'border-line-subtle bg-surface/90' : 'border-line bg-surface-2/95 shadow-md',
         interactive && 'cursor-pointer transition-colors hover:border-line-strong',
         className,
       )}

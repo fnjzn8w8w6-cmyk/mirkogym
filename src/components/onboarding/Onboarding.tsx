@@ -15,7 +15,7 @@ const slides = [
   {
     icon: TrendingUp,
     title: 'Progressione automatica',
-    text: 'Double progression + RIR: quando chiudi il range con il RIR giusto, MirkoGym ti dice quanto aggiungere.',
+    text: 'Double progression + RIR: quando chiudi il range con il RIR giusto, HowToGym ti dice quanto aggiungere.',
   },
   {
     icon: BarChart3,
@@ -45,7 +45,7 @@ export function Onboarding() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Logo size={40} />
-          <span className="text-lg text-fg">MirkoGym</span>
+          <span className="text-lg text-fg">HowToGym</span>
         </div>
         {!last && (
           <Button variant="ghost" size="sm" onClick={finish}>

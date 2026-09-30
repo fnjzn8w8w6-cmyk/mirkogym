@@ -1,3 +1,4 @@
+import { MicButton, appendText } from '@/components/ui/MicButton';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Apple, ArrowRight, RefreshCw, Sparkles } from 'lucide-react';
@@ -185,7 +186,10 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
           Dimmi cosa vuoi cambiare: obiettivo più veloce o più lento, intolleranze, cibi che ami o eviti, tempo per cucinare, numero di pasti, più
           proteine o meno carboidrati. Adatto calorie, macro e piano settimanale.
         </p>
-        <TextArea className="mt-3" label="Cosa vuoi cambiare nella tua dieta?" rows={3} value={request} onChange={(e) => setRequest(e.target.value)} />
+        <div className="relative mt-3 [&_textarea]:pr-14">
+          <TextArea label="Cosa vuoi cambiare nella tua dieta?" rows={3} value={request} onChange={(e) => setRequest(e.target.value)} />
+          <MicButton size="sm" className="absolute right-2 top-2" onText={(t) => setRequest((r) => appendText(r, t))} />
+        </div>
         <div className="no-scrollbar -mx-4 mt-2 flex gap-2 overflow-x-auto px-4">
           {EXAMPLES.map((ex) => (
             <button

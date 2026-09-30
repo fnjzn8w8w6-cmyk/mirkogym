@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/Toast';
 import { AIBusy, useAITask } from './AIBusy';
 import { settle } from '@/lib/firestore';
 import { cn } from '@/lib/cn';
+import { MicButton, appendText } from '@/components/ui/MicButton';
 import { formatTonnage } from '@/lib/analytics';
 import { nutrition, type UserProfile } from '@/lib/metabolism';
 import { checkInDue, checkInSummary, evaluate, weekStats, type CheckIn, type CheckInAnswers } from '@/lib/checkin';
@@ -178,12 +179,15 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
                 <Scale label={q.label} value={answers[q.key]} options={q.scale} onChange={(v) => setAnswers({ ...answers, [q.key]: v })} />
               </div>
             ))}
-            <TextArea
-              label="Qualcosa da dire al coach? (facoltativo)"
-              rows={2}
-              value={answers.note ?? ''}
-              onChange={(e) => setAnswers({ ...answers, note: e.target.value })}
-            />
+            <div className="relative [&_textarea]:pr-14">
+              <TextArea
+                label="Qualcosa da dire al coach? (facoltativo)"
+                rows={2}
+                value={answers.note ?? ''}
+                onChange={(e) => setAnswers({ ...answers, note: e.target.value })}
+              />
+              <MicButton size="sm" className="absolute right-2 top-2" onText={(t) => setAnswers((a) => ({ ...a, note: appendText(a.note ?? '', t) }))} />
+            </div>
             <Button fullWidth size="lg" onClick={() => void analyze()}>
               Analizza la mia settimana
             </Button>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, Mail, ShieldCheck } from 'lucide-react';
 import { useData } from '@/hooks/data-context';
-import { authErrorMessage, createAccount, resetPassword, signIn } from '@/lib/auth';
+import { authErrorMessage, createAccount, resetPassword, setRemember, signIn } from '@/lib/auth';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -27,6 +27,7 @@ export function AccountModal({ open, mode, onClose, onModeChange }: Props) {
   const { refreshUser, isAnonymous, sessions, bodyLogs, uid } = useData();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [remember, setRememberState] = useState(true);
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +54,7 @@ export function AccountModal({ open, mode, onClose, onModeChange }: Props) {
     setBusy(true);
     setError(null);
     try {
+      if (mode !== 'reset') await setRemember(remember);
       if (mode === 'create') {
         await createAccount(email, password);
         refreshUser();
@@ -144,6 +146,12 @@ export function AccountModal({ open, mode, onClose, onModeChange }: Props) {
         )}
         {mode === 'create' && confirm.length > 0 && password !== confirm && (
           <p className="text-sm text-danger">Le password non coincidono.</p>
+        )}
+        {mode !== 'reset' && (
+          <label className="flex items-center gap-3 text-base text-fg">
+            <input type="checkbox" className="h-5 w-5 accent-[#39FF88]" checked={remember} onChange={(e) => setRememberState(e.target.checked)} />
+            Rimani connesso
+          </label>
         )}
         {error && (
           <p className="text-sm text-danger" role="alert">

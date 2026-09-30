@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 
-const COLORS = ['#F97316', '#FB923C', '#FACC15', '#22C55E', '#3B82F6', '#EC4899', '#8B5CF6', '#FAFAFA'];
+const COLORS = ['#39FF88', '#6BFFA8', '#FACC15', '#22C55E', '#3B82F6', '#EC4899', '#8B5CF6', '#FAFAFA'];
 
 /** Esplosione di coriandoli leggera (~1.5s), senza dipendenze esterne. */
 export function Confetti({ count = 90 }: { count?: number }) {

@@ -445,7 +445,7 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
 
       <Card className="space-y-2 p-4">
         <div className="text-base font-semibold text-fg">{DAY_LONG[day]}</div>
-        <MacroBar label="Calorie" value={totals.kcal} target={target.target} unit="kcal" color="#F97316" />
+        <MacroBar label="Calorie" value={totals.kcal} target={target.target} unit="kcal" color="#39FF88" />
         <MacroBar label="Proteine" value={totals.protein} target={target.protein} unit="g" color="#EC4899" />
         <MacroBar label="Carboidrati" value={totals.carbs} target={target.carbs} unit="g" color="#14B8A6" />
         <MacroBar label="Grassi" value={totals.fat} target={target.fat} unit="g" color="#EAB308" />

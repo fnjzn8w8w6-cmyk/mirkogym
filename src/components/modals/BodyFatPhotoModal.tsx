@@ -106,10 +106,10 @@ export function BodyFatPhotoModal({ open, onClose, subject, onUse }: Props) {
           </div>
 
           <label className="flex cursor-pointer items-start gap-3 rounded-md bg-surface-2 p-3 text-sm text-fg-2">
-            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-5 w-5 accent-[#F97316]" />
+            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-5 w-5 accent-[#39FF88]" />
             <span>
               <Lock className="mr-1 inline h-3.5 w-3.5 text-fg-3" aria-hidden />
-              Acconsento all'invio delle foto a Google Gemini solo per questa analisi. MirkoGym non le salva; con il piano gratuito Google può usare i
+              Acconsento all'invio delle foto a Google Gemini solo per questa analisi. HowToGym non le salva; con il piano gratuito Google può usare i
               contenuti per migliorare i propri servizi.
             </span>
           </label>

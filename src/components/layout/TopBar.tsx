@@ -40,7 +40,7 @@ export function TopBar({ title, subtitle, back, right, large }: TopBarProps) {
           </IconButton>
         )}
         <div className="min-w-0 flex-1 py-2">
-          {title && <h1 className={large ? 'truncate text-2xl text-fg' : 'truncate text-lg text-fg'}>{title}</h1>}
+          {title && <h1 className={large ? 'truncate font-display text-[22px] font-extrabold leading-tight text-fg' : 'truncate text-lg text-fg'}>{title}</h1>}
           {subtitle && <div className="truncate text-sm text-fg-3">{subtitle}</div>}
         </div>
         <OfflineBadge />

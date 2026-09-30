@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, type ReactNode } from 'react';
-import { HashRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { DataProvider, useData } from '@/hooks/data-context';
@@ -19,7 +19,6 @@ import Home from '@/routes/Home';
 import Session from '@/routes/Session';
 
 // Le schermate secondarie (grafici inclusi) vengono caricate on-demand
-const History = lazy(() => import('@/routes/History'));
 const HistorySession = lazy(() => import('@/routes/HistorySession'));
 const HistoryExercise = lazy(() => import('@/routes/HistoryExercise'));
 const Body = lazy(() => import('@/routes/Body'));
@@ -30,6 +29,7 @@ const Exercises = lazy(() => import('@/routes/Exercises'));
 const Profile = lazy(() => import('@/routes/Profile'));
 const Coach = lazy(() => import('@/routes/Coach'));
 const Food = lazy(() => import('@/routes/Food'));
+const Training = lazy(() => import('@/routes/Training'));
 
 function Page({ children }: { children: ReactNode }) {
   return (
@@ -59,7 +59,7 @@ function AppShell() {
       <Routes location={location} key={section === '/history' ? location.pathname : section}>
         <Route path="/" element={<Page><Home /></Page>} />
         <Route path="/session/:dayId" element={<Page><Session /></Page>} />
-        <Route path="/history" element={<Page><History /></Page>} />
+        <Route path="/history" element={<Navigate to="/training?tab=history" replace />} />
         <Route path="/history/session/:id" element={<Page><HistorySession /></Page>} />
         <Route path="/history/exercise/:key" element={<Page><HistoryExercise /></Page>} />
         <Route path="/body" element={<Page><Body /></Page>} />
@@ -70,6 +70,7 @@ function AppShell() {
         <Route path="/profile" element={<Page><Profile /></Page>} />
         <Route path="/coach" element={<Page><Coach /></Page>} />
         <Route path="/food" element={<Page><Food /></Page>} />
+        <Route path="/training" element={<Page><Training /></Page>} />
         <Route path="*" element={<Page><Home /></Page>} />
       </Routes>
       <RestTimer inSession={inSession} />

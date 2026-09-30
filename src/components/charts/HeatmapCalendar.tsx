@@ -48,7 +48,7 @@ export function HeatmapCalendar({ counts, days = 90 }: { counts: Map<string, num
                 width={CELL}
                 height={CELL}
                 rx={3}
-                fill={!c.inRange ? 'transparent' : c.count ? (c.count > 1 ? '#EA580C' : '#F97316') : '#2A2A2F'}
+                fill={!c.inRange ? 'transparent' : c.count ? (c.count > 1 ? '#1FD86A' : '#39FF88') : '#2A2A2F'}
                 stroke={hover?.date.getTime() === c.date.getTime() ? '#FAFAFA' : 'none'}
                 strokeWidth={1.5}
                 onMouseEnter={() => c.inRange && setHover(c)}

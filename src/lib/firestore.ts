@@ -173,12 +173,14 @@ export async function ensureSeed(uid: string): Promise<boolean> {
 export function subscribeFoodLog(uid: string, date: string, cb: (l: FoodLog) => void, onError: OnError): Unsubscribe {
   return onSnapshot(
     doc(foodLogsCol(uid), date),
-    (d) => cb({ date, entries: d.exists() ? ((d.data().entries as FoodLog['entries']) ?? []) : [] }),
+    (d) => cb({ date, entries: d.exists() ? ((d.data().entries as FoodLog['entries']) ?? []) : [], recap: d.exists() ? (d.data().recap as FoodLog['recap']) : undefined }),
     onError,
   );
 }
 export const saveFoodLog = (uid: string, log: FoodLog) =>
-  setDoc(doc(foodLogsCol(uid), log.date), clean({ date: log.date, entries: log.entries, updatedAt: Timestamp.now() }));
+  setDoc(doc(foodLogsCol(uid), log.date), clean({ date: log.date, entries: log.entries, updatedAt: Timestamp.now() }), { merge: true });
+export const saveDayRecap = (uid: string, date: string, recap: NonNullable<FoodLog['recap']>) =>
+  setDoc(doc(foodLogsCol(uid), date), clean({ date, recap, updatedAt: Timestamp.now() }), { merge: true });
 
 export function subscribeRecipes(uid: string, cb: (r: UserRecipe[]) => void, onError: OnError): Unsubscribe {
   return onSnapshot(
@@ -219,7 +221,7 @@ export async function exportAll(uid: string): Promise<BackupFile> {
     sessions: sessions.docs.map((d) => fromSession(d.id, d.data())),
     bodyLogs: bodyLogs.docs.map((d) => fromBodyLog(d.id, d.data())),
     mesocycles: mesos.docs.map((d) => fromMeso(d.id, d.data())),
-    foodLogs: foodLogs.docs.map((d) => ({ date: d.id, entries: (d.data().entries as FoodLog['entries']) ?? [] })),
+    foodLogs: foodLogs.docs.map((d) => ({ date: d.id, entries: (d.data().entries as FoodLog['entries']) ?? [], recap: d.data().recap as FoodLog['recap'] })),
     recipes: recipes.docs.map((d) => ({ ...(d.data() as UserRecipe), id: d.id })),
     myFoods: myFoods.exists() ? ((myFoods.data().items as Food[]) ?? []) : [],
   };
@@ -275,7 +277,7 @@ export async function importAll(uid: string, backup: BackupFile): Promise<void> 
       data: { ...clean(m), createdAt: toTs(toMs(m.createdAt)) },
     })),
   ];
-  for (const l of backup.foodLogs ?? []) writes.push({ ref: doc(foodLogsCol(uid), l.date), data: clean({ date: l.date, entries: l.entries }) });
+  for (const l of backup.foodLogs ?? []) writes.push({ ref: doc(foodLogsCol(uid), l.date), data: clean({ date: l.date, entries: l.entries, recap: l.recap }) });
   for (const r of backup.recipes ?? []) writes.push({ ref: doc(recipesCol(uid), r.id), data: clean(r) });
   if (backup.myFoods?.length) writes.push({ ref: myFoodsRef(uid), data: clean({ items: backup.myFoods }) });
   if (backup.schedule) {

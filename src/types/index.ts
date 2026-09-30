@@ -67,6 +67,32 @@ export interface Session {
   bodyweightSnapshot?: number;
   notes?: string;
   deload?: boolean;
+  /** Resoconto di fine allenamento inviato al coach */
+  recap?: WorkoutRecap;
+}
+
+/** Com'è andato l'allenamento (per il resoconto personale del coach). */
+export interface WorkoutRecap {
+  /** 1 = pessimo … 5 = ottimo */
+  rating: number;
+  /** 1 = scarico … 5 = carichissimo */
+  energy: number;
+  /** zone doloranti (vuoto = nessun dolore) */
+  pain: string[];
+  note?: string;
+  at: number;
+}
+
+/** Com'è andata la giornata alimentare. */
+export interface DayRecap {
+  /** quanto hai seguito il piano: 1 = per niente … 5 = alla perfezione */
+  adherence: number;
+  /** 1 = nessuna fame … 5 = fame costante */
+  hunger: number;
+  /** sgarro della giornata (vuoto = nessuno) */
+  cheat?: string;
+  note?: string;
+  at: number;
 }
 
 export interface BodyLog {
@@ -229,6 +255,7 @@ export interface FoodLog {
   /** YYYY-MM-DD (anche id del documento) */
   date: string;
   entries: DiaryEntry[];
+  recap?: DayRecap;
 }
 
 export interface RecipeIngredient {

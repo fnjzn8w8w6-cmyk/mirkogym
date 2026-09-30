@@ -40,7 +40,7 @@ export async function renderShareCard(
   ctx.fillRect(0, 0, W, H);
 
   const pad = 80;
-  ctx.fillStyle = '#F97316';
+  ctx.fillStyle = '#39FF88';
   ctx.font = `800 40px ${FONT}`;
   ctx.fillText('🏋️ MIRKOGYM', pad, 130);
   ctx.fillStyle = '#A8A8AD';
@@ -105,7 +105,7 @@ export async function renderShareCard(
 
   ctx.fillStyle = '#4A4A4F';
   ctx.font = `600 28px ${FONT}`;
-  ctx.fillText('Allenamento registrato con MirkoGym', pad, H - 70);
+  ctx.fillText('Allenamento registrato con HowToGym', pad, H - 70);
 
   return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('Immagine non generata'))), 'image/png'));
 }

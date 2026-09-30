@@ -38,7 +38,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <button
           type="button"
           onClick={() => window.location.reload()}
-          className="mt-6 h-11 rounded-md bg-accent-500 px-5 font-semibold text-white"
+          className="mt-6 h-11 rounded-md bg-accent-500 px-5 font-semibold text-onaccent"
         >
           Ricarica
         </button>

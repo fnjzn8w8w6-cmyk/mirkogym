@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { DiaryEntry, FoodLog, UserRecipe } from '@/types';
+import type { DayRecap, DiaryEntry, FoodLog, UserRecipe } from '@/types';
 import {
   deleteRecipe,
+  saveDayRecap,
   saveFoodLog,
   saveMyFoods,
   saveRecipe,
@@ -36,7 +37,7 @@ export function useFoodLog(date: string) {
 
   const write = useCallback(
     (entries: DiaryEntry[]) => {
-      setLog({ date, entries });
+      setLog((l) => ({ ...l, date, entries }));
       return uid ? settle(saveFoodLog(uid, { date, entries })) : Promise.resolve();
     },
     [uid, date],
@@ -44,6 +45,11 @@ export function useFoodLog(date: string) {
 
   return {
     entries: log.date === date ? log.entries : [],
+    recap: log.date === date ? log.recap : undefined,
+    saveRecap: (r: DayRecap) => {
+      setLog((l) => ({ ...l, recap: r }));
+      return uid ? settle(saveDayRecap(uid, date, r)) : Promise.resolve();
+    },
     loading,
     add: (items: DiaryEntry[]) => write([...log.entries, ...items]),
     update: (e: DiaryEntry) => write(log.entries.map((x) => (x.id === e.id ? e : x))),

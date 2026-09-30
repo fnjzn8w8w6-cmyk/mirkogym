@@ -3,24 +3,24 @@
 @tailwind utilities;
 
 :root {
-  --bg-base: #0a0a0b;
-  --bg-surface: #141416;
-  --bg-surface-2: #1e1e22;
-  --bg-surface-3: #2a2a2f;
+  --bg-base: #0b0714;
+  --bg-surface: #150f22;
+  --bg-surface-2: #1d1530;
+  --bg-surface-3: #2a1f3d;
 
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.1);
+  --border-subtle: rgba(192, 132, 252, 0.10);
+  --border-default: rgba(192, 132, 252, 0.16);
   --border-strong: rgba(255, 255, 255, 0.16);
 
   --text-primary: #fafafa;
-  --text-secondary: #a8a8ad;
-  --text-tertiary: #8a8a90; /* leggermente schiarito rispetto a #6E6E73 per contrasto AA su surface */
+  --text-secondary: #b3a9c9;
+  --text-tertiary: #8d82a6; /* leggermente schiarito rispetto a #6E6E73 per contrasto AA su surface */
   --text-disabled: #4a4a4f;
 
-  --accent-500: #f97316;
-  --accent-400: #fb923c;
-  --accent-600: #ea580c;
-  --accent-glow: rgba(249, 115, 22, 0.15);
+  --accent-500: #39ff88;
+  --accent-400: #6bffa8;
+  --accent-600: #1fd86a;
+  --accent-glow: rgba(57, 255, 136, 0.14);
 
   --success: #22c55e;
   --success-bg: rgba(34, 197, 94, 0.12);
@@ -43,7 +43,7 @@
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
   --shadow-glow: 0 0 24px var(--accent-glow);
 
-  --nav-h: 64px;
+  --nav-h: 74px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 
@@ -54,6 +54,10 @@
   html,
   body {
     background: var(--bg-base);
+    background-image: radial-gradient(90% 45% at 100% -5%, rgba(124, 58, 237, 0.28), transparent 70%),
+      radial-gradient(60% 30% at -10% 0%, rgba(57, 255, 136, 0.07), transparent 70%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
     color: var(--text-primary);
     font-family: 'Inter Variable', Inter, system-ui, -apple-system, sans-serif;
     font-variant-numeric: tabular-nums;

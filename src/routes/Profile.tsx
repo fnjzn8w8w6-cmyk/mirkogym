@@ -2,16 +2,13 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CalendarRange, ChevronRight, Flame, Lock, Settings as SettingsIcon, Trophy } from 'lucide-react';
 import { useProgress } from '@/hooks/use-progress';
-import { useSessions } from '@/hooks/use-sessions';
-import { useSchedule } from '@/hooks/use-schedule';
 import { useData } from '@/hooks/data-context';
 import { TopBar } from '@/components/layout/TopBar';
 import { Card } from '@/components/ui/Card';
 import { IconButton } from '@/components/ui/Button';
 import { ProgressBar } from '@/components/ui/ProgressBar';
-import { MuscleFigure, GROUP_MUSCLES } from '@/components/library/MuscleFigure';
 import { RANKS, TIER_COLOR } from '@/lib/gamification';
-import { formatKg, formatTonnage, muscleStatus } from '@/lib/analytics';
+import { formatKg, formatTonnage } from '@/lib/analytics';
 import { useSettings } from '@/hooks/use-settings';
 import { useBodyLogs } from '@/hooks/use-body-logs';
 import { ACTIVITY, EXPERIENCE, GOALS, bfCategory, composition } from '@/lib/metabolism';
@@ -24,8 +21,6 @@ export default function Profile() {
   const navigate = useNavigate();
   const { email } = useData();
   const { level, stats, achievements, unlocked, ranks, bodyweight } = useProgress();
-  const { sessions, groupOf } = useSessions();
-  const { days } = useSchedule();
   const { settings, update } = useSettings();
   const { bodyLogs } = useBodyLogs();
   const profile = settings.profile;
@@ -37,14 +32,6 @@ export default function Profile() {
     return { n: userNutrition(p, settings), c: composition(p), p };
   }, [profile, bodyweight, bodyLogs, settings]);
 
-  // Mappa muscolare: serie della settimana rispetto al massimo dell'obiettivo
-  const intensity = useMemo(() => {
-    const groups = [...new Set(days.flatMap((d) => d.exercises.map((e) => e.group)))];
-    const out: Record<string, number> = {};
-    for (const m of muscleStatus(sessions, groupOf, groups))
-      for (const mm of GROUP_MUSCLES[m.group] ?? []) out[mm] = m.weekSets / settings.weeklySetsMax;
-    return out;
-  }, [sessions, groupOf, days, settings.weeklySetsMax]);
 
   const lastBfNote = bodyLogs.find((b) => b.bodyFat != null)?.notes ?? 'stima dal questionario';
   const sortedAch = [...achievements].sort(
@@ -165,17 +152,6 @@ export default function Profile() {
           </Card>
           <p className="mt-2 text-xs text-fg-3">Standard indicativi basati sul rapporto 1RM stimato / peso corporeo.</p>
         </section>
-
-        {/* Mappa muscolare */}
-        <Card className="p-4">
-          <h2 className="section-title">Muscoli allenati questa settimana</h2>
-          <MuscleFigure intensity={intensity} labels className="mx-auto h-56 w-auto" />
-          <div className="mt-2 flex items-center justify-center gap-2 text-xs text-fg-3">
-            Poco
-            <span className="h-2 w-24 rounded-full bg-gradient-to-r from-[rgba(249,115,22,0.25)] to-accent-500" aria-hidden />
-            Obiettivo raggiunto
-          </div>
-        </Card>
 
         {/* Traguardi */}
         <section>

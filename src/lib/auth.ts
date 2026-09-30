@@ -1,4 +1,7 @@
 import {
+  browserSessionPersistence,
+  indexedDBLocalPersistence,
+  setPersistence,
   createUserWithEmailAndPassword,
   EmailAuthProvider,
   linkWithCredential,
@@ -59,6 +62,11 @@ export async function createAccount(email: string, password: string): Promise<Us
   const res = await createUserWithEmailAndPassword(auth(), email.trim(), password);
   setSignedOutFlag(false);
   return res.user;
+}
+
+/** "Rimani connesso": accesso salvato sul dispositivo (predefinito) oppure solo per questa apertura dell'app. */
+export async function setRemember(remember: boolean): Promise<void> {
+  await setPersistence(auth(), remember ? indexedDBLocalPersistence : browserSessionPersistence);
 }
 
 /** Accede a un account esistente (su un nuovo dispositivo o dopo un logout). */

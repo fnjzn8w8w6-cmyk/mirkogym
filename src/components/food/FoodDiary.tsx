@@ -16,6 +16,7 @@ import { userNutrition } from '@/lib/coach';
 import { mealInfo, simpleFoodPer100, type PlannedMeal, type Recipe } from '@/lib/recipes';
 import type { DiaryEntry, DiaryMeal } from '@/types';
 import { FoodPicker } from './FoodPicker';
+import { DayRecapForm } from '@/components/coach/Recaps';
 import { MacroBar, fmtNum, useRecipes } from './shared';
 
 const MEALS: { key: DiaryMeal; label: string; emoji: string }[] = [
@@ -46,7 +47,7 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
   const { settings } = useSettings();
   const toast = useToast();
   const [date, setDate] = useState(todayISO());
-  const { entries, loading, add, update, remove } = useFoodLog(date);
+  const { entries, loading, add, update, remove, recap, saveRecap } = useFoodLog(date);
   const { data } = useRecipes();
   const [adding, setAdding] = useState<DiaryMeal | null>(null);
   const [editing, setEditing] = useState<DiaryEntry | null>(null);
@@ -171,6 +172,11 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
           </Card>
         );
       })}
+
+      <Card className="p-4">
+        <div className="mb-3 text-base font-semibold text-fg">📝 Com'è andata {dayLabel(date).toLowerCase() === 'oggi' ? 'oggi' : 'questa giornata'}?</div>
+        <DayRecapForm key={date} initial={recap} onSend={(r) => saveRecap(r)} />
+      </Card>
 
       <FoodPicker
         open={adding != null}
