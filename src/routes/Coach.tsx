@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Apple, Dumbbell, Library, MessageCircle, RefreshCw, Send, ShoppingCart, Sparkles, TrendingUp } from 'lucide-react';
+import { Dumbbell, Library, MessageCircle, RefreshCw, Send, Sparkles } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { useSchedule } from '@/hooks/use-schedule';
 import { useSessions } from '@/hooks/use-sessions';
@@ -9,7 +9,7 @@ import { TopBar } from '@/components/layout/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { Button, IconButton } from '@/components/ui/Button';
-import { Segmented, TextArea, Input } from '@/components/ui/Input';
+import { Segmented, TextArea } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
@@ -17,26 +17,14 @@ import { AIBusy, AINote, useAITask } from '@/components/coach/AIBusy';
 import { settle } from '@/lib/firestore';
 import { nutrition, type UserProfile } from '@/lib/metabolism';
 import { generateProgram, sessionMinutes, SLOT_LABEL, type CoachPrefs } from '@/lib/program-generator';
-import {
-  DIETS,
-  adaptiveCalories,
-  askCoach,
-  coachContext,
-  generateMealPlan,
-  interpretTrainingRequest,
-  mealTotals,
-  planTotals,
-  regenerateMeal,
-  shoppingList,
-  type ChatMessage,
-  type MealPlan,
-  type NutritionPrefs,
-} from '@/lib/coach';
+import { askCoach, coachContext, interpretTrainingRequest, type ChatMessage } from '@/lib/coach';
+import { NutritionPlanner, RecipesTab } from '@/components/food/NutritionPlanner';
+import { WeeklyCheckIn } from '@/components/coach/WeeklyCheckIn';
 import { groupColor } from '@/lib/analytics';
 import { cn } from '@/lib/cn';
 import type { Day } from '@/types';
 
-type Tab = 'train' | 'food' | 'chat';
+type Tab = 'train' | 'food' | 'recipes' | 'chat';
 
 /** Profilo con peso e massa grassa più recenti registrati in "Corpo". */
 function useEffectiveProfile(): UserProfile | null {
@@ -75,8 +63,9 @@ export default function Coach() {
           value={tab}
           onChange={(t) => setParams({ tab: t }, { replace: true })}
           options={[
-            { value: 'train', label: 'Allenamento' },
-            { value: 'food', label: 'Nutrizione' },
+            { value: 'train', label: 'Scheda' },
+            { value: 'food', label: 'Dieta' },
+            { value: 'recipes', label: 'Ricette' },
             { value: 'chat', label: 'Chiedi' },
           ]}
         />
@@ -90,7 +79,9 @@ export default function Coach() {
           ) : tab === 'train' ? (
             <TrainingCoach profile={profile} />
           ) : tab === 'food' ? (
-            <NutritionCoach profile={profile} />
+            <NutritionPlanner profile={profile} header={<WeeklyCheckIn profile={profile} autoOpen={params.get('checkin') === '1'} />} />
+          ) : tab === 'recipes' ? (
+            <RecipesTab profile={profile} />
           ) : (
             <ChatCoach profile={profile} />
           )}
@@ -273,289 +264,6 @@ function TrainingCoach({ profile }: { profile: UserProfile }) {
           </div>
         )}
       </Modal>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Nutrizione                                                          */
-/* ------------------------------------------------------------------ */
-
-const DEFAULT_NUTRITION: NutritionPrefs = { diet: 'onnivora', meals: 4, allergies: '', dislikes: '', likes: '', cooking: 'medio' };
-
-function MacroBar({ label, value, target, unit, color }: { label: string; value: number; target: number; unit: string; color: string }) {
-  const pct = target ? Math.min(1.3, value / target) : 0;
-  const off = target ? Math.round(((value - target) / target) * 100) : 0;
-  return (
-    <div>
-      <div className="flex justify-between text-sm">
-        <span className="text-fg-2">{label}</span>
-        <span className={cn('font-semibold', Math.abs(off) > 10 ? 'text-warning' : 'text-fg')}>
-          {Math.round(value)} / {target} {unit}
-        </span>
-      </div>
-      <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface-3">
-        <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct * 100)}%`, backgroundColor: color }} />
-      </div>
-    </div>
-  );
-}
-
-function NutritionCoach({ profile }: { profile: UserProfile }) {
-  const { settings, update } = useSettings();
-  const { bodyLogs } = useBodyLogs();
-  const toast = useToast();
-  const ai = useAITask();
-  const [prefs, setPrefs] = useState<NutritionPrefs>(settings.nutritionPrefs ?? DEFAULT_NUTRITION);
-  const [editPrefs, setEditPrefs] = useState(!settings.mealPlan);
-  const [shopOpen, setShopOpen] = useState(false);
-  const [swapping, setSwapping] = useState<number | null>(null);
-  const adjust = settings.kcalAdjust ?? 0;
-  const target = useMemo(() => nutrition(profile, adjust), [profile, adjust]);
-  const adaptive = useMemo(() => adaptiveCalories(bodyLogs, profile), [bodyLogs, profile]);
-  const plan = settings.mealPlan;
-  const totals = plan ? planTotals(plan) : null;
-
-  const createPlan = async () => {
-    const p = await ai.run((o) => generateMealPlan(target, profile, prefs, o));
-    if (p) {
-      await settle(update({ mealPlan: p, nutritionPrefs: prefs }));
-      setEditPrefs(false);
-      toast.success('Piano alimentare pronto');
-    }
-  };
-
-  const swapMeal = async (i: number) => {
-    if (!plan) return;
-    setSwapping(i);
-    const m = await ai.run((o) => regenerateMeal(plan.meals[i], prefs, o));
-    setSwapping(null);
-    if (m) {
-      const next: MealPlan = { ...plan, meals: plan.meals.map((x, j) => (j === i ? m : x)) };
-      await settle(update({ mealPlan: next }));
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      {/* Obiettivi */}
-      <Card variant="elevated" className="p-4">
-        <div className="flex items-center gap-2 text-lg text-fg">
-          <Apple className="h-5 w-5 text-accent-500" aria-hidden /> I tuoi obiettivi giornalieri
-        </div>
-        <div className="mt-3 grid grid-cols-4 gap-2 text-center">
-          {[
-            ['Kcal', target.target, ''],
-            ['Proteine', target.protein, 'g'],
-            ['Carbo', target.carbs, 'g'],
-            ['Grassi', target.fat, 'g'],
-          ].map(([l, v, u]) => (
-            <div key={String(l)} className="rounded-md bg-surface-2 py-2">
-              <div className="text-lg text-fg">
-                {v}
-                <span className="text-xs text-fg-3">{u}</span>
-              </div>
-              <div className="text-xs uppercase text-fg-3">{l}</div>
-            </div>
-          ))}
-        </div>
-        {adjust !== 0 && (
-          <p className="mt-2 text-sm text-fg-3">
-            Include la correzione del check-in: {adjust > 0 ? '+' : ''}
-            {adjust} kcal.{' '}
-            <button type="button" className="font-semibold text-accent-400" onClick={() => void settle(update({ kcalAdjust: 0 }))}>
-              Azzera
-            </button>
-          </p>
-        )}
-      </Card>
-
-      {/* Check-in adattivo */}
-      <Card className="p-4">
-        <div className="flex items-center gap-2 text-base font-semibold text-fg">
-          <TrendingUp className="h-5 w-5 text-accent-500" aria-hidden /> Check-in settimanale
-        </div>
-        {adaptive ? (
-          <>
-            <p className="mt-1 text-sm text-fg-2">{adaptive.message}</p>
-            <p className="mt-1 text-xs text-fg-3">
-              Basato su {adaptive.points} pesate in {adaptive.days} giorni (andamento reale vs atteso per il tuo obiettivo).
-            </p>
-            {adaptive.suggestion !== 0 && (
-              <Button
-                className="mt-3"
-                size="sm"
-                onClick={() => {
-                  void settle(update({ kcalAdjust: Math.max(-600, Math.min(600, adjust + adaptive.suggestion)) }));
-                  toast.success('Calorie aggiornate');
-                }}
-              >
-                Applica {adaptive.suggestion > 0 ? '+' : ''}
-                {adaptive.suggestion} kcal
-              </Button>
-            )}
-          </>
-        ) : (
-          <p className="mt-1 text-sm text-fg-2">
-            Pesati 3–4 volte a settimana (in "Corpo"): dopo circa 2 settimane il coach confronta l'andamento reale con quello atteso e corregge le
-            calorie.
-          </p>
-        )}
-      </Card>
-
-      {/* Preferenze e piano */}
-      {editPrefs || !plan ? (
-        <Card className="space-y-3 p-4">
-          <div className="text-base font-semibold text-fg">Il tuo piano alimentare</div>
-          <div>
-            <div className="section-title">Alimentazione</div>
-            <div className="grid grid-cols-2 gap-2">
-              {DIETS.map((d) => (
-                <button
-                  key={d.value}
-                  type="button"
-                  aria-pressed={prefs.diet === d.value}
-                  onClick={() => setPrefs({ ...prefs, diet: d.value })}
-                  className={cn(
-                    'h-11 rounded-md border text-sm font-semibold',
-                    prefs.diet === d.value ? 'border-accent-500 bg-accent-glow text-accent-400' : 'border-line bg-surface-2 text-fg-2',
-                  )}
-                >
-                  {d.emoji} {d.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div className="section-title">Pasti al giorno</div>
-            <Segmented<number>
-              label="Pasti al giorno"
-              value={prefs.meals}
-              onChange={(v) => setPrefs({ ...prefs, meals: v as 3 | 4 | 5 })}
-              options={[3, 4, 5].map((n) => ({ value: n, label: `${n} pasti` }))}
-            />
-          </div>
-          <div>
-            <div className="section-title">Tempo per cucinare</div>
-            <Segmented<NutritionPrefs['cooking']>
-              label="Tempo per cucinare"
-              value={prefs.cooking}
-              onChange={(v) => setPrefs({ ...prefs, cooking: v })}
-              options={[
-                { value: 'poco', label: 'Poco' },
-                { value: 'medio', label: 'Medio' },
-                { value: 'molto', label: 'Tanto' },
-              ]}
-            />
-          </div>
-          <Input label="Allergie / intolleranze" value={prefs.allergies} onChange={(e) => setPrefs({ ...prefs, allergies: e.target.value })} />
-          <Input label="Cibi che non ti piacciono" value={prefs.dislikes} onChange={(e) => setPrefs({ ...prefs, dislikes: e.target.value })} />
-          <Input label="Cibi che ami" value={prefs.likes} onChange={(e) => setPrefs({ ...prefs, likes: e.target.value })} />
-          {ai.busy && swapping == null ? (
-            <AIBusy status={ai.status} onCancel={ai.cancel} />
-          ) : (
-            <Button fullWidth size="lg" icon={<Sparkles className="h-5 w-5" />} onClick={createPlan}>
-              {plan ? 'Crea un nuovo piano' : 'Crea il mio piano alimentare'}
-            </Button>
-          )}
-          {ai.error && (
-            <p className="text-sm text-danger" role="alert">
-              {ai.error}
-            </p>
-          )}
-          <AINote />
-        </Card>
-      ) : (
-        <>
-          {totals && (
-            <Card className="space-y-2 p-4">
-              <div className="flex items-baseline justify-between">
-                <span className="text-base font-semibold text-fg">Giornata tipo</span>
-                <span className="text-xs text-fg-3">porzioni calibrate sul tuo obiettivo</span>
-              </div>
-              <MacroBar label="Calorie" value={totals.kcal} target={target.target} unit="kcal" color="#F97316" />
-              <MacroBar label="Proteine" value={totals.protein} target={target.protein} unit="g" color="#EC4899" />
-              <MacroBar label="Carboidrati" value={totals.carbs} target={target.carbs} unit="g" color="#14B8A6" />
-              <MacroBar label="Grassi" value={totals.fat} target={target.fat} unit="g" color="#EAB308" />
-              {Math.abs(totals.kcal - target.target) / target.target > 0.1 && (
-                <p className="text-sm text-warning">Il piano si discosta di oltre il 10% dall'obiettivo: rigeneralo o cambia qualche pasto.</p>
-              )}
-            </Card>
-          )}
-          {plan.meals.map((m, i) => {
-            const t = mealTotals(m);
-            return (
-              <Card key={`${m.name}-${i}`} className="p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="text-lg text-fg">{m.name}</div>
-                    <div className="text-sm text-fg-3">
-                      {m.time && `${m.time} · `}
-                      {t.kcal} kcal · P {t.protein} · C {t.carbs} · G {t.fat}
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    icon={<RefreshCw className={cn('h-4 w-4', swapping === i && 'animate-spin')} />}
-                    disabled={ai.busy}
-                    onClick={() => void swapMeal(i)}
-                  >
-                    Cambia
-                  </Button>
-                </div>
-                <ul className="mt-2 divide-y divide-line-subtle">
-                  {m.items.map((it, j) => (
-                    <li key={j} className="flex items-center justify-between gap-2 py-1.5 text-base">
-                      <span className="text-fg">{it.food}</span>
-                      <span className="shrink-0 text-sm text-fg-3">
-                        <strong className="text-fg-2">{it.grams} g</strong> · {it.kcal} kcal
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                {m.prep && <p className="mt-2 text-sm text-fg-2">👩‍🍳 {m.prep}</p>}
-              </Card>
-            );
-          })}
-          {ai.busy && swapping != null && <AIBusy status={ai.status} onCancel={ai.cancel} />}
-          {ai.error && (
-            <p className="text-sm text-danger" role="alert">
-              {ai.error}
-            </p>
-          )}
-          {plan.tips.length > 0 && (
-            <Card className="p-4">
-              <div className="section-title">Consigli del dietologo</div>
-              <ul className="space-y-1 text-base text-fg-2">
-                {plan.tips.map((t) => (
-                  <li key={t}>• {t}</li>
-                ))}
-              </ul>
-            </Card>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="secondary" icon={<ShoppingCart className="h-5 w-5" />} onClick={() => setShopOpen(true)}>
-              Lista spesa
-            </Button>
-            <Button variant="secondary" icon={<Sparkles className="h-5 w-5" />} onClick={() => setEditPrefs(true)}>
-              Nuovo piano
-            </Button>
-          </div>
-          <AINote />
-          <Modal open={shopOpen} onClose={() => setShopOpen(false)} title="Lista della spesa · 7 giorni">
-            <p className="mb-3 text-sm text-fg-3">Quantità per ripetere la giornata tipo per una settimana (peso a crudo).</p>
-            <ul className="divide-y divide-line-subtle">
-              {shoppingList(plan).map((i) => (
-                <li key={i.food} className="flex justify-between py-2 text-base">
-                  <span className="text-fg">{i.food}</span>
-                  <span className="font-semibold text-fg-2">{i.grams >= 1000 ? `${(i.grams / 1000).toFixed(1).replace('.', ',')} kg` : `${i.grams} g`}</span>
-                </li>
-              ))}
-            </ul>
-          </Modal>
-        </>
-      )}
     </div>
   );
 }

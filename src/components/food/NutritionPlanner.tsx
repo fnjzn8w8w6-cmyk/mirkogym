@@ -1,0 +1,572 @@
+import { useMemo, useState } from 'react';
+import { Apple, ChevronRight, RefreshCw, Settings2, ShoppingCart, Shuffle } from 'lucide-react';
+import { useSettings } from '@/hooks/use-settings';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Input, Segmented } from '@/components/ui/Input';
+import { Modal } from '@/components/ui/Modal';
+import { useToast } from '@/components/ui/Toast';
+import { settle } from '@/lib/firestore';
+import { cn } from '@/lib/cn';
+import { nutrition, type Nutrition, type UserProfile } from '@/lib/metabolism';
+import { DIETS, type NutritionPrefs } from '@/lib/coach';
+import {
+  SLOT_LABEL,
+  dayTotals,
+  formatQty,
+  mealCandidates,
+  mealInfo,
+  planWeek,
+  replaceMeal,
+  rescalePlan,
+  weeklyShopping,
+  type PlanPrefs,
+  type PlannedMeal,
+  type Recipe,
+  type RecipeData,
+  type SimpleMeal,
+  type WeekPlan,
+} from '@/lib/recipes';
+import { MacroLine, RecipeImage, useRecipes } from './shared';
+import { RecipeDetail } from './RecipeDetail';
+import { RecipeGallery } from './RecipeGallery';
+
+export const DEFAULT_NUTRITION: NutritionPrefs = { diet: 'onnivora', meals: 4, allergies: '', dislikes: '', likes: '', cooking: 'medio' };
+export const DAY_SHORT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+export const DAY_LONG = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+const todayIdx = () => (new Date().getDay() + 6) % 7;
+
+export function planPrefs(p: NutritionPrefs, favorites: string[]): PlanPrefs {
+  return { diet: p.diet, meals: p.meals, allergies: p.allergies, dislikes: p.dislikes, cooking: p.cooking, favorites, likes: p.likes };
+}
+
+export function MacroBar({ label, value, target, unit, color }: { label: string; value: number; target: number; unit: string; color: string }) {
+  const pct = target ? Math.min(1.3, value / target) : 0;
+  const off = target ? Math.round(((value - target) / target) * 100) : 0;
+  return (
+    <div>
+      <div className="flex justify-between text-sm">
+        <span className="text-fg-2">{label}</span>
+        <span className={cn('font-semibold', Math.abs(off) > 10 ? 'text-warning' : 'text-fg')}>
+          {Math.round(value)} / {target} {unit}
+        </span>
+      </div>
+      <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface-3">
+        <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct * 100)}%`, backgroundColor: color }} />
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Scheda di un pasto ---------- */
+
+function MealCard({ meal, byId, onOpen, onSwap }: { meal: PlannedMeal; byId: Map<string, Recipe>; onOpen: () => void; onSwap: () => void }) {
+  const info = mealInfo(meal, byId);
+  return (
+    <Card className="overflow-hidden">
+      <button type="button" onClick={onOpen} className="flex w-full gap-3 p-3 text-left" aria-label={`${SLOT_LABEL[meal.slot]}: ${info.name}`}>
+        <RecipeImage recipe={info.recipe} emoji={info.simple?.emoji} className="h-20 w-20 shrink-0 rounded-md" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-xs font-semibold uppercase tracking-wide text-accent-400">{SLOT_LABEL[meal.slot]}</span>
+          <span className="line-clamp-2 block text-base font-semibold leading-snug text-fg">{info.name}</span>
+          {meal.kind === 'recipe' && (
+            <span className="block text-xs text-fg-3">
+              {String(meal.servings).replace('.', ',')} {meal.servings === 1 ? 'porzione' : 'porzioni'}
+              {info.recipe ? ` · ${info.recipe.t} min` : ''}
+            </span>
+          )}
+          <MacroLine {...meal.macros} className="block text-xs" />
+        </span>
+        <ChevronRight className="mt-6 h-5 w-5 shrink-0 text-fg-3" aria-hidden />
+      </button>
+      {(meal.kind === 'simple' || meal.extras.length > 0) && (
+        <ul className="border-t border-line-subtle px-3 py-2 text-sm">
+          {meal.kind === 'simple' &&
+            meal.items.map((it) => (
+              <li key={it.food} className="flex justify-between py-0.5">
+                <span className="text-fg-2">{it.food}</span>
+                <span className="text-fg-3">{it.grams} g</span>
+              </li>
+            ))}
+          {meal.extras.map((it) => (
+            <li key={`x-${it.food}`} className="flex justify-between py-0.5">
+              <span className="text-fg-2">+ {it.food}</span>
+              <span className="text-fg-3">{it.grams} g · per i macro</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex border-t border-line-subtle">
+        <button type="button" onClick={onSwap} className="flex h-11 flex-1 items-center justify-center gap-1.5 text-sm font-semibold text-fg-2">
+          <Shuffle className="h-4 w-4" aria-hidden /> Cambia
+        </button>
+      </div>
+    </Card>
+  );
+}
+
+/* ---------- Scelta di un pasto alternativo ---------- */
+
+function SimpleMealDetail({ meal, onClose }: { meal: SimpleMeal | null; onClose: () => void }) {
+  return (
+    <Modal open={Boolean(meal)} onClose={onClose} title={meal?.name}>
+      {meal && (
+        <div className="space-y-3">
+          <div className="flex h-32 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500/30 to-rose-500/20 text-6xl">{meal.emoji}</div>
+          <ul className="divide-y divide-line-subtle">
+            {meal.items.map(([f, g]) => (
+              <li key={f} className="flex justify-between py-1.5 text-base">
+                <span className="text-fg">{f}</span>
+                <span className="text-fg-3">{g} g</span>
+              </li>
+            ))}
+          </ul>
+          {meal.prep && <p className="text-base text-fg-2">👩‍🍳 {meal.prep}</p>}
+          <p className="text-xs text-fg-3">Le grammature nel piano sono ricalcolate sulle tue calorie.</p>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+function SwapModal({
+  open,
+  slot,
+  data,
+  prefs,
+  onClose,
+  onPick,
+}: {
+  open: boolean;
+  slot: PlannedMeal['slot'] | null;
+  data: RecipeData;
+  prefs: PlanPrefs;
+  onClose: () => void;
+  onPick: (choice: { kind: 'recipe' | 'simple'; id: string }) => void;
+}) {
+  const [preview, setPreview] = useState<Recipe | null>(null);
+  const cands = useMemo(() => (slot ? mealCandidates(data, prefs, slot) : { recipes: [], simple: [] }), [slot, data, prefs]);
+  const random = () => {
+    const all = [...cands.recipes.map((r) => ({ kind: 'recipe' as const, id: r.id })), ...cands.simple.map((m) => ({ kind: 'simple' as const, id: m.id }))];
+    if (all.length) onPick(all[Math.floor(Math.random() * all.length)]);
+  };
+  return (
+    <Modal open={open} onClose={onClose} title={slot ? `Cambia ${SLOT_LABEL[slot].toLowerCase()}` : ''}>
+      <div className="space-y-4">
+        <Button variant="secondary" fullWidth icon={<Shuffle className="h-5 w-5" />} onClick={random}>
+          Sorprendimi
+        </Button>
+        {cands.simple.length > 0 && (
+          <section>
+            <div className="section-title">Veloci all'italiana</div>
+            <div className="grid grid-cols-2 gap-2">
+              {cands.simple.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => onPick({ kind: 'simple', id: m.id })}
+                  className="flex items-center gap-2 rounded-md border border-line bg-surface-2 p-2 text-left text-sm text-fg"
+                >
+                  <span className="text-2xl">{m.emoji}</span>
+                  <span className="line-clamp-2">{m.name}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+        {cands.recipes.length > 0 && (
+          <section>
+            <div className="section-title">Ricette ({cands.recipes.length}) · tocca per vederla</div>
+            <RecipeGallery recipes={cands.recipes} onOpen={setPreview} categories={false} />
+          </section>
+        )}
+      </div>
+      <RecipeDetail
+        recipe={preview}
+        onClose={() => setPreview(null)}
+        onAddToPlan={(r) => {
+          setPreview(null);
+          onPick({ kind: 'recipe', id: r.id });
+        }}
+      />
+    </Modal>
+  );
+}
+
+/* ---------- Aggiunta di una ricetta al piano (dalla galleria) ---------- */
+
+export function AddToPlanModal({ recipe, plan, data, onClose, onPlace }: {
+  recipe: Recipe | null;
+  plan: WeekPlan | undefined;
+  data: RecipeData;
+  onClose: () => void;
+  onPlace: (day: number, meal: number) => void;
+}) {
+  const [day, setDay] = useState(todayIdx());
+  const byId = useMemo(() => new Map(data.recipes.map((r) => [r.id, r])), [data]);
+  return (
+    <Modal open={Boolean(recipe)} onClose={onClose} title="Aggiungi al piano">
+      {recipe && plan && (
+        <div className="space-y-3">
+          <p className="text-sm text-fg-2">Scegli il giorno e il pasto da sostituire: le porzioni vengono ricalcolate sulle calorie di quel pasto.</p>
+          <DayPills value={day} onChange={setDay} />
+          <div className="space-y-2">
+            {plan.days[day].meals.map((m, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => onPlace(day, i)}
+                className="flex w-full items-center gap-3 rounded-md border border-line bg-surface-2 p-2 text-left"
+              >
+                <RecipeImage recipe={mealInfo(m, byId).recipe} emoji={mealInfo(m, byId).simple?.emoji} className="h-12 w-12 shrink-0 rounded-sm" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs font-semibold uppercase text-accent-400">{SLOT_LABEL[m.slot]}</span>
+                  <span className="block truncate text-sm text-fg">{mealInfo(m, byId).name}</span>
+                </span>
+                <span className="text-sm font-semibold text-accent-400">Sostituisci</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+function DayPills({ value, onChange, plan, target }: { value: number; onChange: (d: number) => void; plan?: WeekPlan; target?: Nutrition }) {
+  const today = todayIdx();
+  return (
+    <div className="grid grid-cols-7 gap-1" role="tablist" aria-label="Giorno della settimana">
+      {DAY_SHORT.map((d, i) => {
+        const kcal = plan && target ? dayTotals(plan.days[i].meals).kcal : null;
+        return (
+          <button
+            key={d}
+            type="button"
+            role="tab"
+            aria-selected={value === i}
+            onClick={() => onChange(i)}
+            className={cn(
+              'flex h-14 flex-col items-center justify-center rounded-md border text-sm',
+              value === i ? 'border-accent-500 bg-accent-glow font-bold text-accent-400' : 'border-line bg-surface-2 text-fg-2',
+            )}
+          >
+            {d}
+            {i === today && <span className="text-[10px] font-semibold uppercase">oggi</span>}
+            {i !== today && kcal != null && <span className="text-[10px] text-fg-3">{Math.round(kcal / 10) * 10}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ---------- Dietologo: piano settimanale ---------- */
+
+export function NutritionPlanner({ profile, header }: { profile: UserProfile; header?: React.ReactNode }) {
+  const { settings, update } = useSettings();
+  const toast = useToast();
+  const { data, error, retry } = useRecipes();
+  const [prefs, setPrefs] = useState<NutritionPrefs>(settings.nutritionPrefs ?? DEFAULT_NUTRITION);
+  const [editPrefs, setEditPrefs] = useState(false);
+  const [day, setDay] = useState(todayIdx());
+  const [shopOpen, setShopOpen] = useState(false);
+  const [swap, setSwap] = useState<number | null>(null);
+  const [openRecipe, setOpenRecipe] = useState<{ recipe: Recipe; servings: number } | null>(null);
+  const [openSimple, setOpenSimple] = useState<SimpleMeal | null>(null);
+  const adjust = settings.kcalAdjust ?? 0;
+  const target = useMemo(() => nutrition(profile, adjust), [profile, adjust]);
+  const favorites = settings.favoriteRecipes ?? [];
+  const pp = useMemo(() => planPrefs(settings.nutritionPrefs ?? prefs, favorites), [settings.nutritionPrefs, prefs, favorites]);
+  const plan = settings.weekPlan;
+  const byId = useMemo(() => new Map((data?.recipes ?? []).map((r) => [r.id, r])), [data]);
+
+  const save = (p: WeekPlan, extra: Partial<typeof settings> = {}) => settle(update({ weekPlan: p, ...extra }));
+
+  const create = async () => {
+    if (!data) return;
+    const p = planWeek(data, target, planPrefs(prefs, favorites), Date.now());
+    await save(p, { nutritionPrefs: prefs });
+    setEditPrefs(false);
+    toast.success('Piano settimanale pronto: 7 giorni tutti diversi');
+  };
+
+  const shopping = useMemo(() => (plan && data && shopOpen ? weeklyShopping(plan, data) : []), [plan, data, shopOpen]);
+
+  if (error)
+    return (
+      <Card className="p-4 text-center">
+        <p className="text-base text-fg-2">{error}</p>
+        <Button className="mt-3" onClick={retry}>
+          Riprova
+        </Button>
+      </Card>
+    );
+
+  const targets = (
+    <Card variant="elevated" className="p-4">
+      <div className="flex items-center gap-2 text-lg text-fg">
+        <Apple className="h-5 w-5 text-accent-500" aria-hidden /> I tuoi obiettivi giornalieri
+      </div>
+      <div className="mt-3 grid grid-cols-4 gap-2 text-center">
+        {[
+          ['Kcal', target.target, ''],
+          ['Proteine', target.protein, 'g'],
+          ['Carbo', target.carbs, 'g'],
+          ['Grassi', target.fat, 'g'],
+        ].map(([l, v, u]) => (
+          <div key={String(l)} className="rounded-md bg-surface-2 py-2">
+            <div className="text-lg text-fg">
+              {v}
+              <span className="text-xs text-fg-3">{u}</span>
+            </div>
+            <div className="text-xs uppercase text-fg-3">{l}</div>
+          </div>
+        ))}
+      </div>
+      {adjust !== 0 && (
+        <p className="mt-2 text-sm text-fg-3">
+          Include la correzione del check-in: {adjust > 0 ? '+' : ''}
+          {adjust} kcal.{' '}
+          <button type="button" className="font-semibold text-accent-400" onClick={() => void settle(update({ kcalAdjust: 0 }))}>
+            Azzera
+          </button>
+        </p>
+      )}
+    </Card>
+  );
+
+  if (!plan || editPrefs)
+    return (
+      <div className="space-y-4">
+        {targets}
+        {header}
+        <Card className="space-y-3 p-4">
+          <div className="text-base font-semibold text-fg">Il tuo piano settimanale</div>
+          <p className="text-sm text-fg-2">
+            7 giorni di pasti diversi scelti tra oltre 500 ricette con foto, con porzioni calcolate sulle tue calorie e proteine.
+          </p>
+          <div>
+            <div className="section-title">Alimentazione</div>
+            <div className="grid grid-cols-2 gap-2">
+              {DIETS.map((d) => (
+                <button
+                  key={d.value}
+                  type="button"
+                  aria-pressed={prefs.diet === d.value}
+                  onClick={() => setPrefs({ ...prefs, diet: d.value })}
+                  className={cn(
+                    'h-11 rounded-md border text-sm font-semibold',
+                    prefs.diet === d.value ? 'border-accent-500 bg-accent-glow text-accent-400' : 'border-line bg-surface-2 text-fg-2',
+                  )}
+                >
+                  {d.emoji} {d.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="section-title">Pasti al giorno</div>
+            <Segmented<number>
+              label="Pasti al giorno"
+              value={prefs.meals}
+              onChange={(v) => setPrefs({ ...prefs, meals: v as 3 | 4 | 5 })}
+              options={[3, 4, 5].map((n) => ({ value: n, label: `${n} pasti` }))}
+            />
+          </div>
+          <div>
+            <div className="section-title">Tempo per cucinare</div>
+            <Segmented<NutritionPrefs['cooking']>
+              label="Tempo per cucinare"
+              value={prefs.cooking}
+              onChange={(v) => setPrefs({ ...prefs, cooking: v })}
+              options={[
+                { value: 'poco', label: '≤ 30 min' },
+                { value: 'medio', label: '≤ 1 ora' },
+                { value: 'molto', label: 'Senza limiti' },
+              ]}
+            />
+          </div>
+          <Input label="Allergie / intolleranze" placeholder="es. lattosio, glutine" value={prefs.allergies} onChange={(e) => setPrefs({ ...prefs, allergies: e.target.value })} />
+          <Input label="Cibi che non ti piacciono" placeholder="es. funghi, piccante" value={prefs.dislikes} onChange={(e) => setPrefs({ ...prefs, dislikes: e.target.value })} />
+          <Input label="Cibi che ami" placeholder="es. pollo, salmone, riso" value={prefs.likes} onChange={(e) => setPrefs({ ...prefs, likes: e.target.value })} />
+          {favorites.length > 0 && <p className="text-sm text-fg-3">❤️ Le tue {favorites.length} ricette preferite avranno la precedenza.</p>}
+          <Button fullWidth size="lg" loading={!data} disabled={!data} onClick={() => void create()}>
+            {plan ? 'Crea un nuovo piano' : 'Crea il mio piano settimanale'}
+          </Button>
+          {plan && (
+            <Button fullWidth variant="ghost" onClick={() => setEditPrefs(false)}>
+              Annulla
+            </Button>
+          )}
+        </Card>
+      </div>
+    );
+
+  const meals = plan.days[day]?.meals ?? [];
+  const totals = dayTotals(meals);
+  const stale = Math.abs(plan.targetKcal - target.target) >= 50;
+
+  return (
+    <div className="space-y-4">
+      {targets}
+      {header}
+      {stale && data && (
+        <Card className="border-warning/40 p-4">
+          <p className="text-sm text-fg-2">
+            Il tuo obiettivo è cambiato ({plan.targetKcal} → {target.target} kcal). Ricalcolo le porzioni mantenendo le stesse ricette?
+          </p>
+          <Button
+            className="mt-2"
+            size="sm"
+            onClick={() => {
+              void save(rescalePlan(plan, data, target, pp));
+              toast.success('Porzioni ricalcolate');
+            }}
+          >
+            Ricalcola porzioni
+          </Button>
+        </Card>
+      )}
+
+      <DayPills value={day} onChange={setDay} plan={plan} target={target} />
+
+      <Card className="space-y-2 p-4">
+        <div className="text-base font-semibold text-fg">{DAY_LONG[day]}</div>
+        <MacroBar label="Calorie" value={totals.kcal} target={target.target} unit="kcal" color="#F97316" />
+        <MacroBar label="Proteine" value={totals.protein} target={target.protein} unit="g" color="#EC4899" />
+        <MacroBar label="Carboidrati" value={totals.carbs} target={target.carbs} unit="g" color="#14B8A6" />
+        <MacroBar label="Grassi" value={totals.fat} target={target.fat} unit="g" color="#EAB308" />
+      </Card>
+
+      {!data ? (
+        <p className="text-center text-sm text-fg-3">Carico le ricette…</p>
+      ) : (
+        meals.map((m, i) => (
+          <MealCard
+            key={`${day}-${i}-${m.refId}`}
+            meal={m}
+            byId={byId}
+            onOpen={() => {
+              const info = mealInfo(m, byId);
+              if (info.recipe) setOpenRecipe({ recipe: info.recipe, servings: m.servings });
+              else if (info.simple) setOpenSimple(info.simple);
+            }}
+            onSwap={() => setSwap(i)}
+          />
+        ))
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <Button variant="secondary" icon={<ShoppingCart className="h-5 w-5" />} onClick={() => setShopOpen(true)}>
+          Spesa settimana
+        </Button>
+        <Button
+          variant="secondary"
+          icon={<RefreshCw className="h-5 w-5" />}
+          disabled={!data}
+          onClick={() => {
+            if (!data) return;
+            void save(planWeek(data, target, pp, Date.now()));
+            toast.success('Nuova settimana generata');
+          }}
+        >
+          Rigenera
+        </Button>
+      </div>
+      <Button variant="ghost" fullWidth icon={<Settings2 className="h-5 w-5" />} onClick={() => setEditPrefs(true)}>
+        Preferenze alimentari
+      </Button>
+      <p className="text-xs text-fg-3">
+        Ricette e valori nutrizionali: UniTools — theunitools.com (CC BY-SA 4.0). Indicazioni generali, non sostituiscono un nutrizionista.
+      </p>
+
+      {data && (
+        <SwapModal
+          open={swap != null}
+          slot={swap != null ? (meals[swap]?.slot ?? null) : null}
+          data={data}
+          prefs={pp}
+          onClose={() => setSwap(null)}
+          onPick={(choice) => {
+            if (swap == null) return;
+            void save(replaceMeal(plan, day, swap, choice, data, target, pp));
+            setSwap(null);
+            toast.success('Pasto cambiato');
+          }}
+        />
+      )}
+      <RecipeDetail recipe={openRecipe?.recipe ?? null} servings={openRecipe?.servings} onClose={() => setOpenRecipe(null)} />
+      <SimpleMealDetail meal={openSimple} onClose={() => setOpenSimple(null)} />
+
+      <Modal open={shopOpen} onClose={() => setShopOpen(false)} title="Lista della spesa · settimana">
+        <p className="mb-3 text-sm text-fg-3">Tutti gli ingredienti dei 7 giorni, con le porzioni del tuo piano.</p>
+        <ul className="divide-y divide-line-subtle">
+          {shopping.map((i) => (
+            <li key={`${i.name}|${i.unit}`} className="flex justify-between gap-3 py-2 text-base">
+              <span className="text-fg">{i.name}</span>
+              <span className="shrink-0 font-semibold text-fg-2">{formatQty(i)}</span>
+            </li>
+          ))}
+        </ul>
+      </Modal>
+    </div>
+  );
+}
+
+/* ---------- Tab Ricette ---------- */
+
+export function RecipesTab({ profile }: { profile: UserProfile }) {
+  const { settings, update } = useSettings();
+  const toast = useToast();
+  const { data, error, retry } = useRecipes();
+  const [open, setOpen] = useState<Recipe | null>(null);
+  const [placing, setPlacing] = useState<Recipe | null>(null);
+  const target = useMemo(() => nutrition(profile, settings.kcalAdjust ?? 0), [profile, settings.kcalAdjust]);
+  const pp = planPrefs(settings.nutritionPrefs ?? DEFAULT_NUTRITION, settings.favoriteRecipes ?? []);
+
+  if (error)
+    return (
+      <Card className="p-4 text-center">
+        <p className="text-base text-fg-2">{error}</p>
+        <Button className="mt-3" onClick={retry}>
+          Riprova
+        </Button>
+      </Card>
+    );
+  if (!data) return <p className="py-10 text-center text-sm text-fg-3">Carico le ricette…</p>;
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-fg-2">
+        {data.recipes.length} ricette da tutto il mondo con foto e valori nutrizionali. Tocca quelle che ti ispirano: salvale con il ❤️ (il coach le
+        preferirà nel piano) o aggiungile a un giorno della settimana.
+      </p>
+      <RecipeGallery recipes={data.recipes} onOpen={setOpen} />
+      <RecipeDetail
+        recipe={open}
+        onClose={() => setOpen(null)}
+        onAddToPlan={(r) => {
+          if (!settings.weekPlan) {
+            toast.error('Prima crea il piano settimanale nella sezione Dieta');
+            return;
+          }
+          setOpen(null);
+          setPlacing(r);
+        }}
+      />
+      <AddToPlanModal
+        recipe={placing}
+        plan={settings.weekPlan}
+        data={data}
+        onClose={() => setPlacing(null)}
+        onPlace={(day, meal) => {
+          if (!placing || !settings.weekPlan) return;
+          void settle(update({ weekPlan: replaceMeal(settings.weekPlan, day, meal, { kind: 'recipe', id: placing.id }, data, target, pp) }));
+          setPlacing(null);
+          toast.success(`Aggiunta a ${DAY_LONG[day]}`);
+        }}
+      />
+    </div>
+  );
+}

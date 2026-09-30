@@ -100,8 +100,10 @@ export interface Mesocycle {
 
 import type { UserProfile } from '@/lib/metabolism';
 import type { CoachPrefs } from '@/lib/program-generator';
-import type { MealPlan, NutritionPrefs } from '@/lib/coach';
+import type { NutritionPrefs } from '@/lib/coach';
 import type { Lang } from '@/lib/exercise-i18n';
+import type { WeekPlan } from '@/lib/recipes';
+import type { CheckIn } from '@/lib/checkin';
 
 export interface Settings {
   /** Lingua dei contenuti (istruzioni degli esercizi). */
@@ -111,9 +113,14 @@ export interface Settings {
   profile?: UserProfile;
   /** Richieste personali interpretate dal coach AI (priorità, movimenti da evitare, tempo). */
   coachPrefs?: CoachPrefs;
-  /** Preferenze alimentari e piano pasti generato dal dietologo AI. */
+  /** Preferenze alimentari per il piano settimanale. */
   nutritionPrefs?: NutritionPrefs;
-  mealPlan?: MealPlan;
+  /** Piano alimentare settimanale (ricette variate per 7 giorni). */
+  weekPlan?: WeekPlan;
+  /** Ricette salvate tra i preferiti. */
+  favoriteRecipes?: string[];
+  /** Check-in settimanali (il più recente per primo, massimo 12). */
+  checkIns?: CheckIn[];
   /** Correzione calorica giornaliera applicata dal check-in settimanale (kcal). */
   kcalAdjust?: number;
   restTimerEnabled: boolean;

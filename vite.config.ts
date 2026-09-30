@@ -69,6 +69,22 @@ export default defineConfig({
             },
           },
           {
+            // Ricettario (UniTools World Recipes, ≈750 KB)
+            urlPattern: /\/recipes\.json$/,
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'recipes' },
+          },
+          {
+            // Foto delle ricette
+            urlPattern: /^https:\/\/theunitools\.com\/recipes\//,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'recipe-images',
+              expiration: { maxEntries: 450, maxAgeSeconds: 60 * 60 * 24 * 90 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
             urlPattern: /^https:\/\/firestore\.googleapis\.com/,
             handler: 'NetworkFirst',
             options: { cacheName: 'firestore-cache', networkTimeoutSeconds: 5 },

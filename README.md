@@ -144,11 +144,21 @@ e, se l'AI non risponde, l'app continua a funzionare con le regole.
   volume ai muscoli prioritari, sostituisce i movimenti a rischio con alternative compatibili con la tua
   attrezzatura e riduce la seduta finché rientra nel tempo. Vedi l'anteprima prima di applicarla.
   Disponibile anche nel questionario iniziale ("Raccontalo al coach").
-- **Nutrizione**: obiettivi giornalieri (kcal e macro), **check-in settimanale adattivo** (confronta
-  l'andamento reale del peso con quello atteso per il tuo obiettivo e propone ±kcal, stile MacroFactor),
-  **piano pasti su misura** (dieta onnivora/pescetariana/vegetariana/vegana, pasti al giorno, tempo
-  per cucinare, allergie, gusti) con porzioni **calibrate automaticamente** sulle tue calorie,
-  "Cambia" per sostituire un singolo pasto, **lista della spesa** settimanale.
+- **Dieta**: obiettivi giornalieri (kcal e macro) e **piano settimanale**: 7 giorni con pasti tutti
+  diversi scelti dal ricettario (nessuna ricetta ripetuta nella settimana quando la dieta lo consente),
+  porzioni calcolate sulle calorie di ogni pasto, integrazione proteica automatica se mancano proteine.
+  Tiene conto di dieta, allergie, cibi non graditi, cibi preferiti e tempo per cucinare. "Cambia" per
+  sostituire un pasto (galleria filtrata o "Sorprendimi"), **lista della spesa** dei 7 giorni,
+  ricalcolo delle porzioni quando cambia l'obiettivo. Il piano è calcolato dall'app: zero quota AI.
+- **Ricette**: galleria di **501 ricette con foto** e valori nutrizionali per porzione, con ricerca e
+  filtri (categoria, proteiche, ≤30 min, vegetariane, vegane, senza glutine, preferite). Dal dettaglio:
+  ingredienti scalati sulle porzioni, passaggi con tempi, ❤️ preferiti (il piano li favorisce),
+  "Aggiungi al piano settimanale" e traduzione in italiano con l'AI (salvata sul dispositivo).
+- **Check-in settimanale**: 6 domande veloci (energia, sonno, stress, dolori, fame, aderenza alla dieta)
+  più i dati raccolti dall'app (allenamenti fatti/previsti, volume rispetto alla settimana prima, record,
+  andamento del peso stile MacroFactor). L'app calcola indice di fatica, correzione calorica e
+  consiglio di deload; l'AI scrive un commento (se non risponde restano i consigli calcolati).
+  Applicando le modifiche le porzioni del piano vengono ricalcolate. Promemoria in Home ogni 7 giorni.
 - **Chiedi**: chat con il coach, che conosce profilo, obiettivi e ultimi allenamenti.
 - Sicurezza: mai sotto metabolismo basale né sotto 1500/1200 kcal; con dolori, patologie o disturbi
   alimentari il coach rimanda a medico/professionista.
@@ -160,6 +170,10 @@ La libreria esercizi si apre dall'icona in alto nella pagina Coach e dall'editor
 - **Istruzioni in lingua**: in italiano sono curate a mano per i ~100 esercizi più usati; per gli altri
   esercizi e per le altre lingue vengono tradotte automaticamente (servizio gratuito MyMemory) alla prima
   apertura e salvate sul dispositivo. Se la traduzione non è disponibile si mostra il testo originale.
+- **Ricette**: [UniTools World Recipes](https://theunitools.com) (501 ricette, licenza
+  [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), credit "UniTools — theunitools.com";
+  foto con autore e licenza indicati nel dettaglio). Dati compattati in `public/recipes.json` con
+  `npm run recipes`.
 - **876 esercizi** da [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (pubblico dominio):
   foto di inizio/fine movimento alternate come **simulazione animata**, muscoli principali/secondari
   sulla figura del corpo, istruzioni passo-passo, livello, attrezzo e link al **video su YouTube**.
