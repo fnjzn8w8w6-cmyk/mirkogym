@@ -26,6 +26,17 @@ export function BodyFatPhotoModal({ open, onClose, subject, onUse }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<BodyFatAIResult | null>(null);
+  const [status, setStatus] = useState('');
+  const [elapsed, setElapsed] = useState(0);
+  const cancelRef = useRef(false);
+
+  useEffect(() => {
+    if (!busy) return;
+    const start = Date.now();
+    setElapsed(0);
+    const t = window.setInterval(() => setElapsed(Math.round((Date.now() - start) / 1000)), 1000);
+    return () => window.clearInterval(t);
+  }, [busy]);
 
   useEffect(() => {
     if (!open) return;
@@ -40,18 +51,21 @@ export function BodyFatPhotoModal({ open, onClose, subject, onUse }: Props) {
     if (!front || !subject) return;
     setBusy(true);
     setError(null);
+    cancelRef.current = false;
     try {
       const images = [{ base64: front.base64, view: 'fronte' as const }, ...(side ? [{ base64: side.base64, view: 'profilo' as const }] : [])];
-      setResult(await estimateBodyFatFromPhotos(images, subject));
+      const r = await estimateBodyFatFromPhotos(images, subject, setStatus, () => cancelRef.current);
+      if (!cancelRef.current) setResult(r);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Analisi non riuscita');
+      if (!cancelRef.current) setError(e instanceof Error ? e.message : 'Analisi non riuscita');
     } finally {
       setBusy(false);
+      setStatus('');
     }
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Massa grassa da foto" dismissible={!busy}>
+    <Modal open={open} onClose={onClose} title="Massa grassa da foto">
       {!subject ? (
         <p className="text-base text-fg-2">Completa prima il profilo (sesso, età, altezza, peso) per tarare la stima.</p>
       ) : result ? (
@@ -105,9 +119,29 @@ export function BodyFatPhotoModal({ open, onClose, subject, onUse }: Props) {
               {error}
             </p>
           )}
-          <Button size="lg" fullWidth loading={busy} disabled={!front || !consent} icon={<Sparkles className="h-5 w-5" />} onClick={analyze}>
-            {busy ? 'Analisi in corso…' : 'Analizza'}
-          </Button>
+          {busy ? (
+            <div className="rounded-lg border border-accent-500/30 bg-accent-glow p-4 text-center" role="status" aria-live="polite">
+              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-accent-500 border-t-transparent" aria-hidden />
+              <div className="mt-2 text-base font-semibold text-fg">{status || 'Analisi in corso…'}</div>
+              <div className="text-sm text-fg-3">{elapsed}s · di solito 5–20 secondi</div>
+              <Button
+                className="mt-3"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  cancelRef.current = true;
+                  setBusy(false);
+                  setStatus('');
+                }}
+              >
+                Annulla
+              </Button>
+            </div>
+          ) : (
+            <Button size="lg" fullWidth disabled={!front || !consent} icon={<Sparkles className="h-5 w-5" />} onClick={analyze}>
+              Analizza
+            </Button>
+          )}
         </div>
       )}
     </Modal>
