@@ -65,7 +65,7 @@ export async function estimateBodyFatFromPhotos(
     return await callAIJson(
       prompt(subject, images.map((i) => i.view)),
       parse,
-      { temperature: 0.2, onProgress, isCancelled, label: 'Analisi in corso…' },
+      { temperature: 0.2, onProgress, isCancelled, label: 'Analisi in corso…', prefer: 'flash' },
       images.map((i) => ({ inlineData: { mimeType: 'image/jpeg', data: i.base64 } })),
     );
   } catch (e) {
