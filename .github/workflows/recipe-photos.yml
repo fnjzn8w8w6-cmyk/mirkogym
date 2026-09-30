@@ -1,0 +1,39 @@
+name: Recipe photos
+
+# Cerca foto coerenti per le ricette (Wikibooks / Wikipedia, licenze libere) e le salva nel repository.
+on:
+  push:
+    branches: ['claude/**']
+    paths:
+      - scripts/find-recipe-photos.mjs
+      - scripts/recipe-photos-reject.json
+      - .github/workflows/recipe-photos.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: recipe-photos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  photos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: ImageMagick
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick > /dev/null
+      - name: Find photos
+        run: node scripts/find-recipe-photos.mjs
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898900+github-actions[bot]@users.noreply.github.com"
+          git add -A scripts/recipe-photos.json public/recipe-img review
+          git diff --cached --quiet && exit 0
+          git commit -m "Foto ricette: aggiornamento automatico"
+          git push
