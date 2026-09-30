@@ -5,6 +5,7 @@ import { useSettings } from '@/hooks/use-settings';
 import { settle } from '@/lib/firestore';
 import { Button } from '../ui/Button';
 import { Logo } from './Screens';
+import { AccountModal, type AccountMode } from '../modals/AccountModal';
 
 const slides = [
   {
@@ -27,6 +28,7 @@ const slides = [
 export function Onboarding() {
   const [i, setI] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [account, setAccount] = useState<AccountMode | null>(null);
   const { update } = useSettings();
   const last = i === slides.length - 1;
   const slide = slides[i];
@@ -98,6 +100,15 @@ export function Onboarding() {
       <Button size="lg" fullWidth loading={busy} onClick={() => (last ? finish() : setI(i + 1))}>
         {last ? 'Iniziamo' : 'Avanti'}
       </Button>
+      <button type="button" className="mt-2 h-11 text-base text-fg-2" onClick={() => setAccount('login')}>
+        Hai già un account? <span className="font-semibold text-accent-400">Accedi</span>
+      </button>
+      <AccountModal
+        open={account !== null}
+        mode={account ?? 'login'}
+        onClose={() => setAccount(null)}
+        onModeChange={setAccount}
+      />
     </div>
   );
 }

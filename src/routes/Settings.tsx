@@ -1,12 +1,14 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Copy, Download, ExternalLink, ListChecks, RotateCcw, Upload } from 'lucide-react';
+import { ChevronRight, Copy, Download, ExternalLink, ListChecks, LogOut, RotateCcw, ShieldAlert, ShieldCheck, Upload } from 'lucide-react';
 import type { BackupFile } from '@/types';
 import { useSettings } from '@/hooks/use-settings';
 import { useSessions } from '@/hooks/use-sessions';
 import { useBodyLogs } from '@/hooks/use-body-logs';
 import { useMesocycle } from '@/hooks/use-mesocycle';
-import { useUid } from '@/hooks/data-context';
+import { useData, useUid } from '@/hooks/data-context';
+import { AccountModal, type AccountMode } from '@/components/modals/AccountModal';
+import { authErrorMessage, logOut } from '@/lib/auth';
 import { TopBar } from '@/components/layout/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Button, IconButton } from '@/components/ui/Button';
@@ -44,6 +46,9 @@ export default function Settings() {
   const [resetStep, setResetStep] = useState<0 | 1 | 2>(0);
   const [resetText, setResetText] = useState('');
   const [resetting, setResetting] = useState(false);
+  const { isAnonymous, email } = useData();
+  const [account, setAccount] = useState<AccountMode | null>(null);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   const stats = useMemo(() => {
     const trainingDays = new Set(sessions.map((s) => toISODate(s.date))).size;
@@ -116,6 +121,40 @@ export default function Settings() {
     <div>
       <TopBar title="Impostazioni" large />
       <div className="page space-y-5 pt-4">
+        <section>
+          <h2 className="section-title">Account</h2>
+          {isAnonymous ? (
+            <Card className="border-warning/30 p-4">
+              <div className="flex gap-3">
+                <ShieldAlert className="h-6 w-6 shrink-0 text-warning" aria-hidden />
+                <div>
+                  <div className="text-base font-semibold text-fg">Dati salvati solo su questo dispositivo</div>
+                  <p className="mt-1 text-sm text-fg-2">
+                    Crea un account per non perdere mai i tuoi allenamenti e ritrovarli su qualsiasi telefono.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <Button onClick={() => setAccount('create')}>Crea account</Button>
+                <Button variant="secondary" onClick={() => setAccount('login')}>
+                  Accedi
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <Card className="flex items-center gap-3 p-4">
+              <ShieldCheck className="h-6 w-6 shrink-0 text-success" aria-hidden />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm text-fg-3">Account protetto</div>
+                <div className="truncate text-base font-semibold text-fg">{email}</div>
+              </div>
+              <Button variant="secondary" size="sm" icon={<LogOut className="h-4 w-4" />} onClick={() => setConfirmLogout(true)}>
+                Esci
+              </Button>
+            </Card>
+          )}
+        </section>
+
         <Card interactive className="flex items-center gap-3 p-4" onClick={() => navigate('/schedule')} role="link">
           <span className="flex h-11 w-11 items-center justify-center rounded-md bg-accent-glow text-accent-500">
             <ListChecks className="h-6 w-6" aria-hidden />
@@ -232,6 +271,23 @@ export default function Settings() {
         </Button>
       </div>
 
+      <AccountModal open={account !== null} mode={account ?? 'create'} onClose={() => setAccount(null)} onModeChange={setAccount} />
+      <ConfirmDialog
+        open={confirmLogout}
+        title="Uscire dall'account?"
+        message="I tuoi dati restano salvati nell'account: li ritrovi accedendo di nuovo con la tua email."
+        confirmLabel="Esci"
+        destructive={false}
+        onCancel={() => setConfirmLogout(false)}
+        onConfirm={async () => {
+          try {
+            await logOut();
+          } catch (e) {
+            toast.error(authErrorMessage(e));
+          }
+          setConfirmLogout(false);
+        }}
+      />
       <ConfirmDialog
         open={Boolean(pendingImport)}
         title="Importare il backup?"

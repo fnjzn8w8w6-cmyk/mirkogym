@@ -13,6 +13,7 @@ import { RestTimer } from '@/components/session/RestTimer';
 import { Onboarding } from '@/components/onboarding/Onboarding';
 import { StartingLoads } from '@/components/onboarding/StartingLoads';
 import { SetupRequired, Splash, FatalError } from '@/components/onboarding/Screens';
+import { AuthScreen } from '@/components/onboarding/AuthScreen';
 import Home from '@/routes/Home';
 import Session from '@/routes/Session';
 
@@ -69,7 +70,8 @@ function AppShell() {
 }
 
 function Gate() {
-  const { error, ready, settings, sessions } = useData();
+  const { error, ready, settings, sessions, signedOut } = useData();
+  if (signedOut) return <AuthScreen />;
   if (error && !ready) return <FatalError error={error} />;
   if (!ready) return <Splash />;
   if (!settings.onboardingCompleted) return <Onboarding />;

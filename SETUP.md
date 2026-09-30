@@ -26,10 +26,15 @@ Tempo: ~10 minuti. Serve solo un account Google. Il piano gratuito **Spark** è 
 
    Li ritrovi sempre in ⚙️ **Impostazioni progetto → Generali → Le tue app**.
 
-## 3. Attiva l'accesso anonimo
+## 3. Attiva i metodi di accesso
 
 1. Menu **Build → Authentication** → **Inizia**
 2. Tab **Metodo di accesso** → **Anonimo** → **Attiva** → **Salva**
+3. Sempre in **Metodo di accesso** → **Aggiungi nuovo provider** → **Email/password** →
+   attiva il primo interruttore (*Email/password*; il "link email" non serve) → **Salva**
+
+L'accesso anonimo fa partire subito l'app al primo avvio; con **Email/password** crei il tuo account
+(Impostazioni → Account → *Crea account*) e i dati restano salvati per sempre, su qualsiasi dispositivo.
 
 ## 4. Autorizza il dominio di GitHub Pages
 
@@ -74,7 +79,9 @@ Apri https://fnjzn8w8w6-cmyk.github.io/mirkogym/ :
 1. L'app crea l'utente anonimo e carica la tua scheda (Day 1–5)
 2. Onboarding in 3 slide
 3. (Opzionale) inserisci i carichi di partenza per ogni esercizio — puoi saltare
-4. Sei pronto: **Inizia sessione** 💪
+4. **Impostazioni → Account → Crea account** con email e password: da quel momento i dati sono legati
+   al tuo account (quelli già registrati restano) e puoi accedere da qualsiasi telefono
+5. Sei pronto: **Inizia sessione** 💪
 
 ## Risoluzione problemi
 
@@ -82,6 +89,8 @@ Apri https://fnjzn8w8w6-cmyk.github.io/mirkogym/ :
 |---|---|
 | "Configurazione Firebase mancante" | I secret non erano impostati al momento del build: aggiungili e rilancia il workflow |
 | "Impossibile connettersi" + `auth/admin-restricted-operation` o `operation-not-allowed` | Accesso anonimo non attivo (passo 3) |
+| "Accesso con email non attivo su Firebase" | Provider Email/password non attivo (passo 3) |
+| Password dimenticata | Schermata di accesso → *Password dimenticata?*: arriva un'email per reimpostarla |
 | "Impossibile connettersi" + `permission-denied` | Regole Firestore non pubblicate (passo 6) |
 | `auth/unauthorized-domain` | Dominio GitHub Pages non autorizzato (passo 4) |
 | L'app non si aggiorna dopo un deploy | Chiudila e riaprila: il service worker si aggiorna automaticamente al successivo avvio |

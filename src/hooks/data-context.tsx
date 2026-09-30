@@ -1,7 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import type { ActiveSession, BodyLog, Mesocycle, Schedule, Session, Settings } from '@/types';
-import { watchAnonymousUser } from '@/lib/auth';
+import { watchUser } from '@/lib/auth';
 import {
   ensureSeed,
   subscribeActiveSession,
@@ -16,6 +16,12 @@ import { setHapticsEnabled } from '@/lib/haptics';
 
 export interface DataState {
   user: User | null;
+  /** Nessun utente (dopo "Esci"): va mostrata la schermata di accesso. */
+  signedOut: boolean;
+  isAnonymous: boolean;
+  email: string | null;
+  /** Da chiamare dopo aver collegato un account, per aggiornare isAnonymous/email. */
+  refreshUser: () => void;
   uid: string | null;
   error: Error | null;
   ready: boolean;
@@ -37,6 +43,10 @@ export interface DataState {
 
 const initial: DataState = {
   user: null,
+  signedOut: false,
+  isAnonymous: true,
+  email: null,
+  refreshUser: () => undefined,
   uid: null,
   error: null,
   ready: false,
@@ -57,8 +67,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // 1. Auth anonima
   useEffect(
     () =>
-      watchAnonymousUser(
-        (user) => setState((s) => (s.uid === user.uid ? s : { ...s, user, uid: user.uid })),
+      watchUser(
+        (user) =>
+          setState((s) => {
+            if (!user) return { ...initial, signedOut: true };
+            const who = { user, signedOut: false, isAnonymous: user.isAnonymous, email: user.email, error: null };
+            // Cambio account: riparte da uno stato pulito (niente dati del vecchio utente)
+            return s.uid === user.uid ? { ...s, ...who } : { ...initial, ...who, uid: user.uid };
+          }),
         (error) => setState((s) => ({ ...s, error })),
       ),
     [],
@@ -98,10 +114,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => setHapticsEnabled(state.settings.vibrationEnabled), [state.settings.vibrationEnabled]);
 
+  const refreshUser = useCallback(
+    () =>
+      setState((s) => (s.user ? { ...s, isAnonymous: s.user.isAnonymous, email: s.user.email } : s)),
+    [],
+  );
+
   const value = useMemo<DataState>(() => {
     const l = state.loaded;
-    return { ...state, ready: Boolean(state.uid) && l.schedule && l.settings && l.sessions && l.mesocycles && l.activeSession };
-  }, [state]);
+    return { ...state, refreshUser, ready: Boolean(state.uid) && l.schedule && l.settings && l.sessions && l.mesocycles && l.activeSession };
+  }, [state, refreshUser]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

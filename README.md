@@ -6,7 +6,7 @@ analytics e tracking della composizione corporea.
 
 **App live:** https://fnjzn8w8w6-cmyk.github.io/mirkogym/
 
-Stack: Vite 5 · React 18 · TypeScript strict · Tailwind CSS 3.4 · Firebase (Firestore + Auth anonima) ·
+Stack: Vite 5 · React 18 · TypeScript strict · Tailwind CSS 3.4 · Firebase (Firestore + Auth email/password con avvio anonimo) ·
 Recharts · Framer Motion · date-fns (it) · vite-plugin-pwa · deploy su GitHub Pages via GitHub Actions.
 
 ---
@@ -60,18 +60,28 @@ Su Android (Chrome): menu ⋮ → **Installa app**.
 > Nota iPhone: Safari non supporta `navigator.vibrate`, quindi su iOS le vibrazioni non sono
 > disponibili; il suono di fine recupero sì (attivabile in Impostazioni).
 
-## 5. Backup dei dati
+## 5. Account e salvataggio dei dati
 
-I dati vivono su Firestore, legati a un **utente anonimo**. L'UID resta lo stesso finché non cancelli
-i dati del sito/l'app dal telefono. Per questo è importante fare backup periodici:
+Al primo avvio l'app parte subito con un utente anonimo (dati legati a quel dispositivo).
+Per non perdere mai i dati: **Impostazioni → Account → Crea account** (email + password).
+
+- L'utente anonimo viene **collegato** all'account: stesso UID, tutto ciò che hai già registrato resta.
+- Su un altro telefono (o dopo aver reinstallato l'app / cancellato i dati di Safari): all'avvio tocca
+  **"Hai già un account? Accedi"**, oppure Impostazioni → Account → Accedi.
+- **Esci** da Impostazioni → Account; i dati restano nell'account. *Password dimenticata?* invia
+  un'email per reimpostarla.
+- Finché sei senza account, la Home mostra il promemoria "Proteggi i tuoi dati".
+
+## 6. Backup dei dati
+
+Anche con l'account, un backup ogni tanto non fa male:
 
 - **Impostazioni → Dati → Esporta**: scarica `mirkogym-backup-AAAA-MM-GG.json` con scheda, sessioni,
   body log, mesocicli e impostazioni. Consigliato: una volta a settimana / a fine mesociclo,
   salvandolo su iCloud Drive o Google Drive.
 - **Impostazioni → Dati → Importa**: carica un backup e **sostituisce** tutti i dati attuali
-  (con conferma). È anche il modo per spostare i dati su un nuovo telefono o browser: ogni
-  dispositivo/browser ha il suo utente anonimo.
-- Impostazioni → App mostra l'**UID anonimo** (utile per ritrovare i dati in Firebase Console).
+  (con conferma).
+- Impostazioni → App mostra l'**UID** (utile per ritrovare i dati in Firebase Console).
 
 ---
 

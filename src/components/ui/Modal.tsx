@@ -70,11 +70,13 @@ export function Modal({ open, onClose, title, variant = 'sheet', children, foote
             animate={isSheet ? { y: 0 } : { opacity: 1, scale: 1 }}
             exit={isSheet ? { y: '100%' } : { opacity: 0, scale: 0.95 }}
             transition={{ type: 'spring', damping: 30, stiffness: 340, mass: 0.8 }}
-            drag={isSheet && dismissible ? 'y' : false}
+            // `drag` deve restare stabile: cambiarlo durante l'animazione d'uscita la interrompe
+            // e lascia lo sfondo invisibile a bloccare i tocchi.
+            drag={isSheet ? 'y' : false}
             dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0, bottom: 0.6 }}
+            dragElastic={{ top: 0, bottom: dismissible ? 0.6 : 0.05 }}
             onDragEnd={(_, info) => {
-              if (info.offset.y > 120 || info.velocity.y > 600) onClose();
+              if (dismissible && (info.offset.y > 120 || info.velocity.y > 600)) onClose();
             }}
           >
             {isSheet && <div className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-surface-3" aria-hidden />}
