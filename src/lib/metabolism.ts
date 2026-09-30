@@ -24,7 +24,19 @@ export interface UserProfile {
   waistCm?: number;
   neckCm?: number;
   hipCm?: number;
+  /** Massa grassa nota (misurata o stimata da foto): ha la priorità sulle formule. */
+  bodyFatPct?: number;
+  bodyFatSource?: 'manual' | 'photo';
 }
+
+export type BodyFatMethod = 'manual' | 'photo' | 'navy' | 'bmi';
+
+export const BF_METHOD_LABEL: Record<BodyFatMethod, string> = {
+  manual: 'valore inserito da te',
+  photo: 'stima AI da foto',
+  navy: 'metodo US Navy (circonferenze)',
+  bmi: 'formula di Deurenberg (da BMI): poco precisa per chi è muscoloso',
+};
 
 export const ACTIVITY: { value: UserProfile['activity']; label: string; description: string; factor: number }[] = [
   { value: 1, label: 'Sedentario', description: 'Lavoro da scrivania, pochi passi (< 5.000/giorno)', factor: 1.2 },
@@ -68,7 +80,8 @@ export function bfNavy(p: UserProfile): number | null {
   return 495 / (1.29579 - 0.35004 * Math.log10(w + h - n) + 0.221 * Math.log10(ht)) - 450;
 }
 
-export function bodyFat(p: UserProfile): { value: number; method: 'navy' | 'bmi' } {
+export function bodyFat(p: UserProfile): { value: number; method: BodyFatMethod } {
+  if (p.bodyFatPct != null && p.bodyFatPct > 0) return { value: Math.round(p.bodyFatPct * 10) / 10, method: p.bodyFatSource ?? 'manual' };
   const navy = bfNavy(p);
   const v = navy ?? bfDeurenberg(p);
   return { value: Math.round(Math.min(60, Math.max(3, v)) * 10) / 10, method: navy != null ? 'navy' : 'bmi' };

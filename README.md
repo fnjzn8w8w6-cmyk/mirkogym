@@ -79,6 +79,12 @@ circonferenze, altrimenti formula di Deurenberg), massa magra, BMI e FFMI. Infin
 recuperi in base a obiettivo e livello, carichi di partenza indicativi) oppure un modello.
 Il profilo si aggiorna da **Profilo → Aggiorna profilo e obiettivo**.
 
+**Massa grassa più precisa**: le formule da BMI sovrastimano chi è muscoloso. Si può quindi inserire
+un valore misurato (plicometria, bioimpedenza, DEXA) oppure usare **"BF da foto"** (pagina Corpo o
+questionario): una foto frontale (+ profilo opzionale) viene analizzata da Gemini tramite Firebase AI
+Logic (gratuito, vedi SETUP.md passo 7). Errore tipico delle stime da foto: 2–4 punti; l'ultimo valore
+registrato in "Corpo" è quello usato da Profilo e calcoli.
+
 Prima di ogni allenamento il **check di prontezza** (sonno, energia, indolenzimento) adatta i carichi:
 giornata "no" → −10% sui suggerimenti.
 

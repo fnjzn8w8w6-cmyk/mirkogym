@@ -67,12 +67,30 @@ service cloud.firestore {
 
 3. **Pubblica**. Ogni utente anonimo può leggere e scrivere solo `users/{proprio uid}/...`.
 
-## 7. Configura GitHub e fai il deploy
+## 7. Stima della massa grassa da foto (Firebase AI Logic, gratuito)
+
+La funzione "BF da foto" usa Gemini tramite **Firebase AI Logic**, disponibile nel piano gratuito
+Spark (senza carta di credito).
+
+1. Firebase Console → menu **Build → AI Logic** (o "Firebase AI Logic") → **Inizia / Get started**
+2. Scegli **Gemini Developer API** (non Vertex AI) e conferma: Firebase crea e collega la chiave in automatico
+3. Fatto: non servono nuovi secret su GitHub, l'app usa la configurazione Firebase esistente
+
+Note:
+- Il modello predefinito è `gemini-2.5-flash` (poi `gemini-2.0-flash`). Se in futuro Google lo ritira,
+  aggiungi il secret/variabile `VITE_GEMINI_MODEL` con il nome del modello corrente.
+- Consigliato: attiva **App Check** (Build → App Check, provider reCAPTCHA Enterprise) per impedire
+  che altri usino la quota AI del tuo progetto.
+- Privacy: le foto vengono ridimensionate sul telefono e inviate a Google solo per l'analisi; l'app
+  non le salva. Con il piano gratuito Google può usare i contenuti per migliorare i propri servizi:
+  l'utente lo accetta esplicitamente prima di ogni analisi.
+
+## 8. Configura GitHub e fai il deploy
 
 Segui le sezioni **2** e **3** del [README](./README.md): 6 secret + GitHub Pages con sorgente
 "GitHub Actions". Poi fai un push su `main` (o lancia il workflow a mano).
 
-## 8. Primo avvio
+## 9. Primo avvio
 
 Apri https://fnjzn8w8w6-cmyk.github.io/mirkogym/ :
 
@@ -90,6 +108,7 @@ Apri https://fnjzn8w8w6-cmyk.github.io/mirkogym/ :
 | "Configurazione Firebase mancante" | I secret non erano impostati al momento del build: aggiungili e rilancia il workflow |
 | "Impossibile connettersi" + `auth/admin-restricted-operation` o `operation-not-allowed` | Accesso anonimo non attivo (passo 3) |
 | "Accesso con email non attivo su Firebase" | Provider Email/password non attivo (passo 3) |
+| "Firebase AI Logic non è attivo nel progetto" | Attiva AI Logic con Gemini Developer API (passo 7) |
 | Password dimenticata | Schermata di accesso → *Password dimenticata?*: arriva un'email per reimpostarla |
 | "Impossibile connettersi" + `permission-denied` | Regole Firestore non pubblicate (passo 6) |
 | `auth/unauthorized-domain` | Dominio GitHub Pages non autorizzato (passo 4) |

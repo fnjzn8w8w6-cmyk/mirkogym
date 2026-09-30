@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, ChevronLeft, Flame, Info, Sparkles } from 'lucide-react';
+import { Camera, Check, ChevronLeft, Flame, Info, Sparkles } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { useSchedule } from '@/hooks/use-schedule';
 import { useSessions } from '@/hooks/use-sessions';
@@ -30,6 +30,8 @@ import { cn } from '@/lib/cn';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { TemplatePicker } from './TemplatePicker';
+import { BodyFatPhotoModal } from '../modals/BodyFatPhotoModal';
+import { BF_METHOD_LABEL } from '@/lib/metabolism';
 
 type Step = 'lang' | 'body' | 'activity' | 'experience' | 'goal' | 'availability' | 'results' | 'program';
 const STEPS: Step[] = ['lang', 'body', 'activity', 'experience', 'goal', 'availability', 'results', 'program'];
@@ -65,6 +67,9 @@ export function ProfileSetup() {
   const [programChoice, setProgramChoice] = useState<'generated' | 'template' | 'keep'>('generated');
   const [template, setTemplate] = useState<Template | null>(null);
   const [busy, setBusy] = useState(false);
+  const [bfKnown, setBfKnown] = useState(prev?.bodyFatPct != null ? String(prev.bodyFatPct).replace('.', ',') : '');
+  const [bfSource, setBfSource] = useState<'manual' | 'photo' | undefined>(prev?.bodyFatSource);
+  const [photoOpen, setPhotoOpen] = useState(false);
 
   const idx = STEPS.indexOf(step);
   const next = () => setStep(STEPS[Math.min(idx + 1, STEPS.length - 1)]);
@@ -90,6 +95,8 @@ export function ProfileSetup() {
           waistCm: parseNum(waist) ?? undefined,
           neckCm: parseNum(neck) ?? undefined,
           hipCm: parseNum(hip) ?? undefined,
+          bodyFatPct: parseNum(bfKnown) ?? undefined,
+          bodyFatSource: parseNum(bfKnown) != null ? (bfSource ?? 'manual') : undefined,
         }
       : null;
 
@@ -119,7 +126,7 @@ export function ProfileSetup() {
         date: todayISO(),
         weight: profile.weightKg,
         bodyFat: analysis.c.bf.value,
-        notes: analysis.c.bf.method === 'navy' ? 'Stima iniziale (circonferenze)' : 'Stima iniziale (questionario)',
+        notes: `Massa grassa: ${BF_METHOD_LABEL[analysis.c.bf.method]}`,
         circumferences: profile.waistCm ? { waist: profile.waistCm } : undefined,
       }),
     );
@@ -296,12 +303,38 @@ export function ProfileSetup() {
                   {bfCategory(analysis.c.bf.value, profile.sex)} · {bmiCategory(analysis.c.bmi)} · FFMI {formatKg(analysis.c.ffmi)}
                 </p>
                 <p className="mt-2 text-xs text-fg-3">
-                  {analysis.c.bf.method === 'navy'
-                    ? 'Massa grassa: metodo US Navy (circonferenze).'
-                    : 'Massa grassa: formula di Deurenberg (da BMI, età e sesso). Aggiungi vita e collo per una stima più precisa.'}{' '}
-                  Metabolismo: Mifflin-St Jeor. Non sostituisce il parere di un professionista.
+                  Massa grassa: {BF_METHOD_LABEL[analysis.c.bf.method]}. Metabolismo: Mifflin-St Jeor. Non sostituisce il parere di un professionista.
                 </p>
               </div>
+              <div className="card mt-3 p-4">
+                <div className="text-base font-semibold text-fg">La massa grassa non ti torna?</div>
+                <p className="mt-1 text-sm text-fg-3">Inserisci un valore misurato (plicometria, bioimpedenza, DEXA) o fatti stimare da una foto.</p>
+                <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+                  <Input
+                    label="Massa grassa nota"
+                    kind="decimal"
+                    suffix="%"
+                    value={bfKnown}
+                    onChange={(e) => {
+                      setBfKnown(e.target.value);
+                      setBfSource('manual');
+                    }}
+                  />
+                  <Button variant="secondary" className="h-14" icon={<Camera className="h-5 w-5" />} onClick={() => setPhotoOpen(true)}>
+                    Da foto
+                  </Button>
+                </div>
+              </div>
+              <BodyFatPhotoModal
+                open={photoOpen}
+                onClose={() => setPhotoOpen(false)}
+                subject={profile}
+                onUse={(bf) => {
+                  setBfKnown(String(bf).replace('.', ','));
+                  setBfSource('photo');
+                  setPhotoOpen(false);
+                }}
+              />
             </>
           )}
 

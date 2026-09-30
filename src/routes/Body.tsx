@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { subDays } from 'date-fns';
-import { Moon, Plus, Trash2 } from 'lucide-react';
+import { Camera, Moon, Plus, Trash2 } from 'lucide-react';
+import { BodyFatPhotoModal } from '@/components/modals/BodyFatPhotoModal';
+import { useSettings } from '@/hooks/use-settings';
+import { todayISO } from '@/lib/date-utils';
 import type { BodyLog } from '@/types';
 import { useBodyLogs } from '@/hooks/use-body-logs';
 import { TopBar } from '@/components/layout/TopBar';
@@ -27,7 +30,11 @@ function series(logs: BodyLog[], field: 'weight' | 'bodyFat', days: number): Wei
 }
 
 export default function Body() {
-  const { bodyLogs, remove, loading } = useBodyLogs();
+  const { bodyLogs, remove, loading, save } = useBodyLogs();
+  const { settings } = useSettings();
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const latestWeight = bodyLogs.find((b) => b.weight != null)?.weight ?? settings.profile?.weightKg;
+  const subject = settings.profile && latestWeight ? { ...settings.profile, weightKg: latestWeight } : null;
   const toast = useToast();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<BodyLog | null>(null);
@@ -48,7 +55,30 @@ export default function Body() {
 
   return (
     <div>
-      <TopBar title="Corpo" large />
+      <TopBar
+        title="Corpo"
+        large
+        right={
+          <Button size="sm" variant="secondary" icon={<Camera className="h-4 w-4" />} onClick={() => setPhotoOpen(true)}>
+            BF da foto
+          </Button>
+        }
+      />
+      <BodyFatPhotoModal
+        open={photoOpen}
+        onClose={() => setPhotoOpen(false)}
+        subject={subject}
+        onUse={async (bf, r) => {
+          await save({
+            date: todayISO(),
+            weight: latestWeight,
+            bodyFat: bf,
+            notes: `Stima AI da foto (${r.low}–${r.high}%, affidabilità ${r.confidence})`,
+          });
+          setPhotoOpen(false);
+          toast.success('Massa grassa salvata nel diario');
+        }}
+      />
       <div className="page space-y-4 pt-4">
         {bodyLogs.length === 0 ? (
           <EmptyState

@@ -13,6 +13,7 @@ import { MuscleFigure, GROUP_MUSCLES } from '@/components/library/MuscleFigure';
 import { RANKS, TIER_COLOR } from '@/lib/gamification';
 import { formatKg, formatTonnage, muscleStatus } from '@/lib/analytics';
 import { useSettings } from '@/hooks/use-settings';
+import { useBodyLogs } from '@/hooks/use-body-logs';
 import { ACTIVITY, EXPERIENCE, GOALS, bfCategory, composition, nutrition } from '@/lib/metabolism';
 import { Button } from '@/components/ui/Button';
 import { settle } from '@/lib/firestore';
@@ -25,13 +26,15 @@ export default function Profile() {
   const { sessions, groupOf } = useSessions();
   const { days } = useSchedule();
   const { settings, update } = useSettings();
+  const { bodyLogs } = useBodyLogs();
   const profile = settings.profile;
   const analysis = useMemo(() => {
     if (!profile) return null;
     // Usa il peso più recente registrato in "Corpo"
-    const p = { ...profile, weightKg: bodyweight || profile.weightKg };
+    const lastBf = bodyLogs.find((b) => b.bodyFat != null)?.bodyFat;
+    const p = { ...profile, weightKg: bodyweight || profile.weightKg, bodyFatPct: lastBf ?? profile.bodyFatPct };
     return { n: nutrition(p), c: composition(p), p };
-  }, [profile, bodyweight]);
+  }, [profile, bodyweight, bodyLogs]);
 
   // Mappa muscolare: serie della settimana rispetto al massimo dell'obiettivo
   const intensity = useMemo(() => {
@@ -42,6 +45,7 @@ export default function Profile() {
     return out;
   }, [sessions, groupOf, days, settings.weeklySetsMax]);
 
+  const lastBfNote = bodyLogs.find((b) => b.bodyFat != null)?.notes ?? 'stima dal questionario';
   const sortedAch = [...achievements].sort(
     (x, y) => Number(y.unlocked) - Number(x.unlocked) || y.progress[0] / y.progress[1] - x.progress[0] / x.progress[1],
   );
@@ -109,8 +113,9 @@ export default function Profile() {
                 <Stat label="Grassi" value={`${analysis.n.fat} g`} />
               </div>
               <p className="mt-3 text-sm text-fg-2">
-                Massa grassa stimata <strong className="text-fg">{formatKg(analysis.c.bf.value)}%</strong> ({bfCategory(analysis.c.bf.value, profile.sex)}) · massa magra{' '}
+                Massa grassa <strong className="text-fg">{formatKg(analysis.c.bf.value)}%</strong> ({bfCategory(analysis.c.bf.value, profile.sex)}) · massa magra{' '}
                 {formatKg(analysis.c.lean)} kg · FFMI {formatKg(analysis.c.ffmi)}
+                <span className="block text-xs text-fg-3">Fonte: {lastBfNote}</span>
               </p>
               <Button className="mt-3" variant="secondary" size="sm" onClick={() => void settle(update({ profileCompleted: false }))}>
                 Aggiorna profilo e obiettivo

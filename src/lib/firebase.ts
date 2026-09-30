@@ -47,5 +47,6 @@ function required<T>(value: T | null, name: string): T {
   return value;
 }
 
+export const firebaseApp = (): FirebaseApp => required(app, 'App');
 export const db = (): Firestore => required(_db, 'Firestore');
 export const auth = (): Auth => required(_auth, 'Auth');
