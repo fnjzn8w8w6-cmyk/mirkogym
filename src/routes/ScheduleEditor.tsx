@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
-import { Check, ChevronDown, CloudUpload, GripVertical, Pencil, Plus } from 'lucide-react';
+import { Check, ChevronDown, CloudUpload, GripVertical, LayoutTemplate, Library, Pencil, PenLine, Plus, Trash2 } from 'lucide-react';
 import type { Day, Exercise } from '@/types';
 import { useSchedule } from '@/hooks/use-schedule';
 import { TopBar } from '@/components/layout/TopBar';
@@ -12,6 +12,15 @@ import { ExerciseEditModal } from '@/components/modals/ExerciseEditModal';
 import { settle } from '@/lib/firestore';
 import { groupColor } from '@/lib/analytics';
 import { cn } from '@/lib/cn';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
+import { ExerciseBrowser } from '@/components/library/ExerciseBrowser';
+import { ExerciseDemo } from '@/components/library/ExerciseDemo';
+import { TemplatePicker } from '@/components/onboarding/TemplatePicker';
+import { displayName, groupForLibrary, type LibraryExercise } from '@/lib/exercise-library';
+import { libraryIdOf } from '@/lib/seed-data';
+import type { Template } from '@/lib/templates';
+import { useToast } from '@/components/ui/Toast';
 
 type SaveState = 'idle' | 'pending' | 'saved';
 
@@ -22,6 +31,11 @@ export default function ScheduleEditor() {
   const [editing, setEditing] = useState<{ dayId: string; exercise: Exercise; isNew: boolean } | null>(null);
   const [toDelete, setToDelete] = useState<{ dayId: string; exercise: Exercise } | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [pickFor, setPickFor] = useState<string | null>(null);
+  const [dayToDelete, setDayToDelete] = useState<Day | null>(null);
+  const [templateOpen, setTemplateOpen] = useState(false);
+  const [template, setTemplate] = useState<Template | null>(null);
+  const toast = useToast();
   const timer = useRef<number | null>(null);
   const latest = useRef<Day[] | null>(null);
 
@@ -54,6 +68,34 @@ export default function ScheduleEditor() {
   };
 
   const updateDay = (dayId: string, fn: (d: Day) => Day) => days && commit(days.map((d) => (d.id === dayId ? fn(d) : d)));
+
+  const newExercise = (dayId: string, from?: LibraryExercise): Exercise => {
+    const compound = from?.k === 'compound';
+    return {
+      id: `${dayId.replace('day', 'd')}x${Date.now().toString(36)}`,
+      libraryId: from?.id,
+      name: from ? displayName(from) : '',
+      group: from ? groupForLibrary(from) : 'Dorso',
+      sets: 3,
+      repMin: compound ? 6 : 10,
+      repMax: compound ? 10 : 15,
+      rirTarget: compound ? '2/1/1' : '1-2',
+      rest: compound ? '2-3 min' : '90 sec',
+    };
+  };
+
+  const addDay = () => {
+    if (!days || days.length >= 7) return;
+    const order = days.length + 1;
+    const d: Day = { id: `day${Date.now().toString(36)}`, order, name: `Day ${order}`, subtitle: 'Nuovo giorno', exercises: [] };
+    commit([...days, d]);
+    setOpen(d.id);
+  };
+
+  const removeDay = (id: string) => {
+    if (!days) return;
+    commit(days.filter((d) => d.id !== id).map((d, i) => ({ ...d, order: i + 1 })));
+  };
 
   if (loading || !days) return <PageSkeleton />;
 
@@ -102,6 +144,14 @@ export default function ScheduleEditor() {
               </button>
               {isOpen && (
                 <div className="border-t border-line-subtle p-4">
+                  <label className="mb-3 block">
+                    <span className="section-title block">Nome</span>
+                    <input
+                      value={d.name}
+                      onChange={(e) => updateDay(d.id, (x) => ({ ...x, name: e.target.value }))}
+                      className="h-12 w-full rounded-md border border-line bg-surface-2 px-4 text-base text-fg outline-none focus:border-accent-500"
+                    />
+                  </label>
                   <label className="block">
                     <span className="section-title block">Sottotitolo</span>
                     <input
@@ -120,34 +170,91 @@ export default function ScheduleEditor() {
                       <ExerciseItem key={e.id} exercise={e} onEdit={() => setEditing({ dayId: d.id, exercise: e, isNew: false })} />
                     ))}
                   </Reorder.Group>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setEditing({
-                        dayId: d.id,
-                        isNew: true,
-                        exercise: {
-                          id: `${d.id.replace('day', 'd')}x${Date.now().toString(36)}`,
-                          name: '',
-                          group: d.exercises[0]?.group ?? 'Dorso',
-                          sets: 3,
-                          repMin: 8,
-                          repMax: 12,
-                          rirTarget: '1-2',
-                          rest: '90 sec',
-                        },
-                      })
-                    }
-                    className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-md border border-dashed border-line text-base font-semibold text-fg-2 hover:text-fg"
-                  >
-                    <Plus className="h-5 w-5" aria-hidden /> Aggiungi esercizio
-                  </button>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPickFor(d.id)}
+                      className="flex h-12 items-center justify-center gap-2 rounded-md bg-accent-glow text-base font-semibold text-accent-400"
+                    >
+                      <Library className="h-5 w-5" aria-hidden /> Dalla libreria
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditing({ dayId: d.id, isNew: true, exercise: newExercise(d.id) })}
+                      className="flex h-12 items-center justify-center gap-2 rounded-md border border-dashed border-line text-base font-semibold text-fg-2 hover:text-fg"
+                    >
+                      <PenLine className="h-5 w-5" aria-hidden /> Personalizzato
+                    </button>
+                  </div>
+                  {days.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setDayToDelete(d)}
+                      className="mt-3 flex h-11 w-full items-center justify-center gap-2 text-sm font-semibold text-danger"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden /> Elimina {d.name}
+                    </button>
+                  )}
                 </div>
               )}
             </Card>
           );
         })}
+        <div className="grid grid-cols-2 gap-2 pt-2">
+          <Button variant="secondary" icon={<Plus className="h-5 w-5" />} disabled={days.length >= 7} onClick={addDay}>
+            Aggiungi giorno
+          </Button>
+          <Button variant="secondary" icon={<LayoutTemplate className="h-5 w-5" />} onClick={() => setTemplateOpen(true)}>
+            Usa un modello
+          </Button>
+        </div>
       </div>
+
+      <Modal open={pickFor != null} onClose={() => setPickFor(null)} title="Scegli esercizio">
+        <ExerciseBrowser
+          pickLabel="Aggiungi alla scheda"
+          onPick={(lib) => {
+            const dayId = pickFor;
+            setPickFor(null);
+            if (dayId) setEditing({ dayId, isNew: true, exercise: newExercise(dayId, lib) });
+          }}
+        />
+      </Modal>
+
+      <Modal
+        open={templateOpen}
+        onClose={() => setTemplateOpen(false)}
+        title="Carica un modello"
+      >
+        <p className="mb-3 text-sm text-warning">La scheda attuale verrà sostituita. Lo storico degli allenamenti resta.</p>
+        <TemplatePicker value={template?.id ?? null} onChange={setTemplate} />
+        {template && (
+          <Button
+            className="mt-4"
+            fullWidth
+            onClick={() => {
+              commit(template.days());
+              setTemplateOpen(false);
+              setTemplate(null);
+              toast.success(`Scheda "${template.name}" caricata`);
+            }}
+          >
+            Conferma: usa "{template.name}"
+          </Button>
+        )}
+      </Modal>
+
+      <ConfirmDialog
+        open={Boolean(dayToDelete)}
+        title={`Eliminare ${dayToDelete?.name ?? ''}?`}
+        message="Il giorno e i suoi esercizi verranno rimossi dalla scheda. Lo storico resta invariato."
+        confirmLabel="Elimina"
+        onCancel={() => setDayToDelete(null)}
+        onConfirm={() => {
+          if (dayToDelete) removeDay(dayToDelete.id);
+          setDayToDelete(null);
+        }}
+      />
 
       <ExerciseEditModal
         open={Boolean(editing)}
@@ -204,6 +311,9 @@ function ExerciseItem({ exercise, onEdit }: { exercise: Exercise; onEdit: () => 
         <GripVertical className="h-5 w-5" aria-hidden />
       </button>
       <button type="button" onClick={onEdit} className="flex min-h-[56px] min-w-0 flex-1 items-center gap-2 py-2 text-left">
+        {libraryIdOf(exercise) && (
+          <ExerciseDemo id={libraryIdOf(exercise) as string} animate={false} className="h-11 w-14 shrink-0 rounded-md" />
+        )}
         <span className="min-w-0 flex-1">
           <span className="block truncate text-base text-fg">{exercise.name}</span>
           <span className="mt-0.5 flex flex-wrap gap-1">

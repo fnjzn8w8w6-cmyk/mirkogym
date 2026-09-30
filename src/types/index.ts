@@ -4,7 +4,8 @@
  * `lib/firestore.ts` li converte in millisecondi epoch (`number`) per l'app.
  */
 
-export type DayId = 'day1' | 'day2' | 'day3' | 'day4' | 'day5';
+/** Identificativo del giorno (es. 'day1'); le schede possono avere da 1 a 7 giorni. */
+export type DayId = string;
 
 export interface Exercise {
   id: string;
@@ -18,6 +19,8 @@ export interface Exercise {
   notes?: string;
   /** Carico di partenza inserito nell'onboarding (usato finché non c'è storico). */
   startWeight?: number;
+  /** Esercizio della libreria (demo animata, istruzioni, muscoli). */
+  libraryId?: string;
 }
 
 export interface Day {
@@ -130,6 +133,7 @@ export interface DraftExercise {
   name: string;
   group: string;
   extra?: boolean;
+  libraryId?: string;
   sets: DraftSet[];
 }
 

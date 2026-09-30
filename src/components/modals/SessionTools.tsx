@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Library, Search } from 'lucide-react';
 import type { Day } from '@/types';
 import { parseNum } from '@/hooks/use-active-session';
 import { formatKg, groupColor } from '@/lib/analytics';
@@ -164,12 +164,14 @@ export function SwapExerciseModal({
   days,
   current,
   onPick,
+  onLibrary,
 }: {
   open: boolean;
   onClose: () => void;
   days: Day[];
   current: { name: string; group: string } | null;
   onPick: (c: SwapChoice) => void;
+  onLibrary: () => void;
 }) {
   const [q, setQ] = useState('');
   const [customGroup, setCustomGroup] = useState<string>(current?.group ?? MUSCLE_GROUPS[0]);
@@ -201,6 +203,9 @@ export function SwapExerciseModal({
 
   return (
     <Modal open={open} onClose={onClose} title="Sostituisci esercizio">
+      <Button fullWidth variant="secondary" className="mb-3" icon={<Library className="h-5 w-5" />} onClick={onLibrary}>
+        Cerca tra 876 esercizi con demo
+      </Button>
       <div className="relative">
         <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-fg-3" aria-hidden />
         <input

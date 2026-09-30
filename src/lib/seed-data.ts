@@ -2,8 +2,47 @@ import type { Day, Exercise, Settings } from '@/types';
 
 type Row = [group: string, name: string, sets: number, repMin: number, repMax: number, rir: string, rest: string];
 
+/** Esercizi della scheda di Mirko → esercizio della libreria (demo e istruzioni). */
+export const SEED_LIBRARY: Record<string, string> = {
+  'lat machine': 'Wide-Grip_Lat_Pulldown',
+  pulley: 'Seated_Cable_Rows',
+  'lat machine a dischi': 'Close-Grip_Front_Lat_Pulldown',
+  pullover: 'Straight-Arm_Pulldown',
+  'curl alternato manubri': 'Dumbbell_Alternate_Bicep_Curl',
+  'curl martello': 'Hammer_Curls',
+  'curl manubri panca scott': 'Two-Arm_Dumbbell_Preacher_Curl',
+  'chest press': 'Leverage_Chest_Press',
+  'incline chest press': 'Leverage_Incline_Chest_Press',
+  'croci ai cavi': 'Cable_Crossover',
+  'spinte presa stretta manubri': 'Close-Grip_Dumbbell_Press',
+  pushdown: 'Triceps_Pushdown',
+  'push overhead': 'Cable_Rope_Overhead_Triceps_Extension',
+  'pushdown cavo singolo': 'Triceps_Pushdown',
+  'leg press orizzontale': 'Leg_Press',
+  'hack squat': 'Hack_Squat',
+  'mezzi stacchi': 'Romanian_Deadlift',
+  'leg extension': 'Leg_Extensions',
+  'leg curl': 'Seated_Leg_Curl',
+  'shoulder press': 'Leverage_Shoulder_Press',
+  'alzate laterali ai cavi': 'Cable_Seated_Lateral_Raise',
+  'reverse fly': 'Cable_Rear_Delt_Fly',
+  stacchi: 'Barbell_Deadlift',
+  'panca piana': 'Barbell_Bench_Press_-_Medium_Grip',
+  't-bar / rematore t-bar': 'T-Bar_Row_with_Handle',
+  'croci ai cavi bassi': 'Low_Cable_Crossover',
+  'curl ai cavi': 'Standing_Biceps_Cable_Curl',
+  'curl concentrato ai cavi': 'Standing_One-Arm_Cable_Curl',
+  'pushdown ai cavi': 'Triceps_Pushdown_-_Rope_Attachment',
+  'reverse fly ai cavi/macchina': 'Cable_Rear_Delt_Fly',
+};
+
+/** Esercizio della libreria collegato (esplicito o dedotto dal nome per le schede create prima della libreria). */
+export const libraryIdOf = (e: Pick<Exercise, 'libraryId' | 'name'>): string | undefined =>
+  e.libraryId ?? SEED_LIBRARY[e.name.trim().toLowerCase()];
+
 function ex(prefix: string, rows: Row[]): Exercise[] {
   return rows.map(([group, name, sets, repMin, repMax, rirTarget, rest], i) => ({
+    libraryId: SEED_LIBRARY[name.toLowerCase()],
     id: `${prefix}e${i + 1}`,
     group,
     name,

@@ -20,6 +20,15 @@ import { ExerciseCard } from '@/components/session/ExerciseCard';
 import { Confetti } from '@/components/celebration/Confetti';
 import { calculateSuggestion, describeLog, parseRestSeconds, previousLogsFor, repTargets } from '@/lib/progression';
 import { useWakeLock } from '@/hooks/use-wake-lock';
+import { useLibrary } from '@/hooks/use-library';
+import { ExerciseBrowser } from '@/components/library/ExerciseBrowser';
+import { ExerciseInfoModal } from '@/components/library/ExerciseInfoModal';
+import { displayName, groupForLibrary, type LibraryExercise } from '@/lib/exercise-library';
+import { libraryIdOf } from '@/lib/seed-data';
+import { ACHIEVEMENTS, computeStats, isUnlocked, levelOf, xpOf } from '@/lib/gamification';
+import { renderShareCard, shareImage } from '@/lib/share-card';
+import { useBodyLogs } from '@/hooks/use-body-logs';
+import { Share2 } from 'lucide-react';
 import { ExerciseNoteModal, PlateCalculatorModal, SwapExerciseModal } from '@/components/modals/SessionTools';
 import type { SetType } from '@/types';
 import { detectPR, exerciseKey, formatKg, formatTonnage, isAnyPR, sessionTonnage } from '@/lib/analytics';
@@ -89,9 +98,11 @@ function SessionView({ initial }: { initial: ActiveSession }) {
   const toast = useToast();
   const timer = useRestTimer();
   const { getDay, exerciseIndex, days, save: saveSchedule } = useSchedule();
-  const { sessions } = useSessions();
+  const { sessions, nameOf } = useSessions();
+  const { bodyLogs } = useBodyLogs();
   const { settings } = useSettings();
   const { discard } = useActiveSession();
+  const [sharing, setSharing] = useState(false);
   const {
     draft,
     updateSet,
@@ -118,6 +129,9 @@ function SessionView({ initial }: { initial: ActiveSession }) {
   const [plates, setPlates] = useState<{ weight: number | null } | null>(null);
   const [noteFor, setNoteFor] = useState<number | null>(null);
   const [swapFor, setSwapFor] = useState<number | null>(null);
+  const [libPick, setLibPick] = useState<{ mode: 'extra' } | { mode: 'swap'; idx: number } | null>(null);
+  const [info, setInfo] = useState<LibraryExercise | null>(null);
+  const library = useLibrary();
 
   useWakeLock(settings.keepScreenOn && !result);
 
@@ -131,7 +145,13 @@ function SessionView({ initial }: { initial: ActiveSession }) {
     () =>
       draft.exercises.map(
         (d): Exercise =>
-          exerciseIndex.get(d.exerciseId) ?? { id: d.exerciseId, name: d.name, group: d.group, ...EXTRA_DEFAULTS },
+          exerciseIndex.get(d.exerciseId) ?? {
+            id: d.exerciseId,
+            name: d.name,
+            group: d.group,
+            libraryId: d.libraryId,
+            ...EXTRA_DEFAULTS,
+          },
       ),
     [draft.exercises, exerciseIndex],
   );
@@ -256,6 +276,34 @@ function SessionView({ initial }: { initial: ActiveSession }) {
     void doFinish();
   };
 
+  // Gamification: XP guadagnati, livello e traguardi sbloccati con questa sessione
+  const reward = useMemo(() => {
+    if (!result) return null;
+    const before = sessions.filter((x) => x.id !== result.id);
+    const sb = computeStats(before, bodyLogs, nameOf);
+    const sa = computeStats([...before, result], bodyLogs, nameOf);
+    const ub = ACHIEVEMENTS.filter((a) => isUnlocked(a, sb));
+    const ua = ACHIEVEMENTS.filter((a) => isUnlocked(a, sa));
+    const lb = levelOf(xpOf(sb, ub.length));
+    const la = levelOf(xpOf(sa, ua.length));
+    return { xp: la.xp - lb.xp, level: la, levelUp: la.level > lb.level, unlocked: ua.filter((a) => !ub.includes(a)) };
+    // Calcolato una sola volta, al termine della sessione
+  }, [result]);
+
+  const share = async () => {
+    if (!result) return;
+    setSharing(true);
+    try {
+      const blob = await renderShareCard(result, day?.name ?? 'Allenamento', day?.subtitle ?? '', nameOf);
+      const how = await shareImage(blob, `mirkogym-${new Date(result.date).toISOString().slice(0, 10)}.png`);
+      if (how === 'downloaded') toast.success('Immagine salvata');
+    } catch (e) {
+      if (!(e instanceof DOMException && e.name === 'AbortError')) toast.error('Condivisione non riuscita');
+    } finally {
+      setSharing(false);
+    }
+  };
+
   const prCount = result ? result.logs.reduce((a, l) => a + l.sets.filter((s) => s.isPersonalRecord).length, 0) : 0;
   // Confronto con l'ultima sessione dello stesso giorno (sessions è ordinato dal più recente)
   const prevSameDay = result ? sessions.find((s) => s.dayId === result.dayId && s.id !== result.id) : undefined;
@@ -333,16 +381,32 @@ function SessionView({ initial }: { initial: ActiveSession }) {
             onPlates={(w) => setPlates({ weight: w })}
             onNote={() => setNoteFor(i)}
             onSwap={() => setSwapFor(i)}
+            libraryId={ex.libraryId ?? libraryIdOf(exercises[i])}
+            onInfo={() => {
+              const id = ex.libraryId ?? libraryIdOf(exercises[i]);
+              const lib = id ? library.byId.get(id) : undefined;
+              if (lib) setInfo(lib);
+              else toast.info('Caricamento della libreria…');
+            }}
           />
         ))}
 
-        <button
-          type="button"
-          onClick={() => setExtraOpen(true)}
-          className="flex h-14 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-line text-base font-semibold text-fg-2 hover:border-line-strong hover:text-fg"
-        >
-          <Plus className="h-5 w-5" aria-hidden /> Aggiungi esercizio extra
-        </button>
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <button
+            type="button"
+            onClick={() => setLibPick({ mode: 'extra' })}
+            className="flex h-14 items-center justify-center gap-2 rounded-lg border border-dashed border-line text-base font-semibold text-fg-2 hover:border-line-strong hover:text-fg"
+          >
+            <Plus className="h-5 w-5" aria-hidden /> Aggiungi esercizio extra
+          </button>
+          <button
+            type="button"
+            onClick={() => setExtraOpen(true)}
+            className="h-14 rounded-lg border border-dashed border-line px-4 text-sm font-semibold text-fg-3 hover:text-fg"
+          >
+            Personalizzato
+          </button>
+        </div>
 
         <TextArea label="Note sessione (opzionale)" value={draft.notes ?? ''} onChange={(e) => setNotes(e.target.value)} rows={2} />
 
@@ -450,7 +514,32 @@ function SessionView({ initial }: { initial: ActiveSession }) {
           setSwapFor(null);
           toast.success(`Sostituito con ${c.name}`);
         }}
+        onLibrary={() => {
+          if (swapFor == null) return;
+          setLibPick({ mode: 'swap', idx: swapFor });
+          setSwapFor(null);
+        }}
       />
+      <Modal open={libPick != null} onClose={() => setLibPick(null)} title={libPick?.mode === 'swap' ? 'Sostituisci con…' : 'Aggiungi esercizio'}>
+        <ExerciseBrowser
+          pickLabel={libPick?.mode === 'swap' ? 'Usa questo esercizio' : 'Aggiungi alla sessione'}
+          onPick={(lib) => {
+            const pick = libPick;
+            setLibPick(null);
+            if (!pick) return;
+            const choice = { exerciseId: `lib-${lib.id}`, name: displayName(lib), group: groupForLibrary(lib), extra: true, libraryId: lib.id };
+            if (pick.mode === 'swap') {
+              replaceExercise(pick.idx, choice);
+              toast.success(`Sostituito con ${choice.name}`);
+            } else {
+              addExercise(choice.name, choice.group, 3, lib.id);
+              toast.success(`${choice.name} aggiunto`);
+              window.setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 150);
+            }
+          }}
+        />
+      </Modal>
+      <ExerciseInfoModal exercise={info} onClose={() => setInfo(null)} />
 
       {/* Celebrazione */}
       {result && <Confetti />}
@@ -480,9 +569,38 @@ function SessionView({ initial }: { initial: ActiveSession }) {
                 Hai stabilito {prCount} {prCount === 1 ? 'nuovo PR' : 'nuovi PR'}! 🔥
               </p>
             )}
-            <Button size="lg" fullWidth className="mt-6" onClick={() => navigate('/')}>
-              Torna alla home
-            </Button>
+            {reward && (
+              <div className="mt-5 rounded-lg border border-accent-500/30 bg-accent-glow p-3 text-left">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-lg font-bold text-accent-400">+{reward.xp} XP</span>
+                  <span className="text-sm text-fg-2">
+                    {reward.levelUp ? '🎉 Nuovo livello! ' : ''}Liv. {reward.level.level} · {reward.level.title}
+                  </span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-3">
+                  <div className="h-full rounded-full bg-accent-500" style={{ width: `${reward.level.progress * 100}%` }} />
+                </div>
+                {reward.unlocked.map((a) => (
+                  <div key={a.id} className="mt-3 flex items-center gap-3">
+                    <span className="text-3xl" aria-hidden>
+                      {a.emoji}
+                    </span>
+                    <span>
+                      <span className="block text-xs uppercase tracking-wide text-warning">Traguardo sbloccato</span>
+                      <span className="block text-base font-semibold text-fg">{a.title}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="mt-6 grid grid-cols-[auto_1fr] gap-3">
+              <Button size="lg" variant="secondary" loading={sharing} icon={<Share2 className="h-5 w-5" />} onClick={share}>
+                Condividi
+              </Button>
+              <Button size="lg" onClick={() => navigate('/')}>
+                Torna alla home
+              </Button>
+            </div>
           </div>
         )}
       </Modal>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Clock, Copy, Layers, Scale, Trash2, Trophy } from 'lucide-react';
+import { Clock, Copy, Layers, Scale, Share2, Trash2, Trophy } from 'lucide-react';
+import { renderShareCard, shareImage } from '@/lib/share-card';
 import { useSessions } from '@/hooks/use-sessions';
 import { useSchedule } from '@/hooks/use-schedule';
 import { TopBar } from '@/components/layout/TopBar';
@@ -42,6 +43,20 @@ export default function HistorySession() {
         back="/history"
         right={
           <>
+            <IconButton
+              label="Condividi immagine"
+              onClick={async () => {
+                try {
+                  const blob = await renderShareCard(s, day?.name ?? 'Allenamento', day?.subtitle ?? '', nameOf);
+                  const how = await shareImage(blob, `mirkogym-${new Date(s.date).toISOString().slice(0, 10)}.png`);
+                  if (how === 'downloaded') toast.success('Immagine salvata');
+                } catch (e) {
+                  if (!(e instanceof DOMException && e.name === 'AbortError')) toast.error('Condivisione non riuscita');
+                }
+              }}
+            >
+              <Share2 className="h-5 w-5" />
+            </IconButton>
             <IconButton
               label="Duplica sessione"
               onClick={() => duplicate(s).then(() => toast.success('Sessione duplicata con data odierna'))}

@@ -8,6 +8,7 @@ import { cn } from '@/lib/cn';
 import { Chip } from '../ui/Chip';
 import { IconButton } from '../ui/Button';
 import { SET_GRID, SetRow } from './SetRow';
+import { ExerciseDemo } from '../library/ExerciseDemo';
 import { SuggestionBox } from './SuggestionBox';
 
 /** RIR previsto per la serie i: "2/1/1" → per-serie; "1-2, ult. 0-1" → ultima diversa. */
@@ -41,6 +42,8 @@ interface ExerciseCardProps {
   onPlates: (weight: number | null) => void;
   onNote: () => void;
   onSwap: () => void;
+  libraryId?: string;
+  onInfo: () => void;
 }
 
 export function ExerciseCard({
@@ -63,6 +66,8 @@ export function ExerciseCard({
   onPlates,
   onNote,
   onSwap,
+  libraryId,
+  onInfo,
 }: ExerciseCardProps) {
   const color = groupColor(draft.group);
   const doneCount = draft.sets.filter((s) => s.done).length;
@@ -105,7 +110,20 @@ export function ExerciseCard({
     <motion.section layout className="card overflow-hidden" aria-label={draft.name}>
       <div className="h-1 w-full" style={{ backgroundColor: color, opacity: 0.8 }} aria-hidden />
       <div className="p-4">
-        <div className="flex items-start gap-2">
+        <div className="flex items-start gap-3">
+          {libraryId && (
+            <button
+              type="button"
+              onClick={onInfo}
+              aria-label={`Come si esegue: ${draft.name}`}
+              className="relative shrink-0 overflow-hidden rounded-md ring-1 ring-line"
+            >
+              <ExerciseDemo id={libraryId} className="h-16 w-20" />
+              <span className="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 text-center text-[10px] font-bold uppercase text-white">
+                Demo
+              </span>
+            </button>
+          )}
           <div className="min-w-0 flex-1">
             <div className="text-xs text-fg-3">
               Esercizio {index + 1} · {doneCount}/{draft.sets.length} serie

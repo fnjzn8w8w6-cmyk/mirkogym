@@ -1,14 +1,14 @@
 import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { BarChart3, CalendarRange, Home, Scale, Settings } from 'lucide-react';
+import { BarChart3, Dumbbell, Home, Scale, UserRound } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 const items = [
   { to: '/', label: 'Home', icon: Home, end: true },
   { to: '/history', label: 'Storico', icon: BarChart3 },
+  { to: '/exercises', label: 'Esercizi', icon: Dumbbell },
   { to: '/body', label: 'Corpo', icon: Scale },
-  { to: '/mesocycle', label: 'Meso', icon: CalendarRange },
-  { to: '/settings', label: 'Impost.', icon: Settings },
+  { to: '/profile', label: 'Profilo', icon: UserRound },
 ];
 
 export function BottomNav() {

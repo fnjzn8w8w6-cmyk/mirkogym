@@ -132,13 +132,14 @@ export function useSessionDraft(initial: ActiveSession) {
   const removeSet = (exIdx: number, setIdx: number) =>
     mapExercise(exIdx, (e) => ({ ...e, sets: e.sets.filter((_, i) => i !== setIdx) }));
 
-  const addExercise = (name: string, group: string, sets: number) =>
+  const addExercise = (name: string, group: string, sets: number, libraryId?: string) =>
     commit((d) => ({
       ...d,
       exercises: [
         ...d.exercises,
         {
-          exerciseId: `extra-${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+          libraryId,
+          exerciseId: libraryId ? `lib-${libraryId}` : `extra-${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
           name: name.trim(),
           group,
           extra: true,
@@ -163,11 +164,15 @@ export function useSessionDraft(initial: ActiveSession) {
     }));
 
   /** Sostituisce l'esercizio (es. macchina occupata) mantenendo le serie già impostate. */
-  const replaceExercise = (exIdx: number, next: { exerciseId: string; name: string; group: string; extra?: boolean }) =>
+  const replaceExercise = (
+    exIdx: number,
+    next: { exerciseId: string; name: string; group: string; extra?: boolean; libraryId?: string },
+  ) =>
     mapExercise(exIdx, (e) => ({
       ...e,
       ...next,
       extra: next.extra,
+      libraryId: next.libraryId,
       sets: e.sets.map((st) => (st.done ? st : { ...st, weight: '', isPersonalRecord: false })),
     }));
 

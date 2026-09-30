@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ChevronRight, Dumbbell, Pencil, Play, ShieldAlert, Timer } from 'lucide-react';
 import { useData } from '@/hooks/data-context';
 import { WeekCard } from '@/components/home/MuscleCard';
+import { useProgress } from '@/hooks/use-progress';
 import { TrendLine } from '@/components/ui/Trend';
 import { useSchedule } from '@/hooks/use-schedule';
 import { useSessions } from '@/hooks/use-sessions';
@@ -54,6 +55,7 @@ export default function Home() {
   const [pendingDay, setPendingDay] = useState<Day | null>(null);
   const [starting, setStarting] = useState(false);
   const { isAnonymous } = useData();
+  const { level } = useProgress();
 
   const next = useMemo(() => nextDay(days, sessions), [days, sessions]);
   const activeDay = activeSession ? days.find((d) => d.id === activeSession.dayId) : undefined;
@@ -130,6 +132,22 @@ export default function Home() {
             <p className="text-sm text-fg-3">{formatLongDate(new Date())}</p>
           </div>
           <OfflineBadge />
+          <button
+            type="button"
+            onClick={() => navigate('/profile')}
+            aria-label={`Livello ${level.level}, ${level.title}: apri profilo`}
+            className="flex h-11 items-center gap-2 rounded-full border border-accent-500/40 bg-accent-glow pl-1 pr-3"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-500 text-sm font-extrabold text-white">
+              {level.level}
+            </span>
+            <span className="text-left leading-tight">
+              <span className="block text-xs font-bold text-accent-400">{level.title}</span>
+              <span className="mt-0.5 block h-1 w-14 overflow-hidden rounded-full bg-surface-3">
+                <span className="block h-full bg-accent-500" style={{ width: `${level.progress * 100}%` }} />
+              </span>
+            </span>
+          </button>
         </header>
 
         {/* Promemoria account: i dati anonimi vivono solo su questo dispositivo */}

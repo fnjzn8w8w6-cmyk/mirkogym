@@ -114,6 +114,21 @@ npm run dev
 
 Gli emulatori applicano anche `firestore.rules`.
 
+## Libreria esercizi, schede e gamification
+
+- **876 esercizi** da [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (pubblico dominio):
+  foto di inizio/fine movimento alternate come **simulazione animata**, muscoli principali/secondari
+  sulla figura del corpo, istruzioni passo-passo, livello, attrezzo e link al **video su YouTube**.
+  Ricerca anche in italiano ("panca", "rematore", "alzate laterali"…) e filtri per muscolo/attrezzo.
+  Rigenera il file con `npm run exercises`.
+- **Schede per tutti**: all'avvio ogni nuovo utente sceglie un modello (Scheda di Mirko, Full Body,
+  Upper/Lower, Push/Pull/Legs o da zero). Nell'editor si aggiungono esercizi dalla libreria,
+  si aggiungono/rinominano/eliminano giorni (fino a 7) o si carica un altro modello.
+- **Profilo**: livello ed XP, **ranghi di forza** (Ferro → Campione, stile Liftoff) sui fondamentali in
+  base a 1RM stimato / peso corporeo, **mappa muscolare** della settimana e **19 traguardi**.
+- **Fine allenamento**: XP guadagnati, nuovo livello, traguardi sbloccati e **card condivisibile**
+  (immagine 1080×1350 per Instagram/WhatsApp), disponibile anche dallo storico.
+
 ## Funzioni in sessione
 
 Ispirate alle migliori app del 2026 (Hevy, Strong, Alpha Progression, Fitbod):

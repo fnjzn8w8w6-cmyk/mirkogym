@@ -53,6 +53,22 @@ export default defineConfig({
         navigateFallback: '/mirkogym/index.html',
         runtimeCaching: [
           {
+            // Libreria esercizi (≈750 KB): disponibile offline dopo il primo caricamento
+            urlPattern: /\/exercises\.json$/,
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'exercise-library' },
+          },
+          {
+            // Foto degli esercizi (free-exercise-db)
+            urlPattern: /^https:\/\/raw\.githubusercontent\.com\/yuhonas\/free-exercise-db\//,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'exercise-images',
+              expiration: { maxEntries: 600, maxAgeSeconds: 60 * 60 * 24 * 90 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
             urlPattern: /^https:\/\/firestore\.googleapis\.com/,
             handler: 'NetworkFirst',
             options: { cacheName: 'firestore-cache', networkTimeoutSeconds: 5 },

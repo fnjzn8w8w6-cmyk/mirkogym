@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BarChart3, Dumbbell, TrendingUp } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
+import { useSchedule } from '@/hooks/use-schedule';
+import { TemplatePicker } from './TemplatePicker';
+import type { Template } from '@/lib/templates';
 import { settle } from '@/lib/firestore';
 import { Button } from '../ui/Button';
 import { Logo } from './Screens';
@@ -29,6 +32,9 @@ export function Onboarding() {
   const [i, setI] = useState(0);
   const [busy, setBusy] = useState(false);
   const [account, setAccount] = useState<AccountMode | null>(null);
+  const [step, setStep] = useState<'slides' | 'template'>('slides');
+  const [template, setTemplate] = useState<Template | null>(null);
+  const { save } = useSchedule();
   const { update } = useSettings();
   const last = i === slides.length - 1;
   const slide = slides[i];
@@ -36,8 +42,29 @@ export function Onboarding() {
 
   const finish = async () => {
     setBusy(true);
+    if (template) await settle(save(template.days()));
     await settle(update({ onboardingCompleted: true }));
   };
+
+  if (step === 'template') {
+    return (
+      <div
+        className="mx-auto flex min-h-[100dvh] max-w-md flex-col px-4"
+        style={{ paddingTop: 'calc(var(--safe-top) + 24px)', paddingBottom: 'calc(var(--safe-bottom) + 16px)' }}
+      >
+        <h1 className="text-3xl text-fg">Scegli la tua scheda</h1>
+        <p className="mt-1 text-base text-fg-2">Potrai modificarla quando vuoi, scegliendo tra 876 esercizi.</p>
+        <div className="mt-5 flex-1 pb-4">
+          <TemplatePicker value={template?.id ?? null} onChange={setTemplate} />
+        </div>
+        <div className="sticky bottom-0 bg-base pt-2" style={{ paddingBottom: 'var(--safe-bottom)' }}>
+          <Button size="lg" fullWidth loading={busy} disabled={!template} onClick={finish}>
+            {template ? `Inizia con "${template.name}"` : 'Seleziona una scheda'}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -50,7 +77,7 @@ export function Onboarding() {
           <span className="text-lg text-fg">MirkoGym</span>
         </div>
         {!last && (
-          <Button variant="ghost" size="sm" onClick={finish}>
+          <Button variant="ghost" size="sm" onClick={() => setStep('template')}>
             Salta
           </Button>
         )}
@@ -97,7 +124,7 @@ export function Onboarding() {
         ))}
       </div>
 
-      <Button size="lg" fullWidth loading={busy} onClick={() => (last ? finish() : setI(i + 1))}>
+      <Button size="lg" fullWidth loading={busy} onClick={() => (last ? setStep('template') : setI(i + 1))}>
         {last ? 'Iniziamo' : 'Avanti'}
       </Button>
       <button type="button" className="mt-2 h-11 text-base text-fg-2" onClick={() => setAccount('login')}>
