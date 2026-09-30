@@ -26,7 +26,7 @@ export function useRecipes() {
   return { data, mine, error, retry: () => setAttempt((a) => a + 1) };
 }
 
-const GRADIENTS = ['from-orange-500/40 to-rose-500/30', 'from-emerald-500/40 to-teal-500/30', 'from-amber-500/40 to-yellow-500/20', 'from-sky-500/40 to-indigo-500/30'];
+const GRADIENTS = ['from-accent-500/30 to-violet-500/30', 'from-violet-500/40 to-surface-3', 'from-accent-600/30 to-surface-3', 'from-violet-600/40 to-accent-500/20'];
 
 /** Foto della ricetta; se non c'è una foto verificata, un riquadro colorato con l'emoji della categoria. */
 export function RecipeImage({ recipe, emoji, className }: { recipe?: Recipe; emoji?: string; className?: string }) {

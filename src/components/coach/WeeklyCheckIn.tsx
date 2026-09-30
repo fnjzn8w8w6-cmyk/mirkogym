@@ -215,7 +215,7 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
               <div className="h-2 overflow-hidden rounded-full bg-surface-3">
                 <div
                   className="h-full rounded-full"
-                  style={{ width: `${result.fatigue}%`, backgroundColor: result.fatigue >= 70 ? '#EF4444' : result.fatigue >= 55 ? '#EAB308' : '#22C55E' }}
+                  style={{ width: `${result.fatigue}%`, backgroundColor: result.fatigue >= 70 ? '#EF4444' : result.fatigue >= 55 ? '#EAB308' : '#39FF88' }}
                 />
               </div>
             </div>
@@ -246,14 +246,14 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
                 <div className="section-title !mb-1">Modifiche consigliate</div>
                 {result.kcalChange !== 0 && (
                   <label className="flex items-center gap-3 text-base text-fg">
-                    <input type="checkbox" className="h-5 w-5 accent-orange-500" checked={applyKcal} onChange={(e) => setApplyKcal(e.target.checked)} />
+                    <input type="checkbox" className="h-5 w-5 accent-[#39FF88]" checked={applyKcal} onChange={(e) => setApplyKcal(e.target.checked)} />
                     Calorie {result.kcalChange > 0 ? '+' : ''}
                     {result.kcalChange} kcal/giorno{settings.weekPlan ? ' (porzioni del piano ricalcolate)' : ''}
                   </label>
                 )}
                 {result.deload && (
                   <label className="flex items-center gap-3 text-base text-fg">
-                    <input type="checkbox" className="h-5 w-5 accent-orange-500" checked={applyDeload} onChange={(e) => setApplyDeload(e.target.checked)} />
+                    <input type="checkbox" className="h-5 w-5 accent-[#39FF88]" checked={applyDeload} onChange={(e) => setApplyDeload(e.target.checked)} />
                     Settimana di scarico (carichi −{settings.deloadPercentage}%)
                   </label>
                 )}

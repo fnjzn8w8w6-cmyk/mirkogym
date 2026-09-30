@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronRight, Dumbbell, Pencil, Play, Timer } from 'lucide-react';
+import { ChevronRight, Dumbbell, Play, Timer } from 'lucide-react';
 import { WeekCard } from '@/components/home/MuscleCard';
 import { useProgress } from '@/hooks/use-progress';
 import { userNutrition } from '@/lib/coach';
@@ -21,8 +21,12 @@ import { Chip } from '@/components/ui/Chip';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { OfflineBadge } from '@/components/layout/TopBar';
-import { formatAgo, formatLongDate, formatRelativeDay, fromISODate, daysBetween } from '@/lib/date-utils';
+import { formatAgo, formatLongDate, fromISODate, daysBetween, todayISO } from '@/lib/date-utils';
 import { dayGroups, nextDay, plannedSets } from '@/lib/schedule-utils';
+import { MicButton } from '@/components/ui/MicButton';
+import { useFoodLog } from '@/hooks/use-food';
+import { entryMacros } from '@/components/food/FoodDiary';
+import { sumMacros } from '@/lib/foods';
 import { formatKg, groupColor, trendDelta } from '@/lib/analytics';
 import { cn } from '@/lib/cn';
 import type { Day } from '@/types';
@@ -42,6 +46,66 @@ function Sparkline({ values }: { values: number[] }) {
       <path d={d} fill="none" stroke="var(--accent-500)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
       <circle cx={lx} cy={ly} r={3} fill="var(--accent-500)" />
     </svg>
+  );
+}
+
+function Ring({ value, target, color, label, unit }: { value: number; target: number; color: string; label: string; unit: string }) {
+  const r = 26;
+  const c = 2 * Math.PI * r;
+  const p = target > 0 ? Math.min(1, value / target) : 0;
+  return (
+    <div className="flex flex-col items-center">
+      <svg width={64} height={64} viewBox="0 0 64 64" aria-hidden>
+        <circle cx={32} cy={32} r={r} fill="none" stroke="var(--bg-surface-3)" strokeWidth={6} />
+        <circle
+          cx={32}
+          cy={32}
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth={6}
+          strokeLinecap="round"
+          strokeDasharray={`${p * c} ${c}`}
+          transform="rotate(-90 32 32)"
+          style={{ filter: `drop-shadow(0 0 4px ${color})` }}
+        />
+        <text x={32} y={36} textAnchor="middle" fontSize={13} fontWeight={800} fill="var(--text-primary)">
+          {Math.round(value)}
+        </text>
+      </svg>
+      <span className="mt-1 text-xs font-semibold text-fg-2">{label}</span>
+      <span className="text-[11px] text-fg-3">
+        / {Math.round(target)} {unit}
+      </span>
+    </div>
+  );
+}
+
+function TodayDiet({ onOpen }: { onOpen: () => void }) {
+  const { settings } = useSettings();
+  const { bodyLogs } = useBodyLogs();
+  const { entries } = useFoodLog(todayISO());
+  const profile = settings.profile!;
+  const w = bodyLogs.find((b) => b.weight != null)?.weight ?? profile.weightKg;
+  const target = userNutrition({ ...profile, weightKg: w }, settings);
+  const t = sumMacros(entries.map(entryMacros));
+  return (
+    <Card interactive className="p-4" onClick={onOpen} role="link" aria-label="Apri la dieta">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold uppercase tracking-wider text-fg-3">Dieta di oggi</span>
+        <span className="text-sm text-fg-2">
+          <strong className="font-display text-fg">{t.kcal}</strong> / {target.target} kcal
+        </span>
+      </div>
+      <div className="mt-3 grid grid-cols-3">
+        <Ring value={t.protein} target={target.protein} color="#39FF88" label="Proteine" unit="g" />
+        <Ring value={t.carbs} target={target.carbs} color="#C084FC" label="Carbo" unit="g" />
+        <Ring value={t.fat} target={target.fat} color="#EAB308" label="Grassi" unit="g" />
+      </div>
+      {entries.length === 0 && (
+        <p className="mt-3 text-center text-sm text-fg-2">{settings.weekPlan ? 'Segna i pasti nel diario →' : 'Crea il piano settimanale →'}</p>
+      )}
+    </Card>
   );
 }
 
@@ -91,8 +155,6 @@ export default function Home() {
     [bodyLogs],
   );
 
-  const lastForDay = (id: string) => sessions.find((s) => s.dayId === id);
-
   return (
     <div className="pb-4">
       {/* Banner sessione in corso */}
@@ -122,12 +184,7 @@ export default function Home() {
       <div className="page space-y-4" style={{ paddingTop: activeSession ? 16 : 'calc(var(--safe-top) + 16px)' }}>
         {/* Header */}
         <header className="flex items-center gap-3">
-          <span
-            className="flex h-11 w-11 items-center justify-center rounded-md border border-line-subtle bg-surface text-2xl shadow-glow"
-            aria-hidden
-          >
-            🏋️
-          </span>
+          <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" className="h-11 w-11 rounded-xl shadow-glow" />
           <div className="min-w-0 flex-1">
             <h1 className="font-display text-xl font-extrabold text-fg">How<span className="text-accent-500">To</span>Gym</h1>
             <p className="text-sm text-fg-3">{formatLongDate(new Date())}</p>
@@ -151,103 +208,99 @@ export default function Home() {
           </button>
         </header>
 
-        {/* Hero prossima sessione */}
+        {/* Hero allenamento di oggi */}
         {next && (
-          <Card variant="elevated" className="relative overflow-hidden p-5">
-            <div
-              className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-accent-500/20 blur-3xl"
-              aria-hidden
-            />
-            <div className="relative">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs uppercase tracking-wider text-accent-400">Prossima sessione</span>
-                {meso.isDeloadWeek && <Chip tone="accent">DELOAD -{settings.deloadPercentage}%</Chip>}
-              </div>
-              <h2 className="mt-2 text-3xl text-fg">{next.name}</h2>
-              <p className="text-xl font-semibold text-fg-2">{next.subtitle}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {dayGroups(next).map((g) => (
-                  <Chip key={g} color={groupColor(g)}>
-                    {g}
-                  </Chip>
-                ))}
-              </div>
-              <div className="mt-4 flex gap-6 text-sm text-fg-2">
-                <span className="flex items-center gap-1.5">
-                  <Dumbbell className="h-4 w-4 text-fg-3" aria-hidden />
-                  <strong className="text-fg">{next.exercises.length}</strong> esercizi
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Timer className="h-4 w-4 text-fg-3" aria-hidden />
-                  <strong className="text-fg">{plannedSets(next)}</strong> serie totali
-                </span>
-              </div>
-              <Button
-                size="lg"
-                fullWidth
-                className="mt-5"
-                loading={starting}
-                icon={<Play className="h-5 w-5 fill-current" />}
-                onClick={() => startDay(next)}
-              >
-                {activeSession?.dayId === next.id ? 'Riprendi sessione' : 'Inizia sessione'}
-              </Button>
+          <section
+            className="relative overflow-hidden rounded-2xl border border-accent-500/30 p-5 shadow-glow"
+            style={{ background: 'radial-gradient(120% 90% at 100% 0%, rgba(139,92,246,0.45), transparent 60%), radial-gradient(90% 80% at 0% 100%, rgba(57,255,136,0.18), transparent 60%), linear-gradient(#150F22,#150F22)' }}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold uppercase tracking-[0.2em] text-accent-400">Allenamento di oggi</span>
+              {meso.isDeloadWeek && <Chip tone="accent">DELOAD -{settings.deloadPercentage}%</Chip>}
             </div>
-          </Card>
+            <h2 className="mt-2 font-display text-3xl font-extrabold uppercase leading-tight text-fg">{next.subtitle || next.name}</h2>
+            <p className="text-sm font-semibold text-fg-2">
+              {next.name} · Settimana {meso.currentWeek}/{meso.totalWeeks}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {dayGroups(next).map((g) => (
+                <Chip key={g} color={groupColor(g)}>
+                  {g}
+                </Chip>
+              ))}
+            </div>
+            <div className="mt-4 flex gap-6 text-sm text-fg-2">
+              <span className="flex items-center gap-1.5">
+                <Dumbbell className="h-4 w-4 text-accent-400" aria-hidden />
+                <strong className="text-fg">{next.exercises.length}</strong> esercizi
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Timer className="h-4 w-4 text-accent-400" aria-hidden />
+                <strong className="text-fg">{plannedSets(next)}</strong> serie
+              </span>
+            </div>
+            <Button
+              size="lg"
+              fullWidth
+              className="mt-5 font-display uppercase tracking-wider shadow-glow"
+              loading={starting}
+              icon={<Play className="h-5 w-5 fill-current" />}
+              onClick={() => startDay(next)}
+            >
+              {activeSession?.dayId === next.id ? 'Riprendi' : 'Inizia'}
+            </Button>
+            <button type="button" onClick={() => navigate('/training')} className="mt-3 w-full text-center text-sm font-semibold text-fg-2">
+              Vedi tutta la scheda →
+            </button>
+          </section>
         )}
 
-        {/* Mesociclo */}
-        <Card interactive className="p-4" onClick={() => navigate('/mesocycle')} role="link" aria-label="Apri mesociclo">
-          <div className="flex items-center justify-between">
-            <span className="section-title !mb-0">Mesociclo</span>
-            <ChevronRight className="h-5 w-5 text-fg-3" aria-hidden />
-          </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-lg text-fg">
-              Settimana {meso.currentWeek} di {meso.totalWeeks}
-            </span>
+        {/* Dieta di oggi: anelli dei macro */}
+        {settings.profile && <TodayDiet onOpen={() => navigate('/food')} />}
+
+        {/* Peso + mesociclo */}
+        <div className="grid grid-cols-2 gap-3">
+          <Card interactive className="p-4" onClick={() => navigate('/body')} role="link" aria-label="Apri corpo">
+            <span className="text-xs font-bold uppercase tracking-wider text-fg-3">Peso</span>
+            {showBody && latestBody?.weight != null ? (
+              <>
+                <div className="mt-1 font-display text-2xl font-extrabold text-fg">
+                  {formatKg(latestBody.weight)}
+                  <span className="ml-1 text-sm font-semibold text-fg-3">kg</span>
+                </div>
+                <TrendLine delta={weightTrend?.delta ?? null} label="7 gg" unit="kg" />
+                <div className="mt-1">
+                  <Sparkline values={spark} />
+                </div>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-fg-2">Pesati per vedere l'andamento →</p>
+            )}
+          </Card>
+          <Card interactive className="p-4" onClick={() => navigate('/mesocycle')} role="link" aria-label="Apri mesociclo">
+            <span className="text-xs font-bold uppercase tracking-wider text-fg-3">Mesociclo</span>
+            <div className="mt-1 font-display text-2xl font-extrabold text-fg">
+              {meso.currentWeek}
+              <span className="text-sm font-semibold text-fg-3">/{meso.totalWeeks} sett.</span>
+            </div>
             {meso.isDeloadWeek && <span className="text-sm font-semibold text-accent-400">Deload</span>}
-          </div>
-          <ProgressBar className="mt-3" value={meso.currentWeek / meso.totalWeeks} label="Avanzamento mesociclo" />
-          <div className="mt-3 flex justify-between gap-2">
-            {meso.weeks.map((w) => (
-              <div key={w.index} className="flex flex-1 flex-col items-center gap-1">
+            <ProgressBar className="mt-3" value={meso.currentWeek / meso.totalWeeks} label="Avanzamento mesociclo" />
+            <div className="mt-3 flex justify-between">
+              {meso.weeks.map((w) => (
                 <span
+                  key={w.index}
                   className={cn(
                     'h-2.5 w-2.5 rounded-full',
-                    w.isCurrent ? 'bg-accent-500 ring-4 ring-accent-glow' : w.isPast ? 'bg-success' : 'bg-surface-3',
-                    w.isDeload && !w.isCurrent && !w.isPast && 'bg-accent-600/40',
+                    w.isCurrent ? 'bg-accent-500 ring-4 ring-accent-glow' : w.isPast ? 'bg-accent-600/60' : 'bg-surface-3',
                   )}
                   aria-hidden
                 />
-                <span className="text-xs text-fg-3">
-                  {w.isDeload ? 'DL' : `S${w.index}`} · {w.sessions.length}
-                </span>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {sessions.length > 0 && <WeekCard />}
-
-        {/* Peso corporeo */}
-        {showBody && latestBody?.weight != null && (
-          <Card interactive className="p-4" onClick={() => navigate('/body')} role="link" aria-label="Apri corpo">
-            <div className="flex items-center justify-between">
-              <span className="section-title !mb-0">Peso corporeo</span>
-              <ChevronRight className="h-5 w-5 text-fg-3" aria-hidden />
-            </div>
-            <div className="mt-2 flex items-end justify-between gap-4">
-              <div>
-                <div className="text-3xl text-fg">
-                  {formatKg(latestBody.weight)} <span className="text-lg text-fg-3">kg</span>
-                </div>
-                <TrendLine delta={weightTrend?.delta ?? null} label="7 giorni" unit="kg" />
-              </div>
-              <Sparkline values={spark} />
+              ))}
             </div>
           </Card>
-        )}
+        </div>
+
+        {sessions.length > 0 && <WeekCard />}
 
         {/* Promemoria check-in settimanale */}
         {settings.profile && sessions.length > 0 && checkInDue(settings.checkIns) && (
@@ -269,66 +322,17 @@ export default function Home() {
           </Card>
         )}
 
-        {/* Dieta */}
-        {settings.profile && (
-          <Card interactive className="flex items-center gap-3 p-4" onClick={() => navigate('/food')} role="link" aria-label="Apri la dieta">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-accent-glow text-accent-500">
-              <Sparkles className="h-6 w-6" aria-hidden />
+        {/* Coach con microfono */}
+        <Card className="flex items-center gap-3 border-violet-500/40 p-4" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.25), rgba(21,15,34,0.95))' }}>
+          <button type="button" onClick={() => navigate('/coach?tab=chat')} className="min-w-0 flex-1 text-left">
+            <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-violet-400">
+              <Sparkles className="h-4 w-4" aria-hidden /> Coach
             </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-base font-semibold text-fg">Dieta di oggi</span>
-              <span className="block text-sm text-fg-2">
-                Oggi: {userNutrition({ ...settings.profile, weightKg: latestBody?.weight ?? settings.profile.weightKg }, settings).target} kcal ·{' '}
-                {settings.weekPlan ? 'segna i pasti nel diario' : 'crea il piano settimanale'}
-              </span>
-            </span>
-            <ChevronRight className="h-5 w-5 text-fg-3" aria-hidden />
-          </Card>
-        )}
-
-        {/* Tutti i giorni */}
-        <section>
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="section-title !mb-0">Tutti i giorni</h2>
-            <Button variant="ghost" size="sm" icon={<Pencil className="h-4 w-4" />} onClick={() => navigate('/schedule')}>
-              Modifica
-            </Button>
-          </div>
-          <ul className="card divide-y divide-line-subtle">
-            {days.map((d) => {
-              const last = lastForDay(d.id);
-              return (
-                <li key={d.id}>
-                  <button
-                    type="button"
-                    onClick={() => startDay(d)}
-                    className="flex min-h-[64px] w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
-                  >
-                    <span
-                      className={cn(
-                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-base font-bold',
-                        d.id === next?.id ? 'bg-accent-500 text-onaccent' : 'bg-surface-2 text-fg-2',
-                      )}
-                    >
-                      {d.order}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-base font-semibold text-fg">{d.subtitle}</span>
-                      <span className="block text-sm text-fg-3">
-                        {d.exercises.length} esercizi · {last ? `ultima: ${formatRelativeDay(last.date)}` : 'mai fatto'}
-                      </span>
-                    </span>
-                    {activeSession?.dayId === d.id ? (
-                      <Chip tone="accent">In corso</Chip>
-                    ) : (
-                      <Play className="h-5 w-5 text-fg-3" aria-hidden />
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
+            <span className="mt-1 block text-base font-semibold text-fg">Chiedimi qualcosa</span>
+            <span className="block text-sm text-fg-2">Tocca il microfono e parla: scheda, dieta, dolori…</span>
+          </button>
+          <MicButton onText={(t) => navigate(`/coach?tab=chat&q=${encodeURIComponent(t)}`)} />
+        </Card>
       </div>
 
       <ConfirmDialog

@@ -104,20 +104,20 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
       <Card variant="elevated" className="space-y-3 p-4">
         <div className="grid grid-cols-3 text-center">
           <div>
-            <div className="text-2xl text-fg">{target.target}</div>
+            <div className="font-display text-2xl font-extrabold text-fg">{target.target}</div>
             <div className="text-xs uppercase text-fg-3">Obiettivo</div>
           </div>
           <div>
-            <div className="text-2xl text-fg">{totals.kcal}</div>
+            <div className="font-display text-2xl font-extrabold text-fg">{totals.kcal}</div>
             <div className="text-xs uppercase text-fg-3">Mangiate</div>
           </div>
           <div>
-            <div className={cn('text-2xl', left < 0 ? 'text-warning' : 'text-success')}>{left}</div>
+            <div className={cn('font-display text-2xl font-extrabold', left < 0 ? 'text-warning' : 'text-accent-500')}>{left}</div>
             <div className="text-xs uppercase text-fg-3">{left < 0 ? 'Oltre' : 'Restano'}</div>
           </div>
         </div>
-        <MacroBar label="Proteine" value={totals.protein} target={target.protein} unit="g" color="#EC4899" />
-        <MacroBar label="Carboidrati" value={totals.carbs} target={target.carbs} unit="g" color="#14B8A6" />
+        <MacroBar label="Proteine" value={totals.protein} target={target.protein} unit="g" color="#39FF88" />
+        <MacroBar label="Carboidrati" value={totals.carbs} target={target.carbs} unit="g" color="#C084FC" />
         <MacroBar label="Grassi" value={totals.fat} target={target.fat} unit="g" color="#EAB308" />
       </Card>
 

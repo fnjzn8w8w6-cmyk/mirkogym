@@ -22,8 +22,8 @@
   --accent-600: #1fd86a;
   --accent-glow: rgba(57, 255, 136, 0.14);
 
-  --success: #22c55e;
-  --success-bg: rgba(34, 197, 94, 0.12);
+  --success: #39ff88;
+  --success-bg: rgba(57, 255, 136, 0.12);
   --warning: #eab308;
   --warning-bg: rgba(234, 179, 8, 0.12);
   --danger: #ef4444;
@@ -126,4 +126,11 @@
 /* Recharts: niente outline al tap */
 .recharts-wrapper *:focus {
   outline: none;
+}
+
+/* Tema Toxic: tutti i titoli principali con il font display */
+h1 {
+  font-family: 'Unbounded', 'Inter Variable', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }

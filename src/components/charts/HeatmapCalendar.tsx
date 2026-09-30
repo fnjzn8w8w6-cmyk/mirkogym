@@ -34,7 +34,7 @@ export function HeatmapCalendar({ counts, days = 90 }: { counts: Map<string, num
         <svg width={width} height={height} role="img" aria-label={`${total} giorni di allenamento negli ultimi ${days} giorni`}>
           {DAY_LABELS.map((l, i) =>
             l ? (
-              <text key={i} x={0} y={i * (CELL + GAP) + CELL - 3} fontSize={10} fontWeight={600} fill="#8A8A90">
+              <text key={i} x={0} y={i * (CELL + GAP) + CELL - 3} fontSize={10} fontWeight={600} fill="#8D82A6">
                 {l}
               </text>
             ) : null,

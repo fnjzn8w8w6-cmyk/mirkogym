@@ -334,7 +334,7 @@ function ChatCoach({ profile }: { profile: UserProfile }) {
       return [];
     }
   });
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState(() => new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('q') ?? '');
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

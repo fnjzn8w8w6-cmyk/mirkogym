@@ -27,7 +27,7 @@ export default {
           600: '#1FD86A',
           glow: 'var(--accent-glow)',
         },
-        success: { DEFAULT: '#22C55E', bg: 'var(--success-bg)' },
+        success: { DEFAULT: '#39FF88', bg: 'var(--success-bg)' },
         warning: { DEFAULT: '#EAB308', bg: 'var(--warning-bg)' },
         danger: { DEFAULT: '#EF4444', bg: 'var(--danger-bg)' },
         info: { DEFAULT: '#3B82F6', bg: 'var(--info-bg)' },

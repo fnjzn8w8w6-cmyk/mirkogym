@@ -20,7 +20,7 @@ import type { Day, Exercise } from '@/types';
 
 const STATUS: Record<WeekDayStatus, { icon: string; label: string; cls: string }> = {
   done: { icon: '✅', label: 'Fatto', cls: 'bg-success-bg border-success/30' },
-  next: { icon: '🔵', label: 'Prossimo', cls: 'bg-info-bg border-info/40' },
+  next: { icon: '▶️', label: 'Prossimo', cls: 'bg-accent-glow border-accent-500/60' },
   pending: { icon: '⚪', label: 'Da fare', cls: 'bg-surface-2 border-line-subtle' },
   missed: { icon: '🔴', label: 'Saltato', cls: 'bg-danger-bg border-danger/30' },
 };

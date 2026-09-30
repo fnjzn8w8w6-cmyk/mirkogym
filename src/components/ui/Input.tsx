@@ -101,8 +101,8 @@ export function Toggle({ checked, onChange, label, description, disabled }: Togg
       >
         <span
           className={cn(
-            'absolute top-1 h-6 w-6 rounded-full bg-white shadow-sm transition-transform',
-            checked ? 'translate-x-[24px]' : 'translate-x-1',
+            'absolute left-0 top-1 h-6 w-6 rounded-full shadow-sm transition-transform',
+            checked ? 'translate-x-[24px] bg-onaccent' : 'translate-x-1 bg-fg-2',
           )}
         />
       </button>

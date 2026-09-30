@@ -99,7 +99,7 @@ function SimpleMealDetail({ meal, onClose }: { meal: SimpleMeal | null; onClose:
     <Modal open={Boolean(meal)} onClose={onClose} title={meal?.name}>
       {meal && (
         <div className="space-y-3">
-          <div className="flex h-32 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500/30 to-rose-500/20 text-6xl">{meal.emoji}</div>
+          <div className="flex h-32 items-center justify-center rounded-lg bg-gradient-to-br from-accent-500/25 to-violet-500/25 text-6xl">{meal.emoji}</div>
           <ul className="divide-y divide-line-subtle">
             {meal.items.map(([f, g]) => (
               <li key={f} className="flex justify-between py-1.5 text-base">
@@ -446,8 +446,8 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
       <Card className="space-y-2 p-4">
         <div className="text-base font-semibold text-fg">{DAY_LONG[day]}</div>
         <MacroBar label="Calorie" value={totals.kcal} target={target.target} unit="kcal" color="#39FF88" />
-        <MacroBar label="Proteine" value={totals.protein} target={target.protein} unit="g" color="#EC4899" />
-        <MacroBar label="Carboidrati" value={totals.carbs} target={target.carbs} unit="g" color="#14B8A6" />
+        <MacroBar label="Proteine" value={totals.protein} target={target.protein} unit="g" color="#39FF88" />
+        <MacroBar label="Carboidrati" value={totals.carbs} target={target.carbs} unit="g" color="#C084FC" />
         <MacroBar label="Grassi" value={totals.fat} target={target.fat} unit="g" color="#EAB308" />
       </Card>
 

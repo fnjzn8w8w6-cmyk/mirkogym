@@ -7,12 +7,13 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const pub = resolve(root, 'public');
-const BG = '#0A0A0B';
-const ACCENT = '#F97316';
-const ACCENT_DARK = '#EA580C';
+const BG = '#0B0714';
+const ACCENT = '#39FF88';
+const ACCENT_DARK = '#1FD86A';
+const VIOLET = '#8B5CF6';
 
 /**
- * Manubrio stilizzato arancione su sfondo scuro.
+ * Manubrio stilizzato verde neon su sfondo viola scuro (tema Toxic).
  * `padding` è la frazione di lato riservata alla safe-area (maskable = 0.2).
  */
 function svg(size, { padding = 0.12, rounded = true } = {}) {
@@ -25,15 +26,20 @@ function svg(size, { padding = 0.12, rounded = true } = {}) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#FB923C"/>
+      <stop offset="0" stop-color="#6BFFA8"/>
       <stop offset="1" stop-color="${ACCENT_DARK}"/>
     </linearGradient>
     <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="${ACCENT}" stop-opacity="0.22"/>
+      <stop offset="0" stop-color="${ACCENT}" stop-opacity="0.28"/>
       <stop offset="1" stop-color="${ACCENT}" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vio" cx="0.15" cy="0.05" r="0.9">
+      <stop offset="0" stop-color="${VIOLET}" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="${VIOLET}" stop-opacity="0"/>
     </radialGradient>
   </defs>
   <rect width="${size}" height="${size}" rx="${radius}" fill="${BG}"/>
+  <rect width="${size}" height="${size}" rx="${radius}" fill="url(#vio)"/>
   <circle cx="${size / 2}" cy="${size / 2}" r="${size * 0.46}" fill="url(#glow)"/>
   <g transform="rotate(-30 ${size / 2} ${size / 2})" fill="url(#g)">
     <rect x="${r(22)}" y="${r(46)}" width="${s(56)}" height="${s(8)}" rx="${s(3)}"/>
