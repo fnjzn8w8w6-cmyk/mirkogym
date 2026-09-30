@@ -1,14 +1,16 @@
 import type { Day, Exercise } from '@/types';
 import type { Equipment, Experience, Goal, Sex, UserProfile } from './metabolism';
 import { NAME_IT } from './exercise-library';
+import { parseRestSeconds } from './progression';
 
 /**
- * Generatore di schede in base a obiettivo, esperienza, giorni e attrezzatura.
+ * Generatore di schede in base a obiettivo, esperienza, giorni e attrezzatura, più le
+ * preferenze del coach (priorità muscolari, movimenti da evitare, tempo massimo).
  * Riferimenti: 10–20 serie settimanali per muscolo (meno per i neofiti), 1–3 RIR,
  * forza 3–6 rep con recuperi lunghi, ipertrofia 6–12 (multiarticolari) e 10–15 (isolamento).
  */
 
-type SlotId =
+export type SlotId =
   | 'squat'
   | 'hinge'
   | 'hpush'
@@ -25,6 +27,7 @@ type SlotId =
   | 'biceps'
   | 'triceps'
   | 'calves'
+  | 'glute'
   | 'core';
 
 interface SlotDef {
@@ -56,8 +59,83 @@ const SLOTS: Record<SlotId, SlotDef> = {
   biceps: { group: 'Bicipiti', compound: false, gym: ['Barbell_Curl', 'Standing_Biceps_Cable_Curl'], dumbbells: 'Dumbbell_Alternate_Bicep_Curl', bodyweight: 'Chin-Up' },
   triceps: { group: 'Tricipiti', compound: false, gym: ['Triceps_Pushdown_-_Rope_Attachment'], dumbbells: 'Standing_Dumbbell_Triceps_Extension', bodyweight: 'Bench_Dips' },
   calves: { group: 'Gambe', compound: false, gym: ['Standing_Calf_Raises'], dumbbells: 'Standing_Dumbbell_Calf_Raise', bodyweight: 'Standing_Dumbbell_Calf_Raise', lower: true },
+  glute: { group: 'Gambe', compound: true, gym: ['Barbell_Hip_Thrust'], dumbbells: 'Single_Leg_Glute_Bridge', bodyweight: 'Single_Leg_Glute_Bridge', lower: true },
   core: { group: 'Core', compound: false, gym: ['Cable_Crunch', 'Plank'], dumbbells: 'Plank', bodyweight: 'Plank' },
 };
+
+/** Descrizione dei movimenti (usata anche dall'AI per capire cosa evitare). */
+export const SLOT_LABEL: Record<SlotId, string> = {
+  squat: 'squat / accosciata (carico su ginocchia e schiena)',
+  hinge: 'stacchi / piegamento delle anche (carico lombare)',
+  hpush: 'spinta orizzontale (panca, chest press, piegamenti)',
+  ipush: 'spinta inclinata (panca inclinata)',
+  vpush: 'spinta sopra la testa (lento, shoulder press)',
+  hpull: 'trazione orizzontale (rematori, pulley)',
+  vpull: 'trazione verticale (lat machine, trazioni)',
+  lunge: 'affondi / split squat (ginocchia, equilibrio)',
+  kneeExt: 'estensione del ginocchio (leg extension)',
+  kneeFlex: 'flessione del ginocchio (leg curl)',
+  lateral: 'alzate laterali',
+  rearDelt: 'deltoidi posteriori (face pull, reverse fly)',
+  fly: 'croci per il petto',
+  biceps: 'curl per bicipiti',
+  triceps: 'estensioni per tricipiti',
+  calves: 'polpacci',
+  glute: 'hip thrust / ponte glutei',
+  core: 'addominali',
+};
+export const SLOT_IDS = Object.keys(SLOT_LABEL) as SlotId[];
+
+/** Sostituti sicuri quando un movimento va evitato (in ordine di preferenza). */
+const SUBSTITUTES: Partial<Record<SlotId, string[]>> = {
+  squat: ['Leg_Press', 'Hack_Squat', 'Goblet_Squat', 'Barbell_Hip_Thrust', 'Single_Leg_Glute_Bridge'],
+  hinge: ['Barbell_Hip_Thrust', 'Lying_Leg_Curls', 'Single_Leg_Glute_Bridge'],
+  hpush: ['Dumbbell_Bench_Press', 'Leverage_Chest_Press', 'Pushups'],
+  ipush: ['Leverage_Incline_Chest_Press', 'Incline_Dumbbell_Press', 'Decline_Push-Up'],
+  vpush: ['Leverage_Shoulder_Press', 'Dumbbell_Shoulder_Press', 'Side_Lateral_Raise'],
+  hpull: ['Seated_Cable_Rows', 'One-Arm_Dumbbell_Row', 'Inverted_Row'],
+  vpull: ['Wide-Grip_Lat_Pulldown', 'Close-Grip_Front_Lat_Pulldown', 'Bent-Arm_Dumbbell_Pullover'],
+  lunge: ['Leg_Press', 'Barbell_Hip_Thrust', 'Single_Leg_Glute_Bridge'],
+  kneeFlex: ['Romanian_Deadlift', 'Single_Leg_Glute_Bridge'],
+};
+
+/** L'esercizio è eseguibile con l'attrezzatura dell'utente? */
+function availableFor(id: string, equipment: Equipment): boolean {
+  if (equipment === 'gym') return true;
+  const bw = /Pushups|Push-Up|Plank|Bodyweight|Single_Leg|Superman|Bench_Dips|Crunch|Inverted|Pullups|Chin-Up|Handstand/;
+  return equipment === 'bodyweight' ? bw.test(id) : bw.test(id) || /Dumbbell|Goblet|Step_Ups|Lunges|Split_Squat/.test(id);
+}
+
+/** Priorità muscolari riconosciute (Glutei è un sottogruppo delle Gambe). */
+export const PRIORITY_KEYS = ['Petto', 'Dorso', 'Spalle', 'Bicipiti', 'Tricipiti', 'Gambe', 'Glutei', 'Core'] as const;
+export type PriorityKey = (typeof PRIORITY_KEYS)[number];
+const PRIORITY_SLOT: Record<PriorityKey, SlotId> = {
+  Petto: 'fly',
+  Dorso: 'hpull',
+  Spalle: 'lateral',
+  Bicipiti: 'biceps',
+  Tricipiti: 'triceps',
+  Gambe: 'kneeExt',
+  Glutei: 'glute',
+  Core: 'core',
+};
+
+/** Preferenze del coach (ricavate dall'AI dal testo libero dell'utente). */
+export interface CoachPrefs {
+  request: string;
+  summary: string;
+  priorities: PriorityKey[];
+  avoidSlots: SlotId[];
+  avoidExercises: string[];
+  maxMinutes?: number;
+  injuries: string[];
+}
+
+/** Durata stimata di una seduta in minuti (serie × (recupero + ~45 s) + riscaldamento). */
+export function sessionMinutes(day: Day): number {
+  const sec = day.exercises.reduce((a, e) => a + e.sets * (parseRestSeconds(e.rest) + 45), 0);
+  return Math.round(6 + sec / 60);
+}
 
 const DAY_PLANS: Record<number, { name: string; slots: SlotId[] }[]> = {
   2: [
@@ -150,32 +228,83 @@ function startWeight(slot: SlotDef, libraryId: string, p: UserProfile, reps: num
   return w > 0 ? w : undefined;
 }
 
-export function generateProgram(p: UserProfile): Day[] {
+export function generateProgram(p: UserProfile, prefs?: CoachPrefs | null): Day[] {
   const days = DAY_PLANS[Math.min(6, Math.max(2, p.daysPerWeek))];
+  const avoidSlots = new Set(prefs?.avoidSlots ?? []);
+  const avoidIds = new Set(prefs?.avoidExercises ?? []);
+  const priorities = new Set(prefs?.priorities ?? []);
+
+  /** Sceglie l'esercizio per uno slot rispettando attrezzatura ed esclusioni. */
+  const choose = (slotId: SlotId, used: Set<string>): string | null => {
+    const slot = SLOTS[slotId];
+    const primary = pickVariant(slot, p.equipment, p.experience);
+    const pool: (string | null | undefined)[] = avoidSlots.has(slotId)
+      ? (SUBSTITUTES[slotId] ?? [])
+      : [primary, ...slot.gym, ...(SUBSTITUTES[slotId] ?? [])];
+    return pool.find((id): id is string => !!id && !avoidIds.has(id) && !used.has(id) && availableFor(id, p.equipment)) ?? null;
+  };
+
   return days.map((plan, di) => {
     const used = new Set<string>();
     const exercises: Exercise[] = [];
-    plan.slots.forEach((slotId, si) => {
+    // Slot del giorno + slot extra per i muscoli prioritari già allenati in quel giorno
+    const slots: SlotId[] = [...plan.slots];
+    const groupsOfDay = plan.slots.map((sl) => SLOTS[sl].group);
+    for (const pr of priorities) {
+      const extra = PRIORITY_SLOT[pr];
+      const trainsIt = pr === 'Glutei' ? groupsOfDay.includes('Gambe') : pr === 'Core' || groupsOfDay.includes(pr);
+      if (trainsIt && !slots.includes(extra)) slots.push(extra);
+    }
+    slots.forEach((slotId, si) => {
       const slot = SLOTS[slotId];
-      const lib = pickVariant(slot, p.equipment, p.experience);
-      if (!lib || used.has(lib)) return;
+      const lib = choose(slotId, used);
+      if (!lib) return;
       used.add(lib);
       const rx = prescribe(p.goal, p.experience, slot.compound, si === 0);
+      const priority = priorities.has(slot.group as PriorityKey) || (slotId === 'glute' && priorities.has('Glutei'));
       exercises.push({
         id: `g${di + 1}e${exercises.length + 1}`,
         libraryId: lib,
         name: NAME_IT[lib] ?? lib.replace(/_/g, ' '),
         group: slot.group,
-        sets: rx.sets,
+        sets: Math.min(5, rx.sets + (priority ? 1 : 0)),
         repMin: rx.repMin,
         repMax: rx.repMax,
         rirTarget: rx.rir,
         rest: rx.rest,
         startWeight: startWeight(slot, lib, p, rx.repMax),
+        notes: avoidSlots.has(slotId) ? 'Scelto dal coach al posto di un movimento da evitare' : undefined,
       });
     });
-    return { id: `day${di + 1}`, order: di + 1, name: `Day ${di + 1}`, subtitle: plan.name, exercises };
+    const day: Day = { id: `day${di + 1}`, order: di + 1, name: `Day ${di + 1}`, subtitle: plan.name, exercises };
+    return prefs?.maxMinutes ? fitToTime(day, prefs.maxMinutes, priorities) : day;
   });
+}
+
+/** Riduce la seduta finché rientra nel tempo massimo: prima gli accessori non prioritari, poi le serie. */
+function fitToTime(day: Day, maxMinutes: number, priorities: Set<PriorityKey>): Day {
+  let ex = [...day.exercises];
+  const minutes = () => sessionMinutes({ ...day, exercises: ex });
+  for (let guard = 0; guard < 40 && minutes() > maxMinutes; guard++) {
+    // 1) togli l'ultimo esercizio non prioritario (mai il primo), tenendone almeno 4
+    const idx = [...ex.keys()].reverse().find((i) => i > 0 && !priorities.has(ex[i].group as PriorityKey));
+    if (idx != null && ex.length > 4) {
+      ex = ex.filter((_, i) => i !== idx);
+      continue;
+    }
+    // 2) togli una serie all'esercizio con più serie (minimo 2)
+    const biggest = ex.reduce((a, e) => (e.sets > a.sets ? e : a), ex[0]);
+    if (biggest && biggest.sets > 2) {
+      ex = ex.map((e) => (e === biggest ? { ...e, sets: e.sets - 1 } : e));
+      continue;
+    }
+    if (ex.length > 3) {
+      ex = ex.slice(0, -1);
+      continue;
+    }
+    break;
+  }
+  return { ...day, exercises: ex };
 }
 
 /** Fascia di serie settimanali per muscolo consigliata per livello. */

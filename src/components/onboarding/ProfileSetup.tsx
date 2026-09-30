@@ -31,6 +31,10 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { TemplatePicker } from './TemplatePicker';
 import { BodyFatPhotoModal } from '../modals/BodyFatPhotoModal';
+import { AIBusy, useAITask } from '../coach/AIBusy';
+import { interpretTrainingRequest } from '@/lib/coach';
+import type { CoachPrefs } from '@/lib/program-generator';
+import { TextArea } from '../ui/Input';
 import { BF_METHOD_LABEL } from '@/lib/metabolism';
 
 type Step = 'lang' | 'body' | 'activity' | 'experience' | 'goal' | 'availability' | 'results' | 'program';
@@ -67,6 +71,9 @@ export function ProfileSetup() {
   const [programChoice, setProgramChoice] = useState<'generated' | 'template' | 'keep'>('generated');
   const [template, setTemplate] = useState<Template | null>(null);
   const [busy, setBusy] = useState(false);
+  const [coachText, setCoachText] = useState(settings.coachPrefs?.request ?? '');
+  const [coachPrefs, setCoachPrefs] = useState<CoachPrefs | null>(settings.coachPrefs ?? null);
+  const coachAI = useAITask();
   const [bfKnown, setBfKnown] = useState(prev?.bodyFatPct != null ? String(prev.bodyFatPct).replace('.', ',') : '');
   const [bfSource, setBfSource] = useState<'manual' | 'photo' | undefined>(prev?.bodyFatSource);
   const [photoOpen, setPhotoOpen] = useState(false);
@@ -101,7 +108,7 @@ export function ProfileSetup() {
       : null;
 
   const analysis = useMemo(() => (profile ? { n: nutrition(profile), c: composition(profile) } : null), [profile]);
-  const generated = useMemo(() => (profile ? generateProgram(profile) : []), [profile]);
+  const generated = useMemo(() => (profile ? generateProgram(profile, coachPrefs) : []), [profile, coachPrefs]);
   const hasHistory = sessions.length > 0;
 
   const canNext: Record<Step, boolean> = {
@@ -135,6 +142,7 @@ export function ProfileSetup() {
         language: lang,
         profile,
         profileCompleted: true,
+        ...(programChoice === 'generated' && coachPrefs ? { coachPrefs } : {}),
         weeklySetsMin: ws.min,
         weeklySetsMax: ws.max,
         // I carichi di partenza vanno proposti solo con una scheda nuova
@@ -351,6 +359,37 @@ export function ProfileSetup() {
                 />
                 {programChoice === 'generated' && (
                   <div className="card space-y-3 p-3">
+                    <div>
+                      <TextArea
+                        label="Raccontalo al coach (opzionale)"
+                        rows={2}
+                        value={coachText}
+                        onChange={(e) => setCoachText(e.target.value)}
+                      />
+                      <p className="mt-1 text-xs text-fg-3">Es. “spalle più larghe, male al ginocchio, massimo 50 minuti”</p>
+                      {coachAI.busy ? (
+                        <div className="mt-2">
+                          <AIBusy status={coachAI.status} onCancel={coachAI.cancel} />
+                        </div>
+                      ) : (
+                        <Button
+                          className="mt-2"
+                          size="sm"
+                          variant="secondary"
+                          icon={<Sparkles className="h-4 w-4" />}
+                          disabled={coachText.trim().length < 5}
+                          onClick={async () => {
+                            if (!profile) return;
+                            const prefs = await coachAI.run((o) => interpretTrainingRequest(coachText, profile, o));
+                            if (prefs) setCoachPrefs(prefs);
+                          }}
+                        >
+                          Personalizza con il coach AI
+                        </Button>
+                      )}
+                      {coachAI.error && <p className="mt-2 text-sm text-danger">{coachAI.error}</p>}
+                      {coachPrefs && <p className="mt-2 rounded-md bg-accent-glow p-2 text-sm text-fg">✨ {coachPrefs.summary}</p>}
+                    </div>
                     {generated.map((d) => (
                       <div key={d.id}>
                         <div className="text-sm font-semibold text-fg">

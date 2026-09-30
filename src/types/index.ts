@@ -99,6 +99,8 @@ export interface Mesocycle {
 }
 
 import type { UserProfile } from '@/lib/metabolism';
+import type { CoachPrefs } from '@/lib/program-generator';
+import type { MealPlan, NutritionPrefs } from '@/lib/coach';
 import type { Lang } from '@/lib/exercise-i18n';
 
 export interface Settings {
@@ -107,6 +109,13 @@ export interface Settings {
   /** Questionario iniziale (dati fisici, obiettivo, esperienza) completato. */
   profileCompleted: boolean;
   profile?: UserProfile;
+  /** Richieste personali interpretate dal coach AI (priorità, movimenti da evitare, tempo). */
+  coachPrefs?: CoachPrefs;
+  /** Preferenze alimentari e piano pasti generato dal dietologo AI. */
+  nutritionPrefs?: NutritionPrefs;
+  mealPlan?: MealPlan;
+  /** Correzione calorica giornaliera applicata dal check-in settimanale (kcal). */
+  kcalAdjust?: number;
   restTimerEnabled: boolean;
   restTimerAutoStart: boolean;
   soundEnabled: boolean;

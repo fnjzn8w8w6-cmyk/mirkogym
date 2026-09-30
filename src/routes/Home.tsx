@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { ChevronRight, Dumbbell, Pencil, Play, Timer } from 'lucide-react';
 import { WeekCard } from '@/components/home/MuscleCard';
 import { useProgress } from '@/hooks/use-progress';
+import { nutrition } from '@/lib/metabolism';
+import { Sparkles } from 'lucide-react';
 import { TrendLine } from '@/components/ui/Trend';
 import { useSchedule } from '@/hooks/use-schedule';
 import { useSessions } from '@/hooks/use-sessions';
@@ -243,6 +245,23 @@ export default function Home() {
               </div>
               <Sparkline values={spark} />
             </div>
+          </Card>
+        )}
+
+        {/* Coach AI */}
+        {settings.profile && (
+          <Card interactive className="flex items-center gap-3 p-4" onClick={() => navigate('/coach')} role="link" aria-label="Apri il coach">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-accent-glow text-accent-500">
+              <Sparkles className="h-6 w-6" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-base font-semibold text-fg">Il tuo coach</span>
+              <span className="block text-sm text-fg-2">
+                Oggi: {nutrition({ ...settings.profile, weightKg: latestBody?.weight ?? settings.profile.weightKg }, settings.kcalAdjust ?? 0).target} kcal ·{' '}
+                {settings.mealPlan ? 'piano pasti pronto' : 'crea il piano pasti'}
+              </span>
+            </span>
+            <ChevronRight className="h-5 w-5 text-fg-3" aria-hidden />
           </Card>
         )}
 

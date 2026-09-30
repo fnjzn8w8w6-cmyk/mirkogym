@@ -132,6 +132,29 @@ npm run dev
 
 Gli emulatori applicano anche `firestore.rules`.
 
+## Coach AI: personal trainer + dietologo
+
+Pagina **Coach** (menu in basso). Approccio ibrido: **i numeri li calcola l'app** (calorie, macro,
+serie, ripetizioni, carichi, aggiustamenti) con formule verificate; **Gemini** (Firebase AI Logic,
+gratuito) interpreta il linguaggio naturale e compone pasti reali. Ogni risposta dell'AI è validata
+e, se l'AI non risponde, l'app continua a funzionare con le regole.
+
+- **Allenamento**: scrivi cosa vuoi ("spalle più larghe, male al ginocchio, max 50 minuti").
+  L'AI lo traduce in priorità muscolari, movimenti da evitare, tempo massimo; il generatore aggiunge
+  volume ai muscoli prioritari, sostituisce i movimenti a rischio con alternative compatibili con la tua
+  attrezzatura e riduce la seduta finché rientra nel tempo. Vedi l'anteprima prima di applicarla.
+  Disponibile anche nel questionario iniziale ("Raccontalo al coach").
+- **Nutrizione**: obiettivi giornalieri (kcal e macro), **check-in settimanale adattivo** (confronta
+  l'andamento reale del peso con quello atteso per il tuo obiettivo e propone ±kcal, stile MacroFactor),
+  **piano pasti su misura** (dieta onnivora/pescetariana/vegetariana/vegana, pasti al giorno, tempo
+  per cucinare, allergie, gusti) con porzioni **calibrate automaticamente** sulle tue calorie,
+  "Cambia" per sostituire un singolo pasto, **lista della spesa** settimanale.
+- **Chiedi**: chat con il coach, che conosce profilo, obiettivi e ultimi allenamenti.
+- Sicurezza: mai sotto metabolismo basale né sotto 1500/1200 kcal; con dolori, patologie o disturbi
+  alimentari il coach rimanda a medico/professionista.
+
+La libreria esercizi si apre dall'icona in alto nella pagina Coach e dall'editor della scheda.
+
 ## Libreria esercizi, schede e gamification
 
 - **Istruzioni in lingua**: in italiano sono curate a mano per i ~100 esercizi più usati; per gli altri

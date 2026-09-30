@@ -33,8 +33,8 @@ export default function Profile() {
     // Usa il peso più recente registrato in "Corpo"
     const lastBf = bodyLogs.find((b) => b.bodyFat != null)?.bodyFat;
     const p = { ...profile, weightKg: bodyweight || profile.weightKg, bodyFatPct: lastBf ?? profile.bodyFatPct };
-    return { n: nutrition(p), c: composition(p), p };
-  }, [profile, bodyweight, bodyLogs]);
+    return { n: nutrition(p, settings.kcalAdjust ?? 0), c: composition(p), p };
+  }, [profile, bodyweight, bodyLogs, settings.kcalAdjust]);
 
   // Mappa muscolare: serie della settimana rispetto al massimo dell'obiettivo
   const intensity = useMemo(() => {

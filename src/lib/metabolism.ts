@@ -113,10 +113,12 @@ export interface Nutrition {
 }
 
 /** Calorie obiettivo e macronutrienti (proteine 1,8–2,2 g/kg, grassi ~0,9 g/kg, resto carboidrati). */
-export function nutrition(p: UserProfile): Nutrition {
+export function nutrition(p: UserProfile, adjust = 0): Nutrition {
   const t = tdee(p);
   const goal = GOALS.find((g) => g.value === p.goal) ?? GOALS[3];
-  const target = Math.round((t * (1 + goal.kcal)) / 10) * 10;
+  // Minimo di sicurezza: mai sotto il metabolismo basale né sotto 1500/1200 kcal
+  const floor = Math.max(bmr(p), p.sex === 'm' ? 1500 : 1200);
+  const target = Math.max(floor, Math.round((t * (1 + goal.kcal) + adjust) / 10) * 10);
   const protein = Math.round(p.weightKg * (p.goal === 'cut' ? 2.2 : 1.8));
   const fat = Math.round(p.weightKg * 0.9);
   const carbs = Math.max(0, Math.round((target - protein * 4 - fat * 9) / 4));

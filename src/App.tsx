@@ -28,6 +28,7 @@ const Settings = lazy(() => import('@/routes/Settings'));
 const ScheduleEditor = lazy(() => import('@/routes/ScheduleEditor'));
 const Exercises = lazy(() => import('@/routes/Exercises'));
 const Profile = lazy(() => import('@/routes/Profile'));
+const Coach = lazy(() => import('@/routes/Coach'));
 
 function Page({ children }: { children: ReactNode }) {
   return (
@@ -66,6 +67,7 @@ function AppShell() {
         <Route path="/schedule" element={<Page><ScheduleEditor /></Page>} />
         <Route path="/exercises" element={<Page><Exercises /></Page>} />
         <Route path="/profile" element={<Page><Profile /></Page>} />
+        <Route path="/coach" element={<Page><Coach /></Page>} />
         <Route path="*" element={<Page><Home /></Page>} />
       </Routes>
       <RestTimer inSession={inSession} />
