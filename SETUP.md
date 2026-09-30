@@ -1,0 +1,87 @@
+# Setup Firebase per MirkoGym
+
+Tempo: ~10 minuti. Serve solo un account Google. Il piano gratuito **Spark** è più che sufficiente.
+
+## 1. Crea il progetto
+
+1. Vai su https://console.firebase.google.com → **Aggiungi progetto**
+2. Nome: `mirkogym` (Firebase aggiunge un suffisso, es. `mirkogym-a1b2c`)
+3. Google Analytics: puoi disattivarlo → **Crea progetto**
+
+## 2. Registra l'app web e copia la configurazione
+
+1. Nella home del progetto clicca l'icona **Web** (`</>`)
+2. Nickname: `MirkoGym` · **non** serve Firebase Hosting → **Registra app**
+3. Firebase mostra un blocco `firebaseConfig = { apiKey: ..., authDomain: ..., ... }`.
+   Copia i 6 valori: ti servono per i GitHub Secrets (vedi README) e per `.env.local`.
+
+   | Campo in `firebaseConfig` | Variabile / Secret |
+   |---|---|
+   | `apiKey` | `VITE_FIREBASE_API_KEY` |
+   | `authDomain` | `VITE_FIREBASE_AUTH_DOMAIN` |
+   | `projectId` | `VITE_FIREBASE_PROJECT_ID` |
+   | `storageBucket` | `VITE_FIREBASE_STORAGE_BUCKET` |
+   | `messagingSenderId` | `VITE_FIREBASE_MESSAGING_SENDER_ID` |
+   | `appId` | `VITE_FIREBASE_APP_ID` |
+
+   Li ritrovi sempre in ⚙️ **Impostazioni progetto → Generali → Le tue app**.
+
+## 3. Attiva l'accesso anonimo
+
+1. Menu **Build → Authentication** → **Inizia**
+2. Tab **Metodo di accesso** → **Anonimo** → **Attiva** → **Salva**
+
+## 4. Autorizza il dominio di GitHub Pages
+
+1. **Authentication → Impostazioni → Domini autorizzati** → **Aggiungi dominio**
+2. Aggiungi: `fnjzn8w8w6-cmyk.github.io`
+
+(`localhost` è già presente per lo sviluppo.)
+
+## 5. Crea il database Firestore
+
+1. Menu **Build → Firestore Database** → **Crea database**
+2. Località: `eur3 (europe-west)` o `europe-west8 (Milano)`
+3. Modalità: **produzione** → **Crea**
+
+## 6. Imposta le regole di sicurezza
+
+1. Firestore → tab **Regole**
+2. Sostituisci tutto con il contenuto del file [`firestore.rules`](./firestore.rules):
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+```
+
+3. **Pubblica**. Ogni utente anonimo può leggere e scrivere solo `users/{proprio uid}/...`.
+
+## 7. Configura GitHub e fai il deploy
+
+Segui le sezioni **2** e **3** del [README](./README.md): 6 secret + GitHub Pages con sorgente
+"GitHub Actions". Poi fai un push su `main` (o lancia il workflow a mano).
+
+## 8. Primo avvio
+
+Apri https://fnjzn8w8w6-cmyk.github.io/mirkogym/ :
+
+1. L'app crea l'utente anonimo e carica la tua scheda (Day 1–5)
+2. Onboarding in 3 slide
+3. (Opzionale) inserisci i carichi di partenza per ogni esercizio — puoi saltare
+4. Sei pronto: **Inizia sessione** 💪
+
+## Risoluzione problemi
+
+| Messaggio | Causa / soluzione |
+|---|---|
+| "Configurazione Firebase mancante" | I secret non erano impostati al momento del build: aggiungili e rilancia il workflow |
+| "Impossibile connettersi" + `auth/admin-restricted-operation` o `operation-not-allowed` | Accesso anonimo non attivo (passo 3) |
+| "Impossibile connettersi" + `permission-denied` | Regole Firestore non pubblicate (passo 6) |
+| `auth/unauthorized-domain` | Dominio GitHub Pages non autorizzato (passo 4) |
+| L'app non si aggiorna dopo un deploy | Chiudila e riaprila: il service worker si aggiorna automaticamente al successivo avvio |

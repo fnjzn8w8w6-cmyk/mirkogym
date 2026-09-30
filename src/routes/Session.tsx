@@ -1,0 +1,463 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Clock, Dumbbell, Flag, Play, Plus, Trophy, X } from 'lucide-react';
+import type { ActiveSession, DraftSet, Exercise, Session as SessionT, SetLog } from '@/types';
+import { useSchedule } from '@/hooks/use-schedule';
+import { useSessions } from '@/hooks/use-sessions';
+import { useSettings } from '@/hooks/use-settings';
+import { useMesocycle } from '@/hooks/use-mesocycle';
+import { parseNum, useActiveSession, useSessionDraft } from '@/hooks/use-active-session';
+import { useRestTimer } from '@/hooks/use-rest-timer';
+import { useToast } from '@/components/ui/Toast';
+import { Button, IconButton } from '@/components/ui/Button';
+import { Chip } from '@/components/ui/Chip';
+import { Modal } from '@/components/ui/Modal';
+import { Input, TextArea } from '@/components/ui/Input';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { OfflineBadge } from '@/components/layout/TopBar';
+import { ExerciseCard } from '@/components/session/ExerciseCard';
+import { Confetti } from '@/components/celebration/Confetti';
+import { calculateSuggestion, describeLog, parseRestSeconds, previousLogsFor } from '@/lib/progression';
+import { detectPR, exerciseKey, formatKg, formatTonnage, isAnyPR, sessionTonnage } from '@/lib/analytics';
+import { formatClock, formatDuration } from '@/lib/date-utils';
+import { haptics, unlockAudio } from '@/lib/haptics';
+import { MUSCLE_GROUPS } from '@/lib/seed-data';
+
+export default function SessionRoute() {
+  const { dayId = '' } = useParams();
+  const navigate = useNavigate();
+  const { getDay } = useSchedule();
+  const { activeSession, start } = useActiveSession();
+  const { isDeloadWeek } = useMesocycle();
+  const [starting, setStarting] = useState(false);
+  // Mantiene montata la vista anche dopo che la bozza remota viene chiusa (celebrazione finale)
+  const [viewing, setViewing] = useState<ActiveSession | null>(activeSession);
+  const day = getDay(dayId);
+
+  useEffect(() => {
+    if (activeSession && activeSession.id !== viewing?.id) setViewing(activeSession);
+  }, [activeSession, viewing?.id]);
+
+  if (activeSession && activeSession.dayId !== dayId) return <Navigate to={`/session/${activeSession.dayId}`} replace />;
+  const current = activeSession ?? viewing;
+  if (current) return <SessionView key={current.id} initial={current} />;
+
+  return (
+    <div className="page" style={{ paddingTop: 'calc(var(--safe-top) + 24px)' }}>
+      <EmptyState
+        title={day ? `${day.name} · ${day.subtitle}` : 'Giorno non trovato'}
+        description={day ? `${day.exercises.length} esercizi pronti. Vuoi iniziare?` : 'Torna alla home e scegli un giorno.'}
+        action={
+          <div className="flex gap-3">
+            <Button variant="secondary" onClick={() => navigate('/')}>
+              Home
+            </Button>
+            {day && (
+              <Button
+                loading={starting}
+                icon={<Play className="h-5 w-5 fill-current" />}
+                onClick={async () => {
+                  setStarting(true);
+                  await start(day, isDeloadWeek);
+                  setStarting(false);
+                }}
+              >
+                Inizia
+              </Button>
+            )}
+          </div>
+        }
+      />
+    </div>
+  );
+}
+
+const EXTRA_DEFAULTS: Omit<Exercise, 'id' | 'name' | 'group'> = {
+  sets: 3,
+  repMin: 8,
+  repMax: 12,
+  rirTarget: '1-2',
+  rest: '90 sec',
+};
+
+function SessionView({ initial }: { initial: ActiveSession }) {
+  const navigate = useNavigate();
+  const toast = useToast();
+  const timer = useRestTimer();
+  const { getDay, exerciseIndex } = useSchedule();
+  const { sessions } = useSessions();
+  const { settings } = useSettings();
+  const { discard } = useActiveSession();
+  const { draft, updateSet, addSet, removeSet, addExercise, removeExercise, setNotes, finish, cancelSync } =
+    useSessionDraft(initial);
+
+  const day = getDay(draft.dayId);
+  const [now, setNow] = useState(Date.now());
+  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+  const [exitOpen, setExitOpen] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const [extraOpen, setExtraOpen] = useState(false);
+  const [confirmFinish, setConfirmFinish] = useState<string | null>(null);
+  const [finishing, setFinishing] = useState(false);
+  const [result, setResult] = useState<SessionT | null>(null);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // Definizione di esercizio per ciascun elemento della bozza (extra = default generici)
+  const exercises = useMemo(
+    () =>
+      draft.exercises.map(
+        (d): Exercise =>
+          exerciseIndex.get(d.exerciseId) ?? { id: d.exerciseId, name: d.name, group: d.group, ...EXTRA_DEFAULTS },
+      ),
+    [draft.exercises, exerciseIndex],
+  );
+
+  // Suggerimenti calcolati una volta per sessione (dallo storico, non dalla bozza)
+  const suggestions = useMemo(
+    () =>
+      exercises.map((ex) => {
+        const prev = previousLogsFor(ex, sessions);
+        const last = prev[prev.length - 1];
+        return {
+          suggestion: calculateSuggestion(ex, prev, draft.deload, settings.deloadPercentage),
+          lastText: last ? describeLog(last) : undefined,
+        };
+      }),
+    [exercises, sessions, draft.deload, settings.deloadPercentage],
+  );
+
+  // Storico set per nome esercizio (PR detection)
+  const historyByKey = useMemo(() => {
+    const m = new Map<string, SetLog[]>();
+    for (const s of sessions) {
+      for (const l of s.logs) {
+        const k = exerciseKey(l.name ?? exerciseIndex.get(l.exerciseId)?.name ?? '');
+        m.set(k, [...(m.get(k) ?? []), ...l.sets]);
+      }
+    }
+    return m;
+  }, [sessions, exerciseIndex]);
+
+  const totalSets = draft.exercises.reduce((a, e) => a + e.sets.length, 0);
+  const doneSets = draft.exercises.reduce((a, e) => a + e.sets.filter((s) => s.done).length, 0);
+  const allDone = totalSets > 0 && doneSets === totalSets;
+  const elapsed = Math.floor((now - draft.startedAt) / 1000);
+
+  const toggleDone = (exIdx: number, setIdx: number): boolean => {
+    const ex = draft.exercises[exIdx];
+    const set = ex.sets[setIdx];
+    if (set.done) {
+      updateSet(exIdx, setIdx, { done: false, isPersonalRecord: false });
+      return true;
+    }
+    const sugg = suggestions[exIdx]?.suggestion;
+    const weightStr = set.weight || (sugg?.weight != null ? String(sugg.weight).replace('.', ',') : '');
+    const weight = parseNum(weightStr);
+    const reps = parseNum(set.reps);
+    if (weight == null || reps == null || reps <= 0 || weight < 0) {
+      toast.error(weight == null ? 'Inserisci il peso' : 'Inserisci le ripetizioni');
+      return false;
+    }
+    unlockAudio();
+
+    // PR: storico + serie già completate in questa sessione per lo stesso esercizio
+    const key = exerciseKey(ex.name);
+    const sessionPrev: SetLog[] = draft.exercises
+      .filter((e) => exerciseKey(e.name) === key)
+      .flatMap((e) => e.sets.filter((s) => s.done).map((s) => ({ weight: parseNum(s.weight) ?? 0, reps: parseNum(s.reps) ?? 0 })));
+    // Senza storico precedente la prima volta non è un record (nemmeno rispetto alle serie di oggi)
+    const history = historyByKey.get(key) ?? [];
+    const flags = history.length ? detectPR([...history, ...sessionPrev], { weight, reps }) : detectPR([], { weight, reps });
+    const isPR = isAnyPR(flags);
+
+    const patch: Partial<DraftSet> = { done: true, weight: weightStr, isPersonalRecord: isPR };
+    updateSet(exIdx, setIdx, patch);
+    // Precompila il peso della serie successiva
+    const nextSet = ex.sets[setIdx + 1];
+    if (nextSet && !nextSet.done && nextSet.weight === '') updateSet(exIdx, setIdx + 1, { weight: weightStr });
+
+    if (isPR) {
+      haptics.pr();
+      const what = flags.weightPR ? 'peso massimo' : flags.estimated1RMPR ? '1RM stimato' : 'reps a questo peso';
+      toast.pr(`Nuovo PR — ${ex.name}: ${formatKg(weight, 2)}×${reps} (${what})`);
+    } else {
+      haptics.setDone();
+    }
+
+    if (settings.restTimerEnabled && settings.restTimerAutoStart) {
+      const isLastOfSession = doneSets + 1 === totalSets;
+      if (!isLastOfSession) timer.start(parseRestSeconds(exercises[exIdx].rest), `Dopo ${ex.name} · serie ${setIdx + 1}`);
+    }
+    return true;
+  };
+
+  const doFinish = async () => {
+    setConfirmFinish(null);
+    setFinishing(true);
+    try {
+      const s = await finish();
+      timer.skip();
+      if (s) {
+        haptics.sessionSaved();
+        setResult(s);
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('Salvataggio non riuscito, riprova');
+    } finally {
+      setFinishing(false);
+    }
+  };
+
+  const requestFinish = () => {
+    if (doneSets === 0) {
+      toast.info('Nessuna serie completata: puoi solo scartare la sessione');
+      setDiscardOpen(true);
+      return;
+    }
+    if (!allDone) {
+      setConfirmFinish(`Hai ${totalSets - doneSets} serie non completate: non verranno salvate. Terminare comunque?`);
+      return;
+    }
+    void doFinish();
+  };
+
+  const prCount = result ? result.logs.reduce((a, l) => a + l.sets.filter((s) => s.isPersonalRecord).length, 0) : 0;
+
+  return (
+    <div>
+      {/* Top bar sessione */}
+      <header
+        className="sticky top-0 z-30 border-b border-line-subtle bg-base/90 backdrop-blur-xl"
+        style={{ paddingTop: 'var(--safe-top)' }}
+      >
+        <div className="mx-auto flex min-h-[60px] max-w-2xl items-center gap-2 px-4">
+          <IconButton label="Esci dalla sessione" className="-ml-3" onClick={() => setExitOpen(true)}>
+            <X className="h-6 w-6" />
+          </IconButton>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h1 className="truncate text-lg text-fg">{day?.name ?? 'Sessione'}</h1>
+              {draft.deload && <Chip tone="accent">DELOAD</Chip>}
+            </div>
+            <div className="truncate text-sm text-fg-3">{day?.subtitle}</div>
+          </div>
+          <OfflineBadge />
+          <div className="flex items-center gap-1.5 rounded-full bg-surface-2 px-3 py-1.5" aria-label="Durata sessione">
+            <Clock className="h-4 w-4 text-accent-500" aria-hidden />
+            <span className="text-base font-bold text-fg">{formatClock(elapsed)}</span>
+          </div>
+        </div>
+        <div className="h-1 bg-surface-2">
+          <div
+            className="h-full bg-accent-500 transition-[width] duration-300"
+            style={{ width: `${totalSets ? (doneSets / totalSets) * 100 : 0}%` }}
+            role="progressbar"
+            aria-label="Serie completate"
+            aria-valuenow={doneSets}
+            aria-valuemin={0}
+            aria-valuemax={totalSets}
+          />
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-2xl space-y-3 px-4 pt-4" style={{ paddingBottom: 'calc(var(--safe-bottom) + 120px)' }}>
+        {draft.exercises.map((ex, i) => (
+          <ExerciseCard
+            key={`${ex.exerciseId}-${i}`}
+            index={i}
+            draft={ex}
+            exercise={exercises[i]}
+            suggestion={suggestions[i].suggestion}
+            lastText={suggestions[i].lastText}
+            expanded={Boolean(expanded[i])}
+            onToggleExpanded={() => setExpanded((e) => ({ ...e, [i]: !e[i] }))}
+            onSetChange={(j, patch) => updateSet(i, j, patch)}
+            onToggleDone={(j) => toggleDone(i, j)}
+            onAddSet={() => addSet(i)}
+            onRemoveSet={() => removeSet(i, ex.sets.length - 1)}
+            onRemoveExercise={ex.extra ? () => removeExercise(i) : undefined}
+          />
+        ))}
+
+        <button
+          type="button"
+          onClick={() => setExtraOpen(true)}
+          className="flex h-14 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-line text-base font-semibold text-fg-2 hover:border-line-strong hover:text-fg"
+        >
+          <Plus className="h-5 w-5" aria-hidden /> Aggiungi esercizio extra
+        </button>
+
+        <TextArea label="Note sessione (opzionale)" value={draft.notes ?? ''} onChange={(e) => setNotes(e.target.value)} rows={2} />
+
+        <Button
+          size="lg"
+          fullWidth
+          variant={allDone ? 'primary' : 'secondary'}
+          icon={<Flag className="h-5 w-5" />}
+          loading={finishing}
+          onClick={requestFinish}
+        >
+          Termina sessione · {doneSets}/{totalSets}
+        </Button>
+      </div>
+
+      {/* Uscita */}
+      <Modal open={exitOpen} onClose={() => setExitOpen(false)} title="Uscire dalla sessione?">
+        <p className="text-base text-fg-2">
+          La sessione resta salvata: potrai riprenderla dalla home in qualsiasi momento.
+        </p>
+        <div className="mt-5 space-y-3">
+          <Button fullWidth size="lg" onClick={() => navigate('/')}>
+            Continua più tardi
+          </Button>
+          <Button
+            fullWidth
+            size="lg"
+            variant="danger"
+            onClick={() => {
+              setExitOpen(false);
+              setDiscardOpen(true);
+            }}
+          >
+            Scarta sessione
+          </Button>
+        </div>
+      </Modal>
+
+      <ConfirmDialog
+        open={discardOpen}
+        title="Scartare la sessione?"
+        message="Tutte le serie registrate in questa sessione andranno perse."
+        confirmLabel="Scarta"
+        onCancel={() => setDiscardOpen(false)}
+        onConfirm={async () => {
+          timer.skip();
+          cancelSync();
+          await discard();
+          navigate('/');
+          toast.info('Sessione scartata');
+        }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(confirmFinish)}
+        title="Terminare la sessione?"
+        message={confirmFinish ?? ''}
+        confirmLabel="Termina"
+        destructive={false}
+        onCancel={() => setConfirmFinish(null)}
+        onConfirm={doFinish}
+      />
+
+      <AddExtraModal
+        open={extraOpen}
+        onClose={() => setExtraOpen(false)}
+        onAdd={(name, group, sets) => {
+          addExercise(name, group, sets);
+          setExtraOpen(false);
+          toast.success(`${name} aggiunto`);
+          window.setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 150);
+        }}
+      />
+
+      {/* Celebrazione */}
+      {result && <Confetti />}
+      <Modal open={Boolean(result)} onClose={() => navigate('/')} variant="center" dismissible={false}>
+        {result && (
+          <div className="pt-6 text-center">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-accent-glow shadow-glow">
+              <Trophy className="h-10 w-10 text-accent-500" aria-hidden />
+            </div>
+            <h2 className="mt-4 text-2xl text-fg">Sessione completata!</h2>
+            <p className="mt-1 text-base text-fg-2">
+              {day?.name} · {day?.subtitle}
+            </p>
+            <div className="mt-6 grid grid-cols-3 gap-2">
+              <Stat icon={<Clock className="h-4 w-4" />} label="Durata" value={formatDuration(result.duration)} />
+              <Stat icon={<Dumbbell className="h-4 w-4" />} label="Volume" value={formatTonnage(sessionTonnage(result))} />
+              <Stat icon={<Trophy className="h-4 w-4" />} label="PR" value={String(prCount)} highlight={prCount > 0} />
+            </div>
+            {prCount > 0 && (
+              <p className="mt-4 text-base font-semibold text-warning">
+                Hai stabilito {prCount} {prCount === 1 ? 'nuovo PR' : 'nuovi PR'}! 🔥
+              </p>
+            )}
+            <Button size="lg" fullWidth className="mt-6" onClick={() => navigate('/')}>
+              Torna alla home
+            </Button>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+function Stat({ icon, label, value, highlight }: { icon: React.ReactNode; label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className={`rounded-md border p-3 ${highlight ? 'border-warning/30 bg-warning-bg' : 'border-line-subtle bg-surface-2'}`}>
+      <div className="flex items-center justify-center gap-1 text-xs uppercase text-fg-3">
+        {icon}
+        {label}
+      </div>
+      <div className={`mt-1 text-xl ${highlight ? 'text-warning' : 'text-fg'}`}>{value}</div>
+    </div>
+  );
+}
+
+function AddExtraModal({
+  open,
+  onClose,
+  onAdd,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onAdd: (name: string, group: string, sets: number) => void;
+}) {
+  const [name, setName] = useState('');
+  const [group, setGroup] = useState<string>(MUSCLE_GROUPS[0]);
+  const [sets, setSets] = useState('3');
+  const valid = name.trim().length > 1;
+  return (
+    <Modal open={open} onClose={onClose} title="Esercizio extra">
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!valid) return;
+          onAdd(name, group, Math.min(Math.max(Number(sets) || 3, 1), 10));
+          setName('');
+        }}
+      >
+        <Input label="Nome esercizio" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+        <div>
+          <div className="section-title">Gruppo muscolare</div>
+          <div className="flex flex-wrap gap-2">
+            {MUSCLE_GROUPS.map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setGroup(g)}
+                aria-pressed={g === group}
+                className={`h-10 rounded-full border px-4 text-sm font-semibold ${
+                  g === group ? 'border-accent-500 bg-accent-glow text-accent-400' : 'border-line bg-surface-2 text-fg-2'
+                }`}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+        </div>
+        <Input label="Serie" kind="number" value={sets} onChange={(e) => setSets(e.target.value.replace(/\D/g, ''))} />
+        <Button type="submit" size="lg" fullWidth disabled={!valid}>
+          Aggiungi
+        </Button>
+      </form>
+    </Modal>
+  );
+}

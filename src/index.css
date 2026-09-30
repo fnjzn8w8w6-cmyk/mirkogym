@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-base: #0a0a0b;
+  --bg-surface: #141416;
+  --bg-surface-2: #1e1e22;
+  --bg-surface-3: #2a2a2f;
+
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  --text-primary: #fafafa;
+  --text-secondary: #a8a8ad;
+  --text-tertiary: #8a8a90; /* leggermente schiarito rispetto a #6E6E73 per contrasto AA su surface */
+  --text-disabled: #4a4a4f;
+
+  --accent-500: #f97316;
+  --accent-400: #fb923c;
+  --accent-600: #ea580c;
+  --accent-glow: rgba(249, 115, 22, 0.15);
+
+  --success: #22c55e;
+  --success-bg: rgba(34, 197, 94, 0.12);
+  --warning: #eab308;
+  --warning-bg: rgba(234, 179, 8, 0.12);
+  --danger: #ef4444;
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  --info: #3b82f6;
+  --info-bg: rgba(59, 130, 246, 0.12);
+
+  --muscle-back: #8b5cf6;
+  --muscle-chest: #ec4899;
+  --muscle-legs: #14b8a6;
+  --muscle-shoulders: #f59e0b;
+  --muscle-arms: #06b6d4;
+  --muscle-core: #84cc16;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 24px var(--accent-glow);
+
+  --nav-h: 64px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  color-scheme: dark;
+}
+
+@layer base {
+  html,
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'Inter Variable', Inter, system-ui, -apple-system, sans-serif;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+  body {
+    min-height: 100dvh;
+    font-size: 15px;
+  }
+  #root {
+    min-height: 100dvh;
+  }
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+  button {
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  input,
+  textarea,
+  select {
+    font-size: 16px; /* evita lo zoom automatico di iOS */
+  }
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent-500);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--accent-glow);
+  }
+}
+
+@layer components {
+  .page {
+    @apply mx-auto w-full max-w-2xl px-4;
+    padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 24px);
+  }
+  .card {
+    @apply rounded-lg border border-line-subtle bg-surface;
+  }
+  .section-title {
+    @apply mb-3 text-xs uppercase tracking-wider text-fg-3;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+}
+
+/* Recharts: niente outline al tap */
+.recharts-wrapper *:focus {
+  outline: none;
+}
