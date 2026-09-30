@@ -16,8 +16,36 @@ export interface BodyFatAIResult {
   notes: string;
 }
 
-/** Modelli provati in ordine (il primo disponibile nel progetto viene usato). */
-const MODELS = [import.meta.env.VITE_GEMINI_MODEL, 'gemini-2.5-flash', 'gemini-2.0-flash'].filter(Boolean) as string[];
+/**
+ * Modelli provati in ordine, dal più recente. Google ritira periodicamente i modelli
+ * (i 2.0 sono spenti, i 2.5 restano solo ai progetti che li usavano): il primo che risponde
+ * viene ricordato sul dispositivo. `VITE_GEMINI_MODEL` permette di forzarne uno.
+ */
+const CANDIDATES = [
+  'gemini-3.8-flash',
+  'gemini-3.7-flash',
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
+  'gemini-3-flash',
+  'gemini-3-flash-preview',
+  'gemini-flash-latest',
+  'gemini-3.1-flash-lite',
+  'gemini-2.5-flash',
+];
+const MODEL_KEY = 'mirkogym.geminiModel';
+
+function modelOrder(): string[] {
+  let remembered: string | null = null;
+  try {
+    remembered = localStorage.getItem(MODEL_KEY);
+  } catch {
+    /* ignorato */
+  }
+  const list = [import.meta.env.VITE_GEMINI_MODEL, remembered, ...CANDIDATES].filter((m): m is string => Boolean(m));
+  return [...new Set(list)];
+}
+
+const isModelMissing = (msg: string) => /not.?found|404|not supported|unsupported|is not available|does not exist|unknown model/i.test(msg);
 
 /** Ridimensiona la foto (lato lungo max 1024 px, JPEG) e restituisce il base64 senza prefisso. */
 export async function prepareImage(file: File, maxSide = 1024): Promise<{ base64: string; preview: string }> {
@@ -67,18 +95,32 @@ export async function estimateBodyFatFromPhotos(images: { base64: string; view: 
     ...images.map((i) => ({ inlineData: { mimeType: 'image/jpeg', data: i.base64 } })),
   ];
   let lastError: unknown = null;
-  for (const model of MODELS) {
+  let allMissing = true;
+  for (const model of modelOrder()) {
+    let text: string;
     try {
       const m = getGenerativeModel(ai, { model, generationConfig: { temperature: 0.2, responseMimeType: 'application/json' } });
       const res = await m.generateContent(parts);
-      return parse(res.response.text());
+      text = res.response.text();
     } catch (e) {
       lastError = e;
       const msg = e instanceof Error ? e.message : String(e);
       // Modello non disponibile: prova il successivo; altri errori vengono riportati subito
-      if (!/not found|404|not supported|unsupported/i.test(msg)) break;
+      if (isModelMissing(msg)) continue;
+      allMissing = false;
+      break;
     }
+    try {
+      localStorage.setItem(MODEL_KEY, model);
+    } catch {
+      /* ignorato */
+    }
+    return parse(text);
   }
+  if (allMissing)
+    throw new Error(
+      'Nessun modello Gemini disponibile nel progetto. Controlla in Firebase Console → AI Logic i modelli disponibili e impostane uno con VITE_GEMINI_MODEL.',
+    );
   throw friendlyError(lastError);
 }
 

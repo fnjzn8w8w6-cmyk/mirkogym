@@ -77,8 +77,11 @@ Spark (senza carta di credito).
 3. Fatto: non servono nuovi secret su GitHub, l'app usa la configurazione Firebase esistente
 
 Note:
-- Il modello predefinito è `gemini-2.5-flash` (poi `gemini-2.0-flash`). Se in futuro Google lo ritira,
-  aggiungi il secret/variabile `VITE_GEMINI_MODEL` con il nome del modello corrente.
+- L'app prova in automatico i modelli Gemini Flash più recenti (3.x, poi `gemini-flash-latest`) e si
+  ricorda il primo disponibile. Google ritira periodicamente i modelli (i 2.0 sono spenti, i 2.5 sono
+  riservati ai progetti che li usavano già): se compare "Nessun modello Gemini disponibile", controlla
+  in Firebase Console → AI Logic il nome di un modello Flash attivo e impostalo su GitHub in
+  **Settings → Secrets and variables → Actions → Variables** come `VITE_GEMINI_MODEL`, poi rilancia il deploy.
 - Consigliato: attiva **App Check** (Build → App Check, provider reCAPTCHA Enterprise) per impedire
   che altri usino la quota AI del tuo progetto.
 - Privacy: le foto vengono ridimensionate sul telefono e inviate a Google solo per l'analisi; l'app
