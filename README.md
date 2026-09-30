@@ -155,6 +155,12 @@ e, se l'AI non risponde, l'app continua a funzionare con le regole.
   L'anteprima mostra i pasti realmente cambiati prima di applicare.
 - **Chiedi al coach**: chat con il coach, che conosce profilo, obiettivi e ultimi allenamenti.
 
+## Importazioni con foto e PDF
+
+- **Scheda del personal trainer** (Allenamento → "Hai già un personal trainer?"): Gemini legge foto o PDF e ricava giorni, esercizi, serie, ripetizioni e recuperi; gli esercizi vengono collegati alla libreria quando il nome corrisponde. Anteprima modificabile prima di salvare.
+- **Dieta del nutrizionista** (Dieta → Piano → "Hai già un nutrizionista?"): pasti e grammature diventano il piano settimanale con porzioni fisse (niente ricalcolo automatico); i macro sono calcolati dal database alimenti.
+- **Foto del piatto** (Diario → "Foto piatto"): l'AI stima alimenti e grammi (errore tipico 20-30%), l'app calcola i macro; si possono correggere i grammi prima di aggiungere.
+
 ## Aspetto e navigazione
 
 Nell'app il nome è **HowToGym** (repository e indirizzo restano invariati). Tema "Toxic": viola notte e

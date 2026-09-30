@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Apple, ChevronRight, Plus, RefreshCw, Settings2, ShoppingCart, Shuffle } from 'lucide-react';
+import { Apple, ChevronRight, FileUp, Plus, RefreshCw, Settings2, ShoppingCart, Shuffle } from 'lucide-react';
+import { DietImportModal } from '@/components/imports/ImportModals';
 import { useSettings } from '@/hooks/use-settings';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -256,6 +257,21 @@ function DayPills({ value, onChange, plan, target }: { value: number; onChange: 
 /* ---------- Dietologo: piano settimanale ---------- */
 
 export function NutritionPlanner({ profile, header }: { profile: UserProfile; header?: React.ReactNode }) {
+  const [importOpen, setImportOpen] = useState(false);
+  const importCard = (
+    <>
+      <Card interactive className="flex items-center gap-3 p-4" onClick={() => setImportOpen(true)} role="button" aria-label="Importa la dieta del nutrizionista">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-accent-glow text-accent-500">
+          <FileUp className="h-5 w-5" aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-base font-semibold text-fg">Hai già un nutrizionista?</span>
+          <span className="block text-sm text-fg-2">Carica foto o PDF della tua dieta</span>
+        </span>
+      </Card>
+      <DietImportModal open={importOpen} onClose={() => setImportOpen(false)} />
+    </>
+  );
   const { settings, update } = useSettings();
   const toast = useToast();
   const { data, error, retry } = useRecipes();
@@ -334,6 +350,7 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
       <div className="space-y-4">
         {targets}
         {header}
+        {importCard}
         <Card className="space-y-3 p-4">
           <div className="text-base font-semibold text-fg">Il tuo piano settimanale</div>
           <p className="text-sm text-fg-2">
@@ -423,7 +440,13 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
     <div className="space-y-4">
       {targets}
       {header}
-      {stale && data && (
+      {plan.source === 'nutrizionista' ? (
+        <p className="text-sm text-fg-2">🩺 Dieta del tuo nutrizionista (porzioni fisse). <button type="button" className="font-semibold text-accent-400" onClick={() => setImportOpen(true)}>Importane un'altra</button></p>
+      ) : (
+        importCard
+      )}
+      {plan.source === 'nutrizionista' && <DietImportModal open={importOpen} onClose={() => setImportOpen(false)} />}
+      {stale && data && plan.source !== 'nutrizionista' && (
         <Card className="border-warning/40 p-4">
           <p className="text-sm text-fg-2">
             Il tuo obiettivo è cambiato ({plan.targetKcal} → {target.target} kcal). Ricalcolo le porzioni mantenendo le stesse ricette?

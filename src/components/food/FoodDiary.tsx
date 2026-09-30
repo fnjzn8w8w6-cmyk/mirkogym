@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { addDays } from 'date-fns';
-import { ChevronLeft, ChevronRight, ClipboardCopy, Plus, Trash2 } from 'lucide-react';
+import { Camera, ChevronLeft, ChevronRight, ClipboardCopy, Plus, Trash2 } from 'lucide-react';
+import { MealPhotoModal } from '@/components/imports/ImportModals';
 import { useSettings } from '@/hooks/use-settings';
 import { useFoodLog } from '@/hooks/use-food';
 import { Card } from '@/components/ui/Card';
@@ -50,6 +51,7 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
   const { entries, loading, add, update, remove, recap, saveRecap } = useFoodLog(date);
   const { data } = useRecipes();
   const [adding, setAdding] = useState<DiaryMeal | null>(null);
+  const [photoFor, setPhotoFor] = useState<DiaryMeal | null>(null);
   const [editing, setEditing] = useState<DiaryEntry | null>(null);
   const [editQty, setEditQty] = useState('');
   const target = useMemo(() => userNutrition(profile, settings), [profile, settings]);
@@ -166,9 +168,14 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
                 })}
               </ul>
             )}
-            <button type="button" onClick={() => setAdding(meal.key)} className="mt-2 flex items-center gap-1 text-sm font-semibold text-accent-400">
-              <Plus className="h-4 w-4" /> Aggiungi alimento
-            </button>
+            <div className="mt-2 flex items-center justify-between">
+              <button type="button" onClick={() => setAdding(meal.key)} className="flex items-center gap-1 text-sm font-semibold text-accent-400">
+                <Plus className="h-4 w-4" /> Aggiungi alimento
+              </button>
+              <button type="button" onClick={() => setPhotoFor(meal.key)} aria-label={`Foto del piatto: ${meal.label}`} className="flex items-center gap-1 text-sm font-semibold text-violet-400">
+                <Camera className="h-4 w-4" /> Foto piatto
+              </button>
+            </div>
           </Card>
         );
       })}
@@ -177,6 +184,18 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
         <div className="mb-3 text-base font-semibold text-fg">📝 Com'è andata {dayLabel(date).toLowerCase() === 'oggi' ? 'oggi' : 'questa giornata'}?</div>
         <DayRecapForm key={date} initial={recap} onSend={(r) => saveRecap(r)} />
       </Card>
+
+      <MealPhotoModal
+        open={photoFor != null}
+        onClose={() => setPhotoFor(null)}
+        mealLabel={MEALS.find((m) => m.key === photoFor)?.label ?? ''}
+        onAdd={(items) => {
+          if (!photoFor) return;
+          const now = Date.now();
+          void add(items.map((i) => ({ id: uid(), meal: photoFor, name: i.name, unit: 'g' as const, qty: i.grams, per: i.per100, ...(i.foodId ? { foodId: i.foodId } : {}), createdAt: now })));
+          toast.success('Piatto aggiunto al diario');
+        }}
+      />
 
       <FoodPicker
         open={adding != null}

@@ -319,6 +319,8 @@ export interface WeekPlan {
   createdAt: number;
   seed: number;
   targetKcal: number;
+  /** 'nutrizionista' = dieta importata: porzioni fisse, niente ricalcolo automatico */
+  source?: 'nutrizionista';
   /** 7 giorni (lunedì → domenica). Oggetti e non array annidati: Firestore non li supporta. */
   days: { meals: PlannedMeal[] }[];
 }

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CalendarRange, Library, Pencil, Play } from 'lucide-react';
+import { CalendarRange, FileUp, Library, Pencil, Play } from 'lucide-react';
+import { ScheduleImportModal } from '@/components/imports/ImportModals';
 import { TopBar } from '@/components/layout/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
@@ -25,6 +26,7 @@ type Tab = 'plan' | 'history';
 /** Allenamento: scheda (giorni, mappa muscolare, strumenti) e storico. */
 export default function Training() {
   const navigate = useNavigate();
+  const [importOpen, setImportOpen] = useState(false);
   const [params, setParams] = useSearchParams();
   const tab: Tab = params.get('tab') === 'history' ? 'history' : 'plan';
   const { days } = useSchedule();
@@ -129,6 +131,16 @@ export default function Training() {
                   Mesociclo
                 </Button>
               </div>
+              <Card interactive className="flex items-center gap-3 p-4" onClick={() => setImportOpen(true)} role="button" aria-label="Importa la scheda del personal trainer">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-accent-glow text-accent-500">
+                  <FileUp className="h-5 w-5" aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-base font-semibold text-fg">Hai già un personal trainer?</span>
+                  <span className="block text-sm text-fg-2">Carica foto o PDF della tua scheda</span>
+                </span>
+              </Card>
+              <ScheduleImportModal open={importOpen} onClose={() => setImportOpen(false)} />
               <Card className="p-4">
                 <h2 className="section-title">Muscoli allenati questa settimana</h2>
                 <MuscleFigure intensity={intensity} labels className="mx-auto h-72 w-auto" />
