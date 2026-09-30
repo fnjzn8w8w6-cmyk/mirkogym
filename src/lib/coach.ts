@@ -1,6 +1,6 @@
 import type { BodyLog, Session } from '@/types';
 import { callAI, callAIJson, num, oneOf, str, strArr, type AIOptions } from './ai';
-import { GOALS, EXPERIENCE, type Goal, type Nutrition, type UserProfile } from './metabolism';
+import { GOALS, EXPERIENCE, MACRO_STYLE_LABEL, nutrition, type Goal, type MacroStyle, type Nutrition, type UserProfile } from './metabolism';
 import { PRIORITY_KEYS, SLOT_IDS, SLOT_LABEL, type CoachPrefs } from './program-generator';
 import { NAME_IT } from './exercise-library';
 import { sessionTonnage } from './analytics';
@@ -75,6 +75,138 @@ export interface NutritionPrefs {
   dislikes: string;
   likes: string;
   cooking: 'poco' | 'medio' | 'molto';
+  /** distribuzione dei macro scelta con il coach */
+  style?: MacroStyle;
+  /** ultima richiesta al dietologo e cosa ha capito */
+  request?: string;
+  summary?: string;
+}
+
+/** Obiettivi dell'utente: calorie con la correzione del check-in e stile dei macro scelto con il coach. */
+export const userNutrition = (p: UserProfile, s: { kcalAdjust?: number; nutritionPrefs?: NutritionPrefs }): Nutrition =>
+  nutrition(p, s.kcalAdjust ?? 0, s.nutritionPrefs?.style ?? 'standard');
+
+export const DEFAULT_NUTRITION: NutritionPrefs = { diet: 'onnivora', meals: 4, allergies: '', dislikes: '', likes: '', cooking: 'medio' };
+
+/* =====================================================================
+ * DIETOLOGO — richiesta in linguaggio naturale → modifiche alla dieta
+ * ===================================================================== */
+
+const MACRO_STYLES = ['standard', 'high-protein', 'low-carb', 'high-carb'] as const;
+const DIET_VALUES = ['onnivora', 'vegetariana', 'vegana', 'pescetariana'] as const;
+const COOKING = ['poco', 'medio', 'molto'] as const;
+
+export interface DietChange {
+  diet?: Diet;
+  meals?: 3 | 4 | 5;
+  cooking?: NutritionPrefs['cooking'];
+  style?: MacroStyle;
+  addAllergies: string[];
+  addDislikes: string[];
+  addLikes: string[];
+  /** cibi da togliere dai "non graditi" (es. "ora mi piacciono i funghi") */
+  removeDislikes: string[];
+  /** correzione calorica richiesta (kcal/giorno), già limitata */
+  kcalDelta: number;
+  summary: string;
+  warnings: string[];
+}
+
+export async function interpretDietRequest(
+  request: string,
+  profile: UserProfile,
+  prefs: NutritionPrefs,
+  target: Nutrition,
+  kcalAdjust: number,
+  opts: AIOptions = {},
+): Promise<DietChange> {
+  const prompt = `Sei un dietologo sportivo. Un utente descrive come vuole cambiare la sua alimentazione. Traduci la richiesta in modifiche per un generatore di piani alimentari.
+Profilo: ${profile.sex === 'm' ? 'uomo' : 'donna'}, ${profile.age} anni, ${profile.weightKg} kg, obiettivo ${GOALS.find((g) => g.value === profile.goal)?.label}.
+Impostazioni attuali: dieta ${prefs.diet}, ${prefs.meals} pasti, tempo per cucinare ${prefs.cooking}, stile macro ${prefs.style ?? 'standard'}, allergie "${prefs.allergies}", non graditi "${prefs.dislikes}", preferiti "${prefs.likes}".
+Obiettivo attuale: ${target.target} kcal, proteine ${target.protein} g, carboidrati ${target.carbs} g, grassi ${target.fat} g (correzione già applicata ${kcalAdjust} kcal).
+
+RICHIESTA DELL'UTENTE: """${request.slice(0, 1200)}"""
+
+Valori ammessi (usa null o liste vuote per ciò che l'utente NON chiede di cambiare):
+- diet: ${DIET_VALUES.join(', ')}
+- meals: 3, 4 o 5 pasti al giorno
+- cooking: poco (≤30 min), medio (≤1 ora), molto
+- style: standard, high-protein (più proteine), low-carb (pochi carboidrati), high-carb (più carboidrati, es. sport di resistenza)
+- addAllergies / addDislikes / addLikes / removeDislikes: alimenti in italiano, una o due parole ciascuno (es. "lattosio", "funghi", "salmone")
+- kcalDelta: correzione calorica giornaliera tra -400 e 400 SOLO se l'utente chiede di mangiare di più/meno o di andare più veloce/lento; per dimagrire più in fretta al massimo -250, per aumentare di massa più in fretta al massimo +250.
+Regole di sicurezza: niente diete estreme; se l'utente parla di patologie (diabete, reni, disturbi alimentari, gravidanza) aggiungi un avviso in warnings e non ridurre le calorie.
+Rispondi SOLO con JSON:
+{"diet": ... o null, "meals": ... o null, "cooking": ... o null, "style": ... o null, "addAllergies": [], "addDislikes": [], "addLikes": [], "removeDislikes": [], "kcalDelta": numero, "warnings": ["..."], "summary": "1-2 frasi in italiano, seconda persona, su cosa cambierai"}`;
+
+  return callAIJson(
+    prompt,
+    (raw) => {
+      const r = (raw ?? {}) as Record<string, unknown>;
+      const summary = str(r.summary, 400);
+      if (!summary) throw new Error('Il dietologo non ha capito la richiesta: prova a riformularla');
+      const mealsN = num(r.meals, 3, 5);
+      const words = (v: unknown) => strArr(v, 8, 40).map((w) => w.toLowerCase());
+      const warnings = strArr(r.warnings, 3, 200);
+      let kcalDelta = Math.round(Math.max(-400, Math.min(400, num(r.kcalDelta, -5000, 5000) ?? 0)) / 50) * 50;
+      if (warnings.length && kcalDelta < 0) kcalDelta = 0;
+      // la correzione totale resta entro ±600 kcal
+      kcalDelta = Math.max(-600 - kcalAdjust, Math.min(600 - kcalAdjust, kcalDelta));
+      return {
+        diet: oneOf(r.diet, DIET_VALUES),
+        meals: mealsN ? (Math.round(mealsN) as 3 | 4 | 5) : undefined,
+        cooking: oneOf(r.cooking, COOKING),
+        style: oneOf(r.style, MACRO_STYLES),
+        addAllergies: words(r.addAllergies),
+        addDislikes: words(r.addDislikes),
+        addLikes: words(r.addLikes),
+        removeDislikes: words(r.removeDislikes),
+        kcalDelta,
+        summary,
+        warnings,
+      };
+    },
+    { temperature: 0.2, label: 'Il dietologo sta leggendo la tua richiesta…', prefer: 'lite', ...opts },
+  );
+}
+
+const mergeList = (cur: string, add: string[], remove: string[] = []) => {
+  const items = cur
+    .split(/[,;\n]/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const drop = (x: string) => remove.some((r) => x.toLowerCase().includes(r) || r.includes(x.toLowerCase()));
+  return [...new Set([...items.filter((x) => !drop(x)), ...add])].join(', ');
+};
+
+/** Applica le modifiche alle preferenze alimentari. */
+export function applyDietChange(prefs: NutritionPrefs, c: DietChange, request: string): NutritionPrefs {
+  return {
+    ...prefs,
+    diet: c.diet ?? prefs.diet,
+    meals: c.meals ?? prefs.meals,
+    cooking: c.cooking ?? prefs.cooking,
+    style: c.style ?? prefs.style,
+    allergies: mergeList(prefs.allergies, c.addAllergies),
+    dislikes: mergeList(prefs.dislikes, c.addDislikes, [...c.addLikes, ...c.removeDislikes]),
+    likes: mergeList(prefs.likes, c.addLikes, c.addDislikes),
+    request: request.trim(),
+    summary: c.summary,
+  };
+}
+
+/** Descrizione breve delle modifiche (per l'anteprima). */
+export function describeDietChange(c: DietChange): string[] {
+  const out: string[] = [];
+  if (c.diet) out.push(`Dieta ${c.diet}`);
+  if (c.meals) out.push(`${c.meals} pasti al giorno`);
+  if (c.cooking) out.push(c.cooking === 'poco' ? 'Ricette veloci (≤30 min)' : c.cooking === 'medio' ? 'Ricette entro 1 ora' : 'Anche ricette lunghe');
+  if (c.style) out.push(`Macro: ${MACRO_STYLE_LABEL[c.style].toLowerCase()}`);
+  if (c.kcalDelta) out.push(`${c.kcalDelta > 0 ? '+' : ''}${c.kcalDelta} kcal al giorno`);
+  for (const a of c.addAllergies) out.push(`🚫 ${a}`);
+  for (const d of c.addDislikes) out.push(`✕ ${d}`);
+  for (const l of c.addLikes) out.push(`❤ ${l}`);
+  for (const r of c.removeDislikes) out.push(`↺ di nuovo ok: ${r}`);
+  return out;
 }
 
 /* =====================================================================

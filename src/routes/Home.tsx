@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { ChevronRight, Dumbbell, Pencil, Play, Timer } from 'lucide-react';
 import { WeekCard } from '@/components/home/MuscleCard';
 import { useProgress } from '@/hooks/use-progress';
-import { nutrition } from '@/lib/metabolism';
+import { userNutrition } from '@/lib/coach';
 import { ClipboardCheck, Sparkles } from 'lucide-react';
 import { checkInDue } from '@/lib/checkin';
 import { TrendLine } from '@/components/ui/Trend';
@@ -278,7 +278,7 @@ export default function Home() {
             <span className="min-w-0 flex-1">
               <span className="block text-base font-semibold text-fg">Dieta di oggi</span>
               <span className="block text-sm text-fg-2">
-                Oggi: {nutrition({ ...settings.profile, weightKg: latestBody?.weight ?? settings.profile.weightKg }, settings.kcalAdjust ?? 0).target} kcal ·{' '}
+                Oggi: {userNutrition({ ...settings.profile, weightKg: latestBody?.weight ?? settings.profile.weightKg }, settings).target} kcal ·{' '}
                 {settings.weekPlan ? 'segna i pasti nel diario' : 'crea il piano settimanale'}
               </span>
             </span>

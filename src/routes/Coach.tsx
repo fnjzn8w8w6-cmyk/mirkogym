@@ -15,21 +15,22 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
 import { AIBusy, AINote, useAITask } from '@/components/coach/AIBusy';
 import { settle } from '@/lib/firestore';
-import { nutrition, type UserProfile } from '@/lib/metabolism';
+import type { UserProfile } from '@/lib/metabolism';
 import { generateProgram, sessionMinutes, SLOT_LABEL, type CoachPrefs } from '@/lib/program-generator';
-import { askCoach, coachContext, interpretTrainingRequest, type ChatMessage } from '@/lib/coach';
+import { askCoach, coachContext, interpretTrainingRequest, userNutrition, type ChatMessage } from '@/lib/coach';
 import { useEffectiveProfile } from '@/hooks/use-effective-profile';
+import { DietCoach } from '@/components/coach/DietCoach';
 import { groupColor } from '@/lib/analytics';
 import { cn } from '@/lib/cn';
 import type { Day } from '@/types';
 
-type Tab = 'train' | 'chat';
+type Tab = 'train' | 'diet' | 'chat';
 
 export default function Coach() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const raw = params.get('tab');
-  const tab: Tab = raw === 'chat' ? 'chat' : 'train';
+  const tab: Tab = raw === 'chat' || raw === 'diet' ? raw : 'train';
   // Vecchi collegamenti alla nutrizione: ora è nella pagina Dieta
   useEffect(() => {
     if (raw === 'food' || raw === 'recipes') navigate(`/food?tab=${raw === 'food' ? 'plan' : 'recipes'}${params.get('checkin') ? '&checkin=1' : ''}`, { replace: true });
@@ -40,7 +41,7 @@ export default function Coach() {
     <div>
       <TopBar
         title="Coach"
-        subtitle="Il tuo personal trainer su misura"
+        subtitle="Personal trainer e dietologo su misura"
         large
         right={
           <IconButton label="Libreria esercizi" onClick={() => navigate('/exercises')} className="-mr-2">
@@ -55,7 +56,8 @@ export default function Coach() {
           onChange={(t) => setParams({ tab: t }, { replace: true })}
           options={[
             { value: 'train', label: 'Allenamento' },
-            { value: 'chat', label: 'Chiedi al coach' },
+            { value: 'diet', label: 'Dieta' },
+            { value: 'chat', label: 'Chiedi' },
           ]}
         />
         <div className="mt-4">
@@ -67,6 +69,8 @@ export default function Coach() {
             />
           ) : tab === 'train' ? (
             <TrainingCoach profile={profile} />
+          ) : tab === 'diet' ? (
+            <DietCoach profile={profile} />
           ) : (
             <ChatCoach profile={profile} />
           )}
@@ -295,7 +299,7 @@ function ChatCoach({ profile }: { profile: UserProfile }) {
     const history = [...messages, { role: 'user' as const, text: q }];
     setMessages(history);
     setInput('');
-    const ctx = coachContext(profile, nutrition(profile, settings.kcalAdjust ?? 0), sessions, bodyLogs);
+    const ctx = coachContext(profile, userNutrition(profile, settings), sessions, bodyLogs);
     const answer = await ai.run((o) => askCoach(q, messages, ctx, o));
     if (answer) setMessages([...history, { role: 'coach', text: answer }]);
   };

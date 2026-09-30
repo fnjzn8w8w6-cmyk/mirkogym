@@ -115,7 +115,7 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
           patch.weekPlan = rescalePlan(
             settings.weekPlan,
             data,
-            nutrition(profile, newAdjust),
+            nutrition(profile, newAdjust, settings.nutritionPrefs?.style),
             planPrefs(settings.nutritionPrefs ?? DEFAULT_NUTRITION, settings.favoriteRecipes ?? []),
           );
         } catch {

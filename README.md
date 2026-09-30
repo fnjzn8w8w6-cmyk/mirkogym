@@ -144,6 +144,12 @@ e, se l'AI non risponde, l'app continua a funzionare con le regole.
   volume ai muscoli prioritari, sostituisce i movimenti a rischio con alternative compatibili con la tua
   attrezzatura e riduce la seduta finché rientra nel tempo. Vedi l'anteprima prima di applicarla.
   Disponibile anche nel questionario iniziale ("Raccontalo al coach").
+- **Dieta**: scrivi come vuoi cambiare l'alimentazione ("voglio dimagrire più in fretta, sono intollerante
+  al lattosio, ho poco tempo, adoro il salmone"). L'AI la traduce in modifiche validate: dieta, numero di
+  pasti, allergie, cibi graditi/sgraditi, tempo per cucinare, stile dei macro (bilanciata, più proteine,
+  pochi carboidrati, più carboidrati) e correzione calorica (massimo ±400 kcal per volta, ±600 in totale,
+  mai sotto il minimo di sicurezza). Vedi obiettivi prima/dopo e un'anteprima del nuovo piano settimanale
+  prima di applicare.
 - **Chiedi al coach**: chat con il coach, che conosce profilo, obiettivi e ultimi allenamenti.
 
 ## Dieta: diario, piano settimanale e ricette

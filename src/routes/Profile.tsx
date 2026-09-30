@@ -14,7 +14,8 @@ import { RANKS, TIER_COLOR } from '@/lib/gamification';
 import { formatKg, formatTonnage, muscleStatus } from '@/lib/analytics';
 import { useSettings } from '@/hooks/use-settings';
 import { useBodyLogs } from '@/hooks/use-body-logs';
-import { ACTIVITY, EXPERIENCE, GOALS, bfCategory, composition, nutrition } from '@/lib/metabolism';
+import { ACTIVITY, EXPERIENCE, GOALS, bfCategory, composition } from '@/lib/metabolism';
+import { userNutrition } from '@/lib/coach';
 import { Button } from '@/components/ui/Button';
 import { settle } from '@/lib/firestore';
 import { cn } from '@/lib/cn';
@@ -33,8 +34,8 @@ export default function Profile() {
     // Usa il peso più recente registrato in "Corpo"
     const lastBf = bodyLogs.find((b) => b.bodyFat != null)?.bodyFat;
     const p = { ...profile, weightKg: bodyweight || profile.weightKg, bodyFatPct: lastBf ?? profile.bodyFatPct };
-    return { n: nutrition(p, settings.kcalAdjust ?? 0), c: composition(p), p };
-  }, [profile, bodyweight, bodyLogs, settings.kcalAdjust]);
+    return { n: userNutrition(p, settings), c: composition(p), p };
+  }, [profile, bodyweight, bodyLogs, settings]);
 
   // Mappa muscolare: serie della settimana rispetto al massimo dell'obiettivo
   const intensity = useMemo(() => {

@@ -112,16 +112,34 @@ export interface Nutrition {
   carbs: number;
 }
 
+/** Stile di distribuzione dei macro scelto con il coach (le calorie non cambiano). */
+export type MacroStyle = 'standard' | 'high-protein' | 'low-carb' | 'high-carb';
+export const MACRO_STYLE_LABEL: Record<MacroStyle, string> = {
+  standard: 'Bilanciata',
+  'high-protein': 'Più proteine',
+  'low-carb': 'Pochi carboidrati',
+  'high-carb': 'Più carboidrati',
+};
+
 /** Calorie obiettivo e macronutrienti (proteine 1,8–2,2 g/kg, grassi ~0,9 g/kg, resto carboidrati). */
-export function nutrition(p: UserProfile, adjust = 0): Nutrition {
+export function nutrition(p: UserProfile, adjust = 0, style: MacroStyle = 'standard'): Nutrition {
   const t = tdee(p);
   const goal = GOALS.find((g) => g.value === p.goal) ?? GOALS[3];
   // Minimo di sicurezza: mai sotto il metabolismo basale né sotto 1500/1200 kcal
   const floor = Math.max(bmr(p), p.sex === 'm' ? 1500 : 1200);
   const target = Math.max(floor, Math.round((t * (1 + goal.kcal) + adjust) / 10) * 10);
-  const protein = Math.round(p.weightKg * (p.goal === 'cut' ? 2.2 : 1.8));
-  const fat = Math.round(p.weightKg * 0.9);
-  const carbs = Math.max(0, Math.round((target - protein * 4 - fat * 9) / 4));
+  let protein = Math.round(p.weightKg * (p.goal === 'cut' ? 2.2 : 1.8));
+  let fat = Math.round(p.weightKg * 0.9);
+  if (style === 'high-protein') protein = Math.round(p.weightKg * 2.4);
+  if (style === 'low-carb') {
+    protein = Math.round(p.weightKg * 2.2);
+    fat = Math.max(fat, Math.round((target * 0.38) / 9));
+  }
+  if (style === 'high-carb') fat = Math.round(p.weightKg * 0.7);
+  // i carboidrati non scendono sotto ~100 g (o il 12% delle calorie) salvo con low-carb
+  const minCarbs = style === 'low-carb' ? 80 : 100;
+  const carbs = Math.max(minCarbs, Math.round((target - protein * 4 - fat * 9) / 4));
+  if (protein * 4 + fat * 9 + carbs * 4 > target + 40) fat = Math.max(Math.round(p.weightKg * 0.6), Math.round((target - protein * 4 - carbs * 4) / 9));
   return { bmr: bmr(p), tdee: t, target, protein, fat, carbs };
 }
 

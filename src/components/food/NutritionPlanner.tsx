@@ -8,8 +8,8 @@ import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { settle } from '@/lib/firestore';
 import { cn } from '@/lib/cn';
-import { nutrition, type Nutrition, type UserProfile } from '@/lib/metabolism';
-import { DIETS, type NutritionPrefs } from '@/lib/coach';
+import { MACRO_STYLE_LABEL, type MacroStyle, type Nutrition, type UserProfile } from '@/lib/metabolism';
+import { DEFAULT_NUTRITION, DIETS, userNutrition, type NutritionPrefs } from '@/lib/coach';
 import {
   SLOT_LABEL,
   dayTotals,
@@ -35,7 +35,7 @@ import type { DiaryMeal, UserRecipe } from '@/types';
 import { RecipeDetail } from './RecipeDetail';
 import { RecipeGallery } from './RecipeGallery';
 
-export const DEFAULT_NUTRITION: NutritionPrefs = { diet: 'onnivora', meals: 4, allergies: '', dislikes: '', likes: '', cooking: 'medio' };
+export { DEFAULT_NUTRITION };
 export const DAY_SHORT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
 export const DAY_LONG = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
 const todayIdx = () => (new Date().getDay() + 6) % 7;
@@ -58,7 +58,7 @@ function MealCard({ meal, byId, onOpen, onSwap }: { meal: PlannedMeal; byId: Map
           {meal.kind === 'recipe' && (
             <span className="block text-xs text-fg-3">
               {String(meal.servings).replace('.', ',')} {meal.servings === 1 ? 'porzione' : 'porzioni'}
-              {info.recipe ? ` · ${info.recipe.t} min` : ''}
+              {info.recipe?.min ? ` · ${info.recipe.min} min` : ''}
             </span>
           )}
           <MacroLine {...meal.macros} className="block text-xs" />
@@ -118,6 +118,7 @@ function SimpleMealDetail({ meal, onClose }: { meal: SimpleMeal | null; onClose:
 function SwapModal({
   open,
   slot,
+  currentId,
   data,
   prefs,
   onClose,
@@ -125,6 +126,8 @@ function SwapModal({
 }: {
   open: boolean;
   slot: PlannedMeal['slot'] | null;
+  /** pasto attuale (escluso da "Sorprendimi") */
+  currentId?: string;
   data: RecipeData;
   prefs: PlanPrefs;
   onClose: () => void;
@@ -133,7 +136,9 @@ function SwapModal({
   const [preview, setPreview] = useState<Recipe | null>(null);
   const cands = useMemo(() => (slot ? mealCandidates(data, prefs, slot) : { recipes: [], simple: [] }), [slot, data, prefs]);
   const random = () => {
-    const all = [...cands.recipes.map((r) => ({ kind: 'recipe' as const, id: r.id })), ...cands.simple.map((m) => ({ kind: 'simple' as const, id: m.id }))];
+    const all = [...cands.recipes.map((r) => ({ kind: 'recipe' as const, id: r.id })), ...cands.simple.map((m) => ({ kind: 'simple' as const, id: m.id }))].filter(
+      (c) => c.id !== currentId,
+    );
     if (all.length) onPick(all[Math.floor(Math.random() * all.length)]);
   };
   return (
@@ -261,7 +266,7 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
   const [openRecipe, setOpenRecipe] = useState<{ recipe: Recipe; servings: number } | null>(null);
   const [openSimple, setOpenSimple] = useState<SimpleMeal | null>(null);
   const adjust = settings.kcalAdjust ?? 0;
-  const target = useMemo(() => nutrition(profile, adjust), [profile, adjust]);
+  const target = useMemo(() => userNutrition(profile, settings), [profile, settings]);
   const favorites = settings.favoriteRecipes ?? [];
   const pp = useMemo(() => planPrefs(settings.nutritionPrefs ?? prefs, favorites), [settings.nutritionPrefs, prefs, favorites]);
   const plan = settings.weekPlan;
@@ -271,7 +276,8 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
 
   const create = async () => {
     if (!data) return;
-    const p = planWeek(data, target, planPrefs(prefs, favorites), Date.now());
+    // obiettivi ricalcolati con lo stile dei macro appena scelto
+    const p = planWeek(data, userNutrition(profile, { ...settings, nutritionPrefs: prefs }), planPrefs(prefs, favorites), Date.now());
     await save(p, { nutritionPrefs: prefs });
     setEditPrefs(false);
     toast.success('Piano settimanale pronto: 7 giorni tutti diversi');
@@ -373,6 +379,25 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
               ]}
             />
           </div>
+          <div>
+            <div className="section-title">Macronutrienti</div>
+            <div className="grid grid-cols-2 gap-2">
+              {(Object.keys(MACRO_STYLE_LABEL) as MacroStyle[]).map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  aria-pressed={(prefs.style ?? 'standard') === st}
+                  onClick={() => setPrefs({ ...prefs, style: st })}
+                  className={cn(
+                    'h-11 rounded-md border text-sm font-semibold',
+                    (prefs.style ?? 'standard') === st ? 'border-accent-500 bg-accent-glow text-accent-400' : 'border-line bg-surface-2 text-fg-2',
+                  )}
+                >
+                  {MACRO_STYLE_LABEL[st]}
+                </button>
+              ))}
+            </div>
+          </div>
           <Input label="Allergie / intolleranze" placeholder="es. lattosio, glutine" value={prefs.allergies} onChange={(e) => setPrefs({ ...prefs, allergies: e.target.value })} />
           <Input label="Cibi che non ti piacciono" placeholder="es. funghi, piccante" value={prefs.dislikes} onChange={(e) => setPrefs({ ...prefs, dislikes: e.target.value })} />
           <Input label="Cibi che ami" placeholder="es. pollo, salmone, riso" value={prefs.likes} onChange={(e) => setPrefs({ ...prefs, likes: e.target.value })} />
@@ -460,7 +485,7 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
           Rigenera
         </Button>
       </div>
-      <Button variant="ghost" fullWidth icon={<Settings2 className="h-5 w-5" />} onClick={() => setEditPrefs(true)}>
+      <Button variant="ghost" fullWidth icon={<Settings2 className="h-5 w-5" />} onClick={() => (setPrefs(settings.nutritionPrefs ?? DEFAULT_NUTRITION), setEditPrefs(true))}>
         Preferenze alimentari
       </Button>
       <p className="text-xs text-fg-3">
@@ -471,6 +496,7 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
         <SwapModal
           open={swap != null}
           slot={swap != null ? (meals[swap]?.slot ?? null) : null}
+          currentId={swap != null ? meals[swap]?.refId : undefined}
           data={data}
           prefs={pp}
           onClose={() => setSwap(null)}
@@ -511,7 +537,7 @@ export function RecipesTab({ profile }: { profile: UserProfile }) {
   const [placing, setPlacing] = useState<Recipe | null>(null);
   const [editor, setEditor] = useState<{ recipe: UserRecipe | null } | null>(null);
   const [diary, setDiary] = useState<Recipe | null>(null);
-  const target = useMemo(() => nutrition(profile, settings.kcalAdjust ?? 0), [profile, settings.kcalAdjust]);
+  const target = useMemo(() => userNutrition(profile, settings), [profile, settings]);
   const pp = planPrefs(settings.nutritionPrefs ?? DEFAULT_NUTRITION, settings.favoriteRecipes ?? []);
 
   if (error)

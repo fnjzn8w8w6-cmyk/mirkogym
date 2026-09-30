@@ -11,7 +11,8 @@ import { useToast } from '@/components/ui/Toast';
 import { cn } from '@/lib/cn';
 import { formatLongDate, fromISODate, toISODate, todayISO } from '@/lib/date-utils';
 import { macrosFor, round1, sumMacros, type Macros } from '@/lib/foods';
-import { nutrition, type UserProfile } from '@/lib/metabolism';
+import type { UserProfile } from '@/lib/metabolism';
+import { userNutrition } from '@/lib/coach';
 import { mealInfo, simpleFoodPer100, type PlannedMeal, type Recipe } from '@/lib/recipes';
 import type { DiaryEntry, DiaryMeal } from '@/types';
 import { FoodPicker } from './FoodPicker';
@@ -45,12 +46,12 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
   const { settings } = useSettings();
   const toast = useToast();
   const [date, setDate] = useState(todayISO());
-  const { entries, add, update, remove } = useFoodLog(date);
+  const { entries, loading, add, update, remove } = useFoodLog(date);
   const { data } = useRecipes();
   const [adding, setAdding] = useState<DiaryMeal | null>(null);
   const [editing, setEditing] = useState<DiaryEntry | null>(null);
   const [editQty, setEditQty] = useState('');
-  const target = useMemo(() => nutrition(profile, settings.kcalAdjust ?? 0), [profile, settings.kcalAdjust]);
+  const target = useMemo(() => userNutrition(profile, settings), [profile, settings]);
   const totals = useMemo(() => sumMacros(entries.map(entryMacros)), [entries]);
   const left = target.target - totals.kcal;
 
@@ -118,7 +119,7 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
         <MacroBar label="Grassi" value={totals.fat} target={target.fat} unit="g" color="#EAB308" />
       </Card>
 
-      {planDay.length > 0 && entries.length === 0 && (
+      {planDay.length > 0 && !loading && entries.length === 0 && (
         <Button variant="secondary" fullWidth icon={<ClipboardCopy className="h-5 w-5" />} disabled={!data} onClick={copyFromPlan}>
           Copia i pasti del piano di {dayLabel(date).toLowerCase() === 'oggi' ? 'oggi' : 'questo giorno'}
         </Button>
