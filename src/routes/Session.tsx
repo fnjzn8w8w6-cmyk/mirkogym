@@ -111,6 +111,7 @@ function SessionView({ initial }: { initial: ActiveSession }) {
     addExercise,
     removeExercise,
     setNotes,
+    setReadiness,
     insertWarmups,
     replaceExercise,
     finish,
@@ -162,7 +163,14 @@ function SessionView({ initial }: { initial: ActiveSession }) {
       exercises.map((ex) => {
         const prev = previousLogsFor(ex, sessions);
         const last = prev[prev.length - 1];
-        const suggestion = calculateSuggestion(ex, prev, draft.deload, settings.deloadPercentage);
+        const base = calculateSuggestion(ex, prev, draft.deload, settings.deloadPercentage);
+        // Autoregolazione: giornata "no" → -10% sul carico suggerito
+        const suggestion =
+          draft.readiness === 'low' && base.weight != null && !draft.deload
+            ? { ...base, weight: Math.round(base.weight * 0.9 * 4) / 4, hint: `Giornata no: -10% · ${base.hint}` }
+            : draft.readiness === 'high' && base.type === 'maintain'
+              ? { ...base, hint: `${base.hint} — sei in forma, prova a superare i target!` }
+              : base;
         const lastWorking = (last?.sets ?? []).filter((x) => x.type !== 'warmup');
         return {
           suggestion,
@@ -171,7 +179,7 @@ function SessionView({ initial }: { initial: ActiveSession }) {
           repTargets: repTargets(ex, last, suggestion, Math.max(ex.sets, 10)),
         };
       }),
-    [exercises, sessions, draft.deload, settings.deloadPercentage],
+    [exercises, sessions, draft.deload, draft.readiness, settings.deloadPercentage],
   );
 
   // Storico set per nome esercizio (PR detection)
@@ -541,6 +549,8 @@ function SessionView({ initial }: { initial: ActiveSession }) {
       </Modal>
       <ExerciseInfoModal exercise={info} onClose={() => setInfo(null)} />
 
+      <ReadinessModal open={draft.readiness == null && doneSets === 0 && !result} onPick={setReadiness} />
+
       {/* Celebrazione */}
       {result && <Confetti />}
       <Modal open={Boolean(result)} onClose={() => navigate('/')} variant="center" dismissible={false}>
@@ -668,6 +678,64 @@ function AddExtraModal({
           Aggiungi
         </Button>
       </form>
+    </Modal>
+  );
+}
+
+const READINESS_QUESTIONS = [
+  { key: 'sleep', label: 'Come hai dormito?', options: ['😫 Male', '😐 Così così', '😴 Bene'] },
+  { key: 'energy', label: 'Livello di energia', options: ['🪫 Basso', '🙂 Normale', '⚡ Alto'] },
+  { key: 'soreness', label: 'Indolenzimento muscolare', options: ['🤕 Molto', '😌 Poco', '💪 Niente'] },
+] as const;
+
+/** Check di prontezza pre-allenamento: 3 domande, 3 tocchi. */
+function ReadinessModal({ open, onPick }: { open: boolean; onPick: (r: 'low' | 'normal' | 'high') => void }) {
+  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const complete = READINESS_QUESTIONS.every((q) => answers[q.key] != null);
+  const score = READINESS_QUESTIONS.reduce((a, q) => a + (answers[q.key] ?? 1), 0); // 0..6
+  const result = score <= 2 ? 'low' : score >= 5 ? 'high' : 'normal';
+  return (
+    <Modal open={open} onClose={() => onPick('normal')} title="Come ti senti oggi?">
+      <p className="-mt-1 mb-4 text-sm text-fg-3">Adattiamo i carichi suggeriti alla tua giornata.</p>
+      <div className="space-y-4">
+        {READINESS_QUESTIONS.map((q) => (
+          <div key={q.key}>
+            <div className="mb-2 text-base font-semibold text-fg">{q.label}</div>
+            <div className="grid grid-cols-3 gap-2">
+              {q.options.map((o, i) => (
+                <button
+                  key={o}
+                  type="button"
+                  aria-pressed={answers[q.key] === i}
+                  onClick={() => setAnswers((a) => ({ ...a, [q.key]: i }))}
+                  className={`h-12 rounded-md border text-sm font-semibold ${
+                    answers[q.key] === i ? 'border-accent-500 bg-accent-glow text-accent-400' : 'border-line bg-surface-2 text-fg-2'
+                  }`}
+                >
+                  {o}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {complete && (
+        <p className="mt-4 text-sm text-fg-2">
+          {result === 'low'
+            ? '🔋 Giornata impegnativa: ridurremo i carichi suggeriti del 10%.'
+            : result === 'high'
+              ? '🚀 Sei in gran forma: prova a superare i target!'
+              : '👍 Tutto nella norma: si segue il piano.'}
+        </p>
+      )}
+      <div className="mt-5 grid grid-cols-[auto_1fr] gap-3">
+        <Button variant="ghost" onClick={() => onPick('normal')}>
+          Salta
+        </Button>
+        <Button disabled={!complete} onClick={() => onPick(result)}>
+          Inizia l'allenamento
+        </Button>
+      </div>
     </Modal>
   );
 }

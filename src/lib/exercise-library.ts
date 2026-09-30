@@ -198,6 +198,18 @@ export const NAME_IT: Record<string, string> = {
   'Hanging_Leg_Raise': 'Leg raise alla sbarra',
   'Russian_Twist': 'Russian twist',
   'Ab_Roller': 'Ruota addominale',
+  'Standing_One-Arm_Cable_Curl': 'Curl ai cavi a un braccio',
+  'Bodyweight_Squat': 'Squat a corpo libero',
+  'Bench_Dips': 'Dip su panca',
+  'Single_Leg_Glute_Bridge': 'Ponte glutei a una gamba',
+  'Decline_Push-Up': 'Piegamenti con piedi rialzati',
+  'Dumbbell_Step_Ups': 'Step-up con manubri',
+  'Inverted_Row': 'Rematore inverso',
+  'Standing_Dumbbell_Calf_Raise': 'Calf raise con manubri',
+  'Stiff-Legged_Dumbbell_Deadlift': 'Stacco a gambe tese manubri',
+  'Superman': 'Superman',
+  'Handstand_Push-Ups': 'Piegamenti in verticale',
+  'Bodyweight_Walking_Lunge': 'Affondi camminati',
 };
 
 export const displayName = (ex: LibraryExercise): string => NAME_IT[ex.id] ?? ex.n;

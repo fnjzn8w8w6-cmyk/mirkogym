@@ -152,6 +152,7 @@ export function useSessionDraft(initial: ActiveSession) {
     commit((d) => ({ ...d, exercises: d.exercises.filter((_, i) => i !== exIdx) }));
 
   const setNotes = (notes: string) => commit((d) => ({ ...d, notes }));
+  const setReadiness = (readiness: ActiveSession['readiness']) => commit((d) => ({ ...d, readiness }));
 
   /** Inserisce serie di riscaldamento (tipo W) in testa all'esercizio. */
   const insertWarmups = (exIdx: number, sets: { weight: number; reps: number }[]) =>
@@ -229,6 +230,7 @@ export function useSessionDraft(initial: ActiveSession) {
     addExercise,
     removeExercise,
     setNotes,
+    setReadiness,
     insertWarmups,
     replaceExercise,
     finish,

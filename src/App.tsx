@@ -14,6 +14,7 @@ import { Onboarding } from '@/components/onboarding/Onboarding';
 import { StartingLoads } from '@/components/onboarding/StartingLoads';
 import { SetupRequired, Splash, FatalError } from '@/components/onboarding/Screens';
 import { AuthScreen } from '@/components/onboarding/AuthScreen';
+import { ProfileSetup } from '@/components/onboarding/ProfileSetup';
 import Home from '@/routes/Home';
 import Session from '@/routes/Session';
 
@@ -74,11 +75,13 @@ function AppShell() {
 }
 
 function Gate() {
-  const { error, ready, settings, sessions, signedOut } = useData();
-  if (signedOut) return <AuthScreen />;
+  const { error, ready, settings, sessions, signedOut, isAnonymous, uid } = useData();
+  // Login obbligatorio: senza account (o con il vecchio utente anonimo) si passa dalla registrazione
+  if (signedOut || (uid && isAnonymous)) return <AuthScreen />;
   if (error && !ready) return <FatalError error={error} />;
   if (!ready) return <Splash />;
   if (!settings.onboardingCompleted) return <Onboarding />;
+  if (!settings.profileCompleted) return <ProfileSetup />;
   if (!settings.startingLoadsPrompted && sessions.length === 0) return <StartingLoads />;
   return <AppShell />;
 }

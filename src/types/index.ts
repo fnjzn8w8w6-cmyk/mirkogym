@@ -98,7 +98,15 @@ export interface Mesocycle {
   deloadForced?: boolean;
 }
 
+import type { UserProfile } from '@/lib/metabolism';
+import type { Lang } from '@/lib/exercise-i18n';
+
 export interface Settings {
+  /** Lingua dei contenuti (istruzioni degli esercizi). */
+  language: Lang;
+  /** Questionario iniziale (dati fisici, obiettivo, esperienza) completato. */
+  profileCompleted: boolean;
+  profile?: UserProfile;
   restTimerEnabled: boolean;
   restTimerAutoStart: boolean;
   soundEnabled: boolean;
@@ -143,6 +151,8 @@ export interface ActiveSession {
   startedAt: number;
   updatedAt: number;
   deload: boolean;
+  /** Check di prontezza pre-allenamento (autoregolazione). */
+  readiness?: 'low' | 'normal' | 'high';
   exercises: DraftExercise[];
   notes?: string;
 }

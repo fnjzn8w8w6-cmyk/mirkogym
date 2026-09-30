@@ -60,17 +60,29 @@ Su Android (Chrome): menu ⋮ → **Installa app**.
 > Nota iPhone: Safari non supporta `navigator.vibrate`, quindi su iOS le vibrazioni non sono
 > disponibili; il suono di fine recupero sì (attivabile in Impostazioni).
 
-## 5. Account e salvataggio dei dati
+## 5. Account, questionario e scheda su misura
 
-Al primo avvio l'app parte subito con un utente anonimo (dati legati a quel dispositivo).
-Per non perdere mai i dati: **Impostazioni → Account → Crea account** (email + password).
+Al primo avvio l'**account è obbligatorio** (email + password): i dati sono sempre salvati e
+disponibili su ogni dispositivo. Dopo la registrazione un questionario guidato chiede:
 
-- L'utente anonimo viene **collegato** all'account: stesso UID, tutto ciò che hai già registrato resta.
-- Su un altro telefono (o dopo aver reinstallato l'app / cancellato i dati di Safari): all'avvio tocca
-  **"Hai già un account? Accedi"**, oppure Impostazioni → Account → Accedi.
-- **Esci** da Impostazioni → Account; i dati restano nell'account. *Password dimenticata?* invia
-  un'email per reimpostarla.
-- Finché sei senza account, la Home mostra il promemoria "Proteggi i tuoi dati".
+1. **Lingua** delle istruzioni degli esercizi (IT, EN, ES, FR, DE, PT)
+2. **Sesso, età, altezza, peso**
+3. **Attività quotidiana** (da sedentario a molto attivo)
+4. **Livello**: neofita, intermedio, avanzato
+5. **Obiettivo**: definizione, massa, forza, mantenimento
+6. **Giorni a settimana e attrezzatura** (+ circonferenze opzionali vita/collo/fianchi)
+
+Poi mostra l'**analisi**: metabolismo basale (Mifflin-St Jeor), consumo giornaliero (× fattore di
+attività), calorie obiettivo e macronutrienti, **massa grassa stimata** (metodo US Navy con le
+circonferenze, altrimenti formula di Deurenberg), massa magra, BMI e FFMI. Infine propone una
+**scheda su misura** (split in base ai giorni, esercizi in base all'attrezzatura, serie/ripetizioni/RIR/
+recuperi in base a obiettivo e livello, carichi di partenza indicativi) oppure un modello.
+Il profilo si aggiorna da **Profilo → Aggiorna profilo e obiettivo**.
+
+Prima di ogni allenamento il **check di prontezza** (sonno, energia, indolenzimento) adatta i carichi:
+giornata "no" → −10% sui suggerimenti.
+
+Gli utenti anonimi delle versioni precedenti, creando l'account, mantengono tutti i dati.
 
 ## 6. Backup dei dati
 
@@ -116,6 +128,9 @@ Gli emulatori applicano anche `firestore.rules`.
 
 ## Libreria esercizi, schede e gamification
 
+- **Istruzioni in lingua**: in italiano sono curate a mano per i ~100 esercizi più usati; per gli altri
+  esercizi e per le altre lingue vengono tradotte automaticamente (servizio gratuito MyMemory) alla prima
+  apertura e salvate sul dispositivo. Se la traduzione non è disponibile si mostra il testo originale.
 - **876 esercizi** da [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (pubblico dominio):
   foto di inizio/fine movimento alternate come **simulazione animata**, muscoli principali/secondari
   sulla figura del corpo, istruzioni passo-passo, livello, attrezzo e link al **video su YouTube**.

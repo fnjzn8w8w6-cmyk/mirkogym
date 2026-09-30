@@ -13,7 +13,12 @@ export function StartingLoads() {
   const { days, save } = useSchedule();
   const { update } = useSettings();
   const [dayIdx, setDayIdx] = useState(0);
-  const [values, setValues] = useState<Record<string, string>>({});
+  // Precompila con i carichi indicativi della scheda generata (modificabili)
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      days.flatMap((d) => d.exercises.filter((e) => e.startWeight).map((e) => [e.id, String(e.startWeight).replace('.', ',')])),
+    ),
+  );
   const [busy, setBusy] = useState(false);
   const day = days[dayIdx];
   const last = dayIdx === days.length - 1;

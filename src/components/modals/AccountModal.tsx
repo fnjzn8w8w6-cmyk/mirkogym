@@ -24,7 +24,7 @@ const titles: Record<AccountMode, string> = {
 
 export function AccountModal({ open, mode, onClose, onModeChange }: Props) {
   const toast = useToast();
-  const { refreshUser, isAnonymous, sessions, bodyLogs } = useData();
+  const { refreshUser, isAnonymous, sessions, bodyLogs, uid } = useData();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -39,7 +39,7 @@ export function AccountModal({ open, mode, onClose, onModeChange }: Props) {
     setBusy(false);
   }, [open, mode]);
 
-  const hasLocalData = isAnonymous && (sessions.length > 0 || bodyLogs.length > 0);
+  const hasLocalData = Boolean(uid) && isAnonymous && (sessions.length > 0 || bodyLogs.length > 0);
   const emailOk = /^\S+@\S+\.\S+$/.test(email.trim());
   const valid =
     mode === 'reset'
@@ -93,7 +93,7 @@ export function AccountModal({ open, mode, onClose, onModeChange }: Props) {
           void submit();
         }}
       >
-        {mode === 'create' && (
+        {mode === 'create' && uid && isAnonymous && (
           <div className="flex gap-3 rounded-md border border-success/25 bg-success-bg p-3 text-sm text-fg-2">
             <ShieldCheck className="h-5 w-5 shrink-0 text-success" aria-hidden />
             <span>
@@ -159,7 +159,7 @@ export function AccountModal({ open, mode, onClose, onModeChange }: Props) {
               <button type="button" className="h-11 font-semibold text-accent-400" onClick={() => onModeChange('reset')}>
                 Password dimenticata?
               </button>
-              {isAnonymous && (
+              {(isAnonymous || !uid) && (
                 <button type="button" className="h-11 text-fg-2" onClick={() => onModeChange('create')}>
                   Non hai un account? <span className="font-semibold text-accent-400">Crealo</span>
                 </button>

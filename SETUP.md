@@ -33,8 +33,8 @@ Tempo: ~10 minuti. Serve solo un account Google. Il piano gratuito **Spark** è 
 3. Sempre in **Metodo di accesso** → **Aggiungi nuovo provider** → **Email/password** →
    attiva il primo interruttore (*Email/password*; il "link email" non serve) → **Salva**
 
-L'accesso anonimo fa partire subito l'app al primo avvio; con **Email/password** crei il tuo account
-(Impostazioni → Account → *Crea account*) e i dati restano salvati per sempre, su qualsiasi dispositivo.
+**Email/password è obbligatorio**: al primo avvio l'app chiede di creare l'account o di accedere.
+L'accesso anonimo serve solo agli utenti delle prime versioni, che creando l'account mantengono i dati.
 
 ## 4. Autorizza il dominio di GitHub Pages
 

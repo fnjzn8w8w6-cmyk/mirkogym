@@ -131,6 +131,8 @@ export const SEED_DAYS: Day[] = [
 ];
 
 export const DEFAULT_SETTINGS: Settings = {
+  language: 'it',
+  profileCompleted: false,
   restTimerEnabled: true,
   restTimerAutoStart: true,
   soundEnabled: true,

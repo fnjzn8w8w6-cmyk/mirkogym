@@ -70,7 +70,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       watchUser(
         (user) =>
           setState((s) => {
-            if (!user) return { ...initial, signedOut: true };
+            if (!user) return { ...initial, signedOut: true, isAnonymous: false };
             const who = { user, signedOut: false, isAnonymous: user.isAnonymous, email: user.email, error: null };
             // Cambio account: riparte da uno stato pulito (niente dati del vecchio utente)
             return s.uid === user.uid ? { ...s, ...who } : { ...initial, ...who, uid: user.uid };

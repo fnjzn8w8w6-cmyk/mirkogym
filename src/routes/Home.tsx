@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronRight, Dumbbell, Pencil, Play, ShieldAlert, Timer } from 'lucide-react';
-import { useData } from '@/hooks/data-context';
+import { ChevronRight, Dumbbell, Pencil, Play, Timer } from 'lucide-react';
 import { WeekCard } from '@/components/home/MuscleCard';
 import { useProgress } from '@/hooks/use-progress';
 import { TrendLine } from '@/components/ui/Trend';
@@ -54,7 +53,6 @@ export default function Home() {
   const { activeSession, start } = useActiveSession();
   const [pendingDay, setPendingDay] = useState<Day | null>(null);
   const [starting, setStarting] = useState(false);
-  const { isAnonymous } = useData();
   const { level } = useProgress();
 
   const next = useMemo(() => nextDay(days, sessions), [days, sessions]);
@@ -149,18 +147,6 @@ export default function Home() {
             </span>
           </button>
         </header>
-
-        {/* Promemoria account: i dati anonimi vivono solo su questo dispositivo */}
-        {isAnonymous && sessions.length > 0 && (
-          <Card interactive className="flex items-center gap-3 border-warning/30 p-4" onClick={() => navigate('/settings')} role="link">
-            <ShieldAlert className="h-6 w-6 shrink-0 text-warning" aria-hidden />
-            <span className="min-w-0 flex-1">
-              <span className="block text-base font-semibold text-fg">Proteggi i tuoi dati</span>
-              <span className="block text-sm text-fg-2">Crea un account per non perdere i tuoi allenamenti</span>
-            </span>
-            <ChevronRight className="h-5 w-5 text-fg-3" aria-hidden />
-          </Card>
-        )}
 
         {/* Hero prossima sessione */}
         {next && (

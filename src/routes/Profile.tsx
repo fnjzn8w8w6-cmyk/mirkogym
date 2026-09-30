@@ -13,6 +13,9 @@ import { MuscleFigure, GROUP_MUSCLES } from '@/components/library/MuscleFigure';
 import { RANKS, TIER_COLOR } from '@/lib/gamification';
 import { formatKg, formatTonnage, muscleStatus } from '@/lib/analytics';
 import { useSettings } from '@/hooks/use-settings';
+import { ACTIVITY, EXPERIENCE, GOALS, bfCategory, composition, nutrition } from '@/lib/metabolism';
+import { Button } from '@/components/ui/Button';
+import { settle } from '@/lib/firestore';
 import { cn } from '@/lib/cn';
 
 export default function Profile() {
@@ -21,7 +24,14 @@ export default function Profile() {
   const { level, stats, achievements, unlocked, ranks, bodyweight } = useProgress();
   const { sessions, groupOf } = useSessions();
   const { days } = useSchedule();
-  const { settings } = useSettings();
+  const { settings, update } = useSettings();
+  const profile = settings.profile;
+  const analysis = useMemo(() => {
+    if (!profile) return null;
+    // Usa il peso più recente registrato in "Corpo"
+    const p = { ...profile, weightKg: bodyweight || profile.weightKg };
+    return { n: nutrition(p), c: composition(p), p };
+  }, [profile, bodyweight]);
 
   // Mappa muscolare: serie della settimana rispetto al massimo dell'obiettivo
   const intensity = useMemo(() => {
@@ -72,6 +82,42 @@ export default function Profile() {
             <Stat label="Streak" value={`${stats.streak}`} icon={<Flame className="h-3.5 w-3.5 text-accent-500" aria-hidden />} />
           </div>
         </Card>
+
+        {/* Profilo metabolico */}
+        {analysis && profile && (
+          <section>
+            <h2 className="section-title">Il tuo profilo</h2>
+            <Card className="p-4">
+              <div className="flex flex-wrap gap-1.5 text-sm">
+                <span className="rounded-full bg-accent-glow px-2.5 py-1 font-semibold text-accent-400">
+                  {GOALS.find((g) => g.value === profile.goal)?.emoji} {GOALS.find((g) => g.value === profile.goal)?.label}
+                </span>
+                <span className="rounded-full bg-surface-2 px-2.5 py-1 text-fg-2">{EXPERIENCE.find((x) => x.value === profile.experience)?.label}</span>
+                <span className="rounded-full bg-surface-2 px-2.5 py-1 text-fg-2">{ACTIVITY.find((x) => x.value === profile.activity)?.label}</span>
+                <span className="rounded-full bg-surface-2 px-2.5 py-1 text-fg-2">
+                  {profile.heightCm} cm · {formatKg(analysis.p.weightKg)} kg
+                </span>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                <Stat label="Kcal/giorno" value={String(analysis.n.target)} />
+                <Stat label="Metab. basale" value={String(analysis.n.bmr)} />
+                <Stat label="Consumo" value={String(analysis.n.tdee)} />
+              </div>
+              <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+                <Stat label="Proteine" value={`${analysis.n.protein} g`} />
+                <Stat label="Carbo" value={`${analysis.n.carbs} g`} />
+                <Stat label="Grassi" value={`${analysis.n.fat} g`} />
+              </div>
+              <p className="mt-3 text-sm text-fg-2">
+                Massa grassa stimata <strong className="text-fg">{formatKg(analysis.c.bf.value)}%</strong> ({bfCategory(analysis.c.bf.value, profile.sex)}) · massa magra{' '}
+                {formatKg(analysis.c.lean)} kg · FFMI {formatKg(analysis.c.ffmi)}
+              </p>
+              <Button className="mt-3" variant="secondary" size="sm" onClick={() => void settle(update({ profileCompleted: false }))}>
+                Aggiorna profilo e obiettivo
+              </Button>
+            </Card>
+          </section>
+        )}
 
         {/* Ranghi di forza */}
         <section>

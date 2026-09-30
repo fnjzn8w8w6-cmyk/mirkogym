@@ -15,6 +15,8 @@ import { Chip } from '../ui/Chip';
 import { Button } from '../ui/Button';
 import { ExerciseDemo } from './ExerciseDemo';
 import { MuscleFigure } from './MuscleFigure';
+import { useExerciseText } from '@/hooks/use-exercise-text';
+import { Skeleton } from '../ui/Skeleton';
 
 interface Props {
   exercise: LibraryExercise | null;
@@ -25,11 +27,12 @@ interface Props {
 
 export function ExerciseInfoModal({ exercise, onClose, action }: Props) {
   const ex = exercise;
+  const { text, loading, lang } = useExerciseText(ex);
   return (
     <Modal
       open={Boolean(ex)}
       onClose={onClose}
-      title={ex ? displayName(ex) : ''}
+      title={ex ? (text?.name ?? displayName(ex)) : ''}
       footer={
         ex && action ? (
           <Button size="lg" fullWidth onClick={() => action.onClick(ex)}>
@@ -46,7 +49,7 @@ export function ExerciseInfoModal({ exercise, onClose, action }: Props) {
               Simulazione del movimento
             </span>
           </div>
-          {displayName(ex) !== ex.n && <p className="-mt-2 text-sm text-fg-3">{ex.n}</p>}
+          {(text?.name ?? displayName(ex)) !== ex.n && <p className="-mt-2 text-sm text-fg-3">{ex.n}</p>}
 
           <div className="flex flex-wrap gap-1.5">
             <Chip color={groupColor(groupForLibrary(ex))}>{groupForLibrary(ex)}</Chip>
@@ -82,17 +85,34 @@ export function ExerciseInfoModal({ exercise, onClose, action }: Props) {
 
           <section>
             <h3 className="section-title">Come si esegue</h3>
-            <ol className="space-y-2">
-              {ex.i.map((step, i) => (
-                <li key={i} className="flex gap-3 text-base text-fg-2">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-glow text-xs font-bold text-accent-400">
-                    {i + 1}
-                  </span>
-                  <span lang="en">{step}</span>
-                </li>
-              ))}
-            </ol>
-            <p className="mt-3 text-xs text-fg-3">Istruzioni in inglese · foto: free-exercise-db (pubblico dominio)</p>
+            {loading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-5 w-11/12" />
+                <Skeleton className="h-5 w-4/5" />
+              </div>
+            ) : (
+              <ol className="space-y-2">
+                {(text?.steps ?? ex.i).map((step, i) => (
+                  <li key={i} className="flex gap-3 text-base text-fg-2">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-glow text-xs font-bold text-accent-400">
+                      {i + 1}
+                    </span>
+                    <span lang={text?.source === 'fallback' || text?.source === 'original' ? 'en' : lang}>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+            <p className="mt-3 text-xs text-fg-3">
+              {text?.source === 'curated'
+                ? 'Istruzioni curate'
+                : text?.source === 'machine'
+                  ? 'Traduzione automatica'
+                  : text?.source === 'fallback'
+                    ? 'Traduzione non disponibile ora: testo originale in inglese'
+                    : 'Testo originale'}{' '}
+              · foto: free-exercise-db (pubblico dominio)
+            </p>
           </section>
         </div>
       )}

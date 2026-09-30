@@ -1,9 +1,9 @@
 import {
+  createUserWithEmailAndPassword,
   EmailAuthProvider,
   linkWithCredential,
   onAuthStateChanged,
   sendPasswordResetEmail,
-  signInAnonymously,
   signInWithEmailAndPassword,
   signOut,
   type User,
@@ -14,13 +14,6 @@ import { auth } from './firebase';
 /** Dopo un "Esci" non ricreiamo in automatico un utente anonimo: mostriamo la schermata di accesso. */
 const SIGNED_OUT_KEY = 'mirkogym.signedOut';
 
-function isSignedOutFlag(): boolean {
-  try {
-    return localStorage.getItem(SIGNED_OUT_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
 function setSignedOutFlag(v: boolean): void {
   try {
     if (v) localStorage.setItem(SIGNED_OUT_KEY, '1');
@@ -41,33 +34,11 @@ function clearLocalUserState(): void {
 }
 
 /**
- * Osserva lo stato di autenticazione. Se non c'è nessun utente (primo avvio) crea un utente
- * anonimo, così l'app è subito usabile; l'utente può poi trasformarlo in un account con email.
- * Dopo un logout esplicito invece restituisce `null` (schermata di accesso).
+ * Osserva lo stato di autenticazione. Il login è obbligatorio: senza utente
+ * viene restituito `null` e l'app mostra la schermata di accesso/registrazione.
  */
 export function watchUser(onUser: (user: User | null) => void, onError: (err: Error) => void): () => void {
-  return onAuthStateChanged(
-    auth(),
-    (user) => {
-      if (user) {
-        onUser(user);
-        return;
-      }
-      if (isSignedOutFlag()) {
-        onUser(null);
-        return;
-      }
-      signInAnonymously(auth()).catch((e: unknown) => onError(e instanceof Error ? e : new Error(String(e))));
-    },
-    (err) => onError(err),
-  );
-}
-
-/** Usa l'app senza account (utente anonimo, dati legati a questo dispositivo). */
-export async function continueAnonymously(): Promise<void> {
-  setSignedOutFlag(false);
-  clearLocalUserState();
-  await signInAnonymously(auth());
+  return onAuthStateChanged(auth(), (user) => onUser(user), (err) => onError(err));
 }
 
 /**
@@ -83,7 +54,11 @@ export async function createAccount(email: string, password: string): Promise<Us
     setSignedOutFlag(false);
     return res.user;
   }
-  throw new Error('Sei già collegato a un account');
+  if (current) throw new Error('Sei già collegato a un account');
+  clearLocalUserState();
+  const res = await createUserWithEmailAndPassword(auth(), email.trim(), password);
+  setSignedOutFlag(false);
+  return res.user;
 }
 
 /** Accede a un account esistente (su un nuovo dispositivo o dopo un logout). */

@@ -19,6 +19,7 @@ import { useToast } from '@/components/ui/Toast';
 import { exportAll, importAll, isBackupFile, resetAll, saveMesocycle, settle } from '@/lib/firestore';
 import { clearLocalActiveSession } from '@/hooks/use-active-session';
 import { exerciseKey } from '@/lib/analytics';
+import { LANGUAGES } from '@/lib/exercise-i18n';
 import { toISODate } from '@/lib/date-utils';
 
 const REPO_URL = 'https://github.com/fnjzn8w8w6-cmyk/mirkogym';
@@ -165,6 +166,26 @@ export default function Settings() {
           </span>
           <ChevronRight className="h-5 w-5 text-fg-3" aria-hidden />
         </Card>
+
+        <section>
+          <h2 className="section-title">Lingua delle istruzioni</h2>
+          <Card className="grid grid-cols-3 gap-2 p-3">
+            {LANGUAGES.map((l) => (
+              <button
+                key={l.value}
+                type="button"
+                aria-pressed={settings.language === l.value}
+                onClick={() => set({ language: l.value })}
+                className={`flex h-12 items-center justify-center gap-1.5 rounded-md border text-sm font-semibold ${
+                  settings.language === l.value ? 'border-accent-500 bg-accent-glow text-accent-400' : 'border-line bg-surface-2 text-fg-2'
+                }`}
+              >
+                <span aria-hidden>{l.flag}</span>
+                {l.label}
+              </button>
+            ))}
+          </Card>
+        </section>
 
         <Section title="Timer riposo">
           <Toggle label="Abilita timer" checked={settings.restTimerEnabled} onChange={(v) => set({ restTimerEnabled: v })} />
