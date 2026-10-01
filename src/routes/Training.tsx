@@ -8,13 +8,10 @@ import { Chip } from '@/components/ui/Chip';
 import { Button } from '@/components/ui/Button';
 import { Segmented } from '@/components/ui/Input';
 import { useToast } from '@/components/ui/Toast';
-import { MuscleFigure, GROUP_MUSCLES } from '@/components/library/MuscleFigure';
 import { useSchedule } from '@/hooks/use-schedule';
 import { useSessions } from '@/hooks/use-sessions';
-import { useSettings } from '@/hooks/use-settings';
 import { useMesocycle } from '@/hooks/use-mesocycle';
 import { useActiveSession } from '@/hooks/use-active-session';
-import { muscleStatus } from '@/lib/analytics';
 import { formatRelativeDay } from '@/lib/date-utils';
 import { sessionMinutes } from '@/lib/program-generator';
 import { cn } from '@/lib/cn';
@@ -32,19 +29,11 @@ export default function Training() {
   const raw = params.get('tab');
   const tab: Tab = raw === 'history' ? 'sessions' : raw === 'sessions' || raw === 'exercises' || raw === 'analysis' ? raw : 'plan';
   const { days } = useSchedule();
-  const { sessions, groupOf } = useSessions();
-  const { settings } = useSettings();
+  const { sessions } = useSessions();
   const meso = useMesocycle();
   const { activeSession, start } = useActiveSession();
   const toast = useToast();
   const [starting, setStarting] = useState<string | null>(null);
-
-  const intensity = useMemo(() => {
-    const groups = [...new Set(days.flatMap((d) => d.exercises.map((e) => e.group)))];
-    const out: Record<string, number> = {};
-    for (const m of muscleStatus(sessions, groupOf, groups)) for (const mm of GROUP_MUSCLES[m.group] ?? []) out[mm] = m.weekSets / settings.weeklySetsMax;
-    return out;
-  }, [sessions, groupOf, days, settings.weeklySetsMax]);
 
   const lastForDay = (id: string) => sessions.find((s) => s.dayId === id);
   const next = useMemo(() => {
@@ -152,15 +141,6 @@ export default function Training() {
                 </span>
               </Card>
               <ScheduleImportModal open={importOpen} onClose={() => setImportOpen(false)} />
-              <Card className="p-4">
-                <h2 className="section-title">Muscoli allenati questa settimana</h2>
-                <MuscleFigure intensity={intensity} labels className="mx-auto h-72 w-auto" />
-                <div className="mt-2 flex items-center justify-center gap-2 text-xs text-fg-3">
-                  Poco
-                  <span className="h-2 w-24 rounded-full bg-gradient-to-r from-accent-500/25 to-accent-500" aria-hidden />
-                  Obiettivo raggiunto
-                </div>
-              </Card>
             </>
           )}
         </div>

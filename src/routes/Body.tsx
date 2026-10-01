@@ -21,6 +21,7 @@ import { formatKg, movingAverage7d, trendDelta } from '@/lib/analytics';
 import { formatRelativeDay, fromISODate, toISODate } from '@/lib/date-utils';
 import { cn } from '@/lib/cn';
 import { CompositionCard, GoalStatus, Measurements } from '@/components/body/BodyOverview';
+import { MuscleWeekCard } from '@/components/body/MuscleWeek';
 
 const PERIODS: [number, string][] = [
   [30, '1M'],
@@ -104,6 +105,7 @@ export default function Body() {
           <>
             <CompositionCard />
             <GoalStatus />
+            <MuscleWeekCard />
 
             <div className="flex justify-end gap-1.5">
               {PERIODS.map(([d, l]) => (
