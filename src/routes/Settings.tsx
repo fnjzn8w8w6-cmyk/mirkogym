@@ -289,7 +289,7 @@ export default function Settings() {
         <section>
           <h2 className="section-title">App</h2>
           <Card className="divide-y divide-line-subtle px-4">
-            <Row label="Versione" value={`v${__APP_VERSION__}`} />
+            <Row label="Versione" value={`v${__APP_VERSION__} · ${new Date(__BUILD_TIME__).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`} />
             <a href={REPO_URL} target="_blank" rel="noreferrer" className="flex min-h-[52px] items-center justify-between text-base text-fg">
               Repository GitHub
               <ExternalLink className="h-5 w-5 text-fg-3" aria-hidden />

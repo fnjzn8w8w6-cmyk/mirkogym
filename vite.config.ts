@@ -8,6 +8,7 @@ export default defineConfig({
   base: '/mirkogym/',
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
   },
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
@@ -28,7 +29,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      // registrazione manuale in src/lib/pwa-update.ts (controlla gli aggiornamenti anche quando l'app torna in primo piano)
       registerType: 'autoUpdate',
+      injectRegister: false,
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
         name: 'HowToGym',
@@ -50,6 +53,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // la nuova versione prende subito il controllo (anche su iPhone senza chiudere l'app)
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         navigateFallback: '/mirkogym/index.html',
         runtimeCaching: [
           {
