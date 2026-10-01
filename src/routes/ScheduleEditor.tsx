@@ -174,7 +174,7 @@ export default function ScheduleEditor() {
                     <button
                       type="button"
                       onClick={() => setPickFor(d.id)}
-                      className="flex h-12 items-center justify-center gap-2 rounded-md bg-accent-glow text-base font-semibold text-accent-400"
+                      className="flex h-12 items-center justify-center gap-2 rounded-md bg-accent-500 text-base font-semibold text-onaccent shadow-glow"
                     >
                       <Library className="h-5 w-5" aria-hidden /> Dalla libreria
                     </button>

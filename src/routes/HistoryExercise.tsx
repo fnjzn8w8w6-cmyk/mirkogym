@@ -35,7 +35,7 @@ export default function HistoryExercise() {
           illustration="chart"
           title="Nessun dato"
           description="Questo esercizio non ha ancora serie registrate."
-          action={<Button onClick={() => navigate('/history?tab=exercises')}>Tutti gli esercizi</Button>}
+          action={<Button onClick={() => navigate('/training?tab=exercises')}>Tutti gli esercizi</Button>}
         />
       </div>
     );

@@ -38,28 +38,32 @@ import {
 import { formatDuration, formatRelativeDay, formatShortDate } from '@/lib/date-utils';
 import { cn } from '@/lib/cn';
 
-type Tab = 'sessions' | 'exercises' | 'analytics';
+export type HistoryTab = 'sessions' | 'exercises' | 'analytics';
 
-export default function History({ embedded }: { embedded?: boolean } = {}) {
+/** Storico: dentro la tab Allenamento ogni sezione viene mostrata direttamente (prop `section`). */
+export default function History({ embedded, section }: { embedded?: boolean; section?: HistoryTab } = {}) {
   const [params, setParams] = useSearchParams();
-  const tab = (params.get('tab') as Tab | null) ?? 'sessions';
+  const raw = params.get('tab');
+  const tab: HistoryTab = section ?? (raw === 'exercises' || raw === 'analytics' ? raw : 'sessions');
   const { loading } = useSessions();
 
   return (
     <div>
       {!embedded && <TopBar title="Storico" large />}
       <div className={embedded ? '' : 'page pt-3'}>
-        <Segmented<Tab>
-          label="Sezione storico"
-          value={tab}
-          onChange={(t) => setParams({ tab: t }, { replace: true })}
-          options={[
-            { value: 'sessions', label: 'Sessioni' },
-            { value: 'exercises', label: 'Esercizi' },
-            { value: 'analytics', label: 'Analytics' },
-          ]}
-        />
-        <div className="mt-4">
+        {!section && (
+          <Segmented<HistoryTab>
+            label="Sezione storico"
+            value={tab}
+            onChange={(t) => setParams({ tab: t }, { replace: true })}
+            options={[
+              { value: 'sessions', label: 'Sessioni' },
+              { value: 'exercises', label: 'Esercizi' },
+              { value: 'analytics', label: 'Analytics' },
+            ]}
+          />
+        )}
+        <div className={section ? '' : 'mt-4'}>
           {loading ? (
             <PageSkeleton />
           ) : tab === 'sessions' ? (
@@ -98,11 +102,13 @@ function SessionsTab() {
 
   return (
     <>
-      <p className="mb-3 text-sm text-fg-3">Scorri una sessione verso sinistra per duplicarla o eliminarla.</p>
+      <p className="mb-3 text-sm text-fg-3">Tocca una sessione per i dettagli e il confronto. Scorri a sinistra per duplicarla o eliminarla.</p>
       <ul className="space-y-2">
-        {sessions.map((s) => {
+        {sessions.map((s, idx) => {
           const day = getDay(s.dayId);
           const prs = s.logs.reduce((a, l) => a + l.sets.filter((x) => x.isPersonalRecord).length, 0);
+          const prev = sessions.slice(idx + 1).find((x) => x.dayId === s.dayId);
+          const delta = prev && sessionTonnage(prev) > 0 ? Math.round(((sessionTonnage(s) - sessionTonnage(prev)) / sessionTonnage(prev)) * 100) : null;
           return (
             <li key={s.id}>
               <SwipeRow
@@ -145,7 +151,21 @@ function SessionsTab() {
                       </Chip>
                     )}
                     {s.deload && <Chip tone="info">Deload</Chip>}
+                    {delta != null && (
+                      <span className={cn('font-semibold', delta > 0 ? 'text-accent-400' : delta < 0 ? 'text-danger' : 'text-fg-3')}>
+                        {delta > 0 ? '▲ +' : delta < 0 ? '▼ ' : '= '}
+                        {delta}% vs volta prima
+                      </span>
+                    )}
                   </div>
+                  {s.recap ? (
+                    <div className="mt-2 truncate text-sm text-fg-2">
+                      ⭐ {s.recap.rating}/5 · ⚡ {s.recap.energy}/5{s.recap.pain.length ? ` · 🩹 ${s.recap.pain.join(', ')}` : ''}
+                      {s.recap.note ? ` · “${s.recap.note}”` : ''}
+                    </div>
+                  ) : (
+                    <div className="mt-2 text-xs text-fg-3">📝 Resoconto non compilato: aprila per aggiungerlo</div>
+                  )}
                 </Card>
               </SwipeRow>
             </li>
@@ -174,6 +194,8 @@ interface ExerciseRow {
   group: string;
   sessions: number;
   last: { weight: number; reps: number } | null;
+  /** top set della volta precedente (per il confronto) */
+  prev: { weight: number; reps: number } | null;
   maxWeight: number;
   best1RM: number;
 }
@@ -181,7 +203,7 @@ interface ExerciseRow {
 export function useExerciseRows(): ExerciseRow[] {
   const { sessions, nameOf, groupOf } = useSessions();
   return useMemo(() => {
-    const m = new Map<string, ExerciseRow & { lastDate: number; allSets: { weight: number; reps: number }[] }>();
+    const m = new Map<string, ExerciseRow & { lastDate: number; allSets: { weight: number; reps: number }[]; tops: { date: number; weight: number; reps: number }[] }>();
     for (const s of sessions) {
       for (const l of s.logs) {
         if (!l.sets.length) continue;
@@ -193,13 +215,17 @@ export function useExerciseRows(): ExerciseRow[] {
           group: groupOf(l),
           sessions: 0,
           last: null,
+          prev: null,
           maxWeight: 0,
           best1RM: 0,
           lastDate: 0,
           allSets: [],
+          tops: [],
         };
         row.sessions++;
         row.allSets.push(...l.sets);
+        const tp = topSet(l.sets);
+        if (tp) row.tops.push({ date: s.date, weight: tp.weight, reps: tp.reps });
         if (s.date > row.lastDate) {
           row.lastDate = s.date;
           const t = topSet(l.sets);
@@ -209,16 +235,112 @@ export function useExerciseRows(): ExerciseRow[] {
         m.set(key, row);
       }
     }
-    return [...m.values()].map(({ lastDate: _d, allSets, ...r }) => {
+    return [...m.values()].map(({ lastDate: _d, allSets, tops, ...r }) => {
       const rec = computeRecords(allSets);
-      return { ...r, maxWeight: rec.maxWeight, best1RM: rec.best1RM };
+      const sorted = tops.sort((a, b) => b.date - a.date);
+      return { ...r, prev: sorted[1] ? { weight: sorted[1].weight, reps: sorted[1].reps } : null, maxWeight: rec.maxWeight, best1RM: rec.best1RM };
     });
   }, [sessions, nameOf, groupOf]);
+}
+
+function Trend({ a, b, unit = '%' }: { a: number; b: number; unit?: string }) {
+  if (!(b > 0)) return <span className="text-fg-3">—</span>;
+  const v = Math.round(((a - b) / b) * 100);
+  return (
+    <span className={cn('font-bold', v > 0 ? 'text-accent-400' : v < 0 ? 'text-danger' : 'text-fg-2')}>
+      {v > 0 ? '▲ +' : v < 0 ? '▼ ' : '= '}
+      {v}
+      {unit}
+    </span>
+  );
+}
+
+/** Ultima sessione contro la media di tutte le sessioni, e per ogni gruppo muscolare. */
+function useGroupStats() {
+  const { sessions, groupOf } = useSessions();
+  return useMemo(() => {
+    const per = new Map<string, { date: number; volume: number; sets: number }[]>();
+    for (const s of sessions) {
+      const acc = new Map<string, { volume: number; sets: number }>();
+      for (const l of s.logs) {
+        const work = l.sets.filter((x) => x.type !== 'warmup');
+        if (!work.length) continue;
+        const g = groupOf(l);
+        const a = acc.get(g) ?? { volume: 0, sets: 0 };
+        a.volume += work.reduce((t, x) => t + x.weight * x.reps, 0);
+        a.sets += work.length;
+        acc.set(g, a);
+      }
+      for (const [g, a] of acc) per.set(g, [...(per.get(g) ?? []), { date: s.date, ...a }]);
+    }
+    const out = new Map<string, { last: { volume: number; sets: number; date: number }; avgVolume: number; avgSets: number; count: number }>();
+    for (const [g, list] of per) {
+      const sorted = list.sort((a, b) => b.date - a.date);
+      out.set(g, {
+        last: sorted[0],
+        avgVolume: sorted.reduce((t, x) => t + x.volume, 0) / sorted.length,
+        avgSets: sorted.reduce((t, x) => t + x.sets, 0) / sorted.length,
+        count: sorted.length,
+      });
+    }
+    return out;
+  }, [sessions, groupOf]);
+}
+
+function SummaryCard() {
+  const { sessions } = useSessions();
+  const last = sessions[0];
+  if (!last) return null;
+  const avg = (f: (s: Session) => number) => sessions.reduce((t, s) => t + f(s), 0) / sessions.length;
+  const sets = (s: Session) => s.logs.reduce((t, l) => t + l.sets.filter((x) => x.type !== 'warmup').length, 0);
+  const rated = sessions.filter((s) => s.recap);
+  const rows: [string, string, string, React.ReactNode][] = [
+    ['Volume', formatTonnage(sessionTonnage(last)), formatTonnage(avg(sessionTonnage)), <Trend a={sessionTonnage(last)} b={avg(sessionTonnage)} />],
+    ['Serie', String(sets(last)), avg(sets).toFixed(1), <Trend a={sets(last)} b={avg(sets)} />],
+    [
+      'Durata',
+      formatDuration(last.duration),
+      formatDuration(Math.round(avg((s) => s.duration ?? 0))),
+      last.duration ? <Trend a={last.duration} b={avg((s) => s.duration ?? 0)} /> : '—',
+    ],
+    [
+      'Voto',
+      last.recap ? `${last.recap.rating}/5` : '—',
+      rated.length ? `${(rated.reduce((t, s) => t + s.recap!.rating, 0) / rated.length).toFixed(1)}/5` : '—',
+      '',
+    ],
+  ];
+  return (
+    <Card className="p-4">
+      <h2 className="section-title">Ultima sessione vs media ({sessions.length} sessioni)</h2>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-xs uppercase text-fg-3">
+            <th className="py-1 text-left font-semibold" />
+            <th className="py-1 text-right font-semibold">Ultima</th>
+            <th className="py-1 text-right font-semibold">Media</th>
+            <th className="py-1 text-right font-semibold" />
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(([l, a, b, t]) => (
+            <tr key={l} className="border-t border-line-subtle">
+              <td className="py-2 text-fg-2">{l}</td>
+              <td className="py-2 text-right font-semibold text-fg">{a}</td>
+              <td className="py-2 text-right text-fg-2">{b}</td>
+              <td className="py-2 text-right">{t}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Card>
+  );
 }
 
 function ExercisesTab() {
   const navigate = useNavigate();
   const rows = useExerciseRows();
+  const groupStats = useGroupStats();
   const groups = useMemo(() => sortGroups([...new Set(rows.map((r) => r.group))]), [rows]);
   const [open, setOpen] = useState<Record<string, boolean>>({});
 
@@ -226,6 +348,8 @@ function ExercisesTab() {
 
   return (
     <div className="space-y-2">
+      <SummaryCard />
+      <h2 className="section-title !mb-0 pt-2">Per gruppo muscolare</h2>
       {groups.map((g) => {
         const list = rows.filter((r) => r.group === g).sort((a, b) => b.sessions - a.sessions);
         const isOpen = open[g] ?? true;
@@ -238,7 +362,15 @@ function ExercisesTab() {
               className="flex min-h-[52px] w-full items-center gap-3 px-4 text-left"
             >
               <span className="h-3 w-3 rounded-full" style={{ backgroundColor: groupColor(g) }} aria-hidden />
-              <span className="flex-1 text-base font-semibold text-fg">{g}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-base font-semibold text-fg">{g}</span>
+                {groupStats.get(g) && (
+                  <span className="block text-xs text-fg-3">
+                    Ultima {formatTonnage(groupStats.get(g)!.last.volume)} · media {formatTonnage(groupStats.get(g)!.avgVolume)} ·{' '}
+                    <Trend a={groupStats.get(g)!.last.volume} b={groupStats.get(g)!.avgVolume} />
+                  </span>
+                )}
+              </span>
               <span className="text-sm text-fg-3">{list.length}</span>
               <ChevronDown className={cn('h-5 w-5 text-fg-3 transition-transform', isOpen && 'rotate-180')} aria-hidden />
             </button>
@@ -261,6 +393,8 @@ function ExercisesTab() {
                           <span className="block truncate text-base text-fg">{r.name}</span>
                           <span className="block text-sm text-fg-3">
                             {r.sessions} sessioni · ultimo {r.last ? `${formatKg(r.last.weight, 2)}×${r.last.reps}` : '—'}
+                            {r.prev ? ` · prima ${formatKg(r.prev.weight, 2)}×${r.prev.reps} ` : ''}
+                            {r.last && r.prev && <Trend a={epley1RM(r.last.weight, r.last.reps)} b={epley1RM(r.prev.weight, r.prev.reps)} />}
                           </span>
                         </span>
                         <span className="text-right">

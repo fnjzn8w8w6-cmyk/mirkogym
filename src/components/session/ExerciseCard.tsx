@@ -11,6 +11,40 @@ import { SET_GRID, SetRow } from './SetRow';
 import { ExerciseDemo } from '../library/ExerciseDemo';
 import { SuggestionBox } from './SuggestionBox';
 
+/** Confronto diretto con l'ultima volta che hai fatto l'esercizio. */
+function PrevCompare({ prevSets, lastDate, sets, lastText }: { prevSets: { weight: string; reps: number }[]; lastDate?: number; sets: DraftSet[]; lastText?: string }) {
+  if (!prevSets.length || !lastDate) return null;
+  const working = sets.filter((s) => s.type !== 'warmup');
+  const vol = (list: { w: number; r: number }[]) => list.reduce((a, x) => a + x.w * x.r, 0);
+  const done = working
+    .map((s, i) => ({ s, i }))
+    .filter(({ s }) => s.done && parseNum(s.weight) != null && Number(s.reps) > 0);
+  const today = vol(done.map(({ s }) => ({ w: parseNum(s.weight) ?? 0, r: Number(s.reps) })));
+  const before = vol(done.map(({ i }) => prevSets[i]).filter(Boolean).map((p) => ({ w: parseNum(p.weight) ?? 0, r: p.reps })));
+  const diff = before > 0 ? Math.round(((today - before) / before) * 100) : null;
+  return (
+    <div className="mt-2 rounded-md border border-violet-500/30 bg-violet-500/10 px-3 py-2">
+      <div className="flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-wider text-violet-400">
+        <span>Volta scorsa · {new Date(lastDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</span>
+        {diff != null && (
+          <span className={cn('normal-case tracking-normal', diff > 0 ? 'text-accent-400' : diff < 0 ? 'text-danger' : 'text-fg-2')}>
+            {diff > 0 ? '▲' : diff < 0 ? '▼' : '='} {diff > 0 ? '+' : ''}
+            {diff}% volume
+          </span>
+        )}
+      </div>
+      <div className="mt-1 flex flex-wrap gap-1.5">
+        {prevSets.map((p, i) => (
+          <span key={i} className="rounded bg-surface-3 px-1.5 py-0.5 text-sm font-semibold text-fg">
+            {p.weight}×{p.reps}
+          </span>
+        ))}
+      </div>
+      {lastText?.includes('RIR') && <div className="mt-1 text-xs text-fg-3">{lastText.slice(lastText.indexOf('RIR'))}</div>}
+    </div>
+  );
+}
+
 /** RIR previsto per la serie i: "2/1/1" → per-serie; "1-2, ult. 0-1" → ultima diversa. */
 export function rirForSet(rirTarget: string, i: number, total: number): string {
   const parts = rirTarget.split('/').map((p) => p.trim());
@@ -26,6 +60,8 @@ interface ExerciseCardProps {
   exercise: Exercise;
   suggestion: Suggestion;
   lastText?: string;
+  /** data dell'ultima volta (per il confronto) */
+  lastDate?: number;
   expanded: boolean;
   onToggleExpanded: () => void;
   onSetChange: (setIdx: number, patch: Partial<DraftSet>) => void;
@@ -52,6 +88,7 @@ export function ExerciseCard({
   exercise,
   suggestion,
   lastText,
+  lastDate,
   expanded,
   onToggleExpanded,
   onSetChange,
@@ -181,8 +218,9 @@ export function ExerciseCard({
         </div>
 
         <div className="mt-3">
-          <SuggestionBox suggestion={suggestion} lastText={lastText} />
+          <SuggestionBox suggestion={suggestion} />
         </div>
+        <PrevCompare prevSets={prevSets} lastDate={lastDate} sets={draft.sets} lastText={lastText} />
 
         <div className={cn(SET_GRID, 'mt-3 px-1 text-center text-xs uppercase tracking-wide text-fg-3')} aria-hidden>
           <span>Set</span>

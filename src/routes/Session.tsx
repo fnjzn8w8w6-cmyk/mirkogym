@@ -37,6 +37,9 @@ import { detectPR, exerciseKey, formatKg, formatTonnage, isAnyPR, sessionTonnage
 import { formatClock, formatDuration } from '@/lib/date-utils';
 import { haptics, unlockAudio } from '@/lib/haptics';
 import { MUSCLE_GROUPS } from '@/lib/seed-data';
+import { useAthlete } from '@/hooks/use-athlete';
+import { useStatsExtra } from '@/hooks/use-progress';
+import { PAIN_LABEL, exercisesStressing, type PainInfo } from '@/lib/athlete';
 
 export default function SessionRoute() {
   const { dayId = '' } = useParams();
@@ -102,7 +105,9 @@ function SessionView({ initial }: { initial: ActiveSession }) {
   const { getDay, exerciseIndex, days, save: saveSchedule } = useSchedule();
   const { sessions, nameOf, save: saveSessionRecap } = useSessions();
   const { bodyLogs } = useBodyLogs();
-  const { settings } = useSettings();
+  const { settings, update: updateSettings } = useSettings();
+  const athlete = useAthlete();
+  const statsExtra = useStatsExtra();
   const { discard } = useActiveSession();
   const [sharing, setSharing] = useState(false);
   const {
@@ -177,6 +182,7 @@ function SessionView({ initial }: { initial: ActiveSession }) {
         return {
           suggestion,
           lastText: last ? describeLog(last) : undefined,
+          lastDate: last?.date,
           prevSets: lastWorking.map((x) => ({ weight: formatKg(x.weight, 2), reps: x.reps })),
           repTargets: repTargets(ex, last, suggestion, Math.max(ex.sets, 10)),
         };
@@ -290,8 +296,8 @@ function SessionView({ initial }: { initial: ActiveSession }) {
   const reward = useMemo(() => {
     if (!result) return null;
     const before = sessions.filter((x) => x.id !== result.id);
-    const sb = computeStats(before, bodyLogs, nameOf);
-    const sa = computeStats([...before, result], bodyLogs, nameOf);
+    const sb = computeStats(before, bodyLogs, nameOf, statsExtra);
+    const sa = computeStats([...before, result], bodyLogs, nameOf, statsExtra);
     const ub = ACHIEVEMENTS.filter((a) => isUnlocked(a, sb));
     const ua = ACHIEVEMENTS.filter((a) => isUnlocked(a, sa));
     const lb = levelOf(xpOf(sb, ub.length));
@@ -368,6 +374,7 @@ function SessionView({ initial }: { initial: ActiveSession }) {
             exercise={exercises[i]}
             suggestion={suggestions[i].suggestion}
             lastText={suggestions[i].lastText}
+            lastDate={suggestions[i].lastDate}
             expanded={Boolean(expanded[i])}
             onToggleExpanded={() => setExpanded((e) => ({ ...e, [i]: !e[i] }))}
             onSetChange={(j, patch) => updateSet(i, j, patch)}
@@ -551,7 +558,13 @@ function SessionView({ initial }: { initial: ActiveSession }) {
       </Modal>
       <ExerciseInfoModal exercise={info} onClose={() => setInfo(null)} />
 
-      <ReadinessModal open={draft.readiness == null && doneSets === 0 && !result} onPick={setReadiness} />
+      <ReadinessModal
+        open={draft.readiness == null && doneSets === 0 && !result}
+        onPick={setReadiness}
+        pains={athlete.report.pains.filter((p) => p.active)}
+        todayNames={exercises.map((e) => e.name)}
+        onResolved={(part) => void settle(updateSettings({ painResolved: { ...(settings.painResolved ?? {}), [part]: Date.now() } }))}
+      />
 
       {/* Celebrazione */}
       {result && <Confetti />}
@@ -701,14 +714,74 @@ const READINESS_QUESTIONS = [
 ] as const;
 
 /** Check di prontezza pre-allenamento: 3 domande, 3 tocchi. */
-function ReadinessModal({ open, onPick }: { open: boolean; onPick: (r: 'low' | 'normal' | 'high') => void }) {
+function ReadinessModal({
+  open,
+  onPick,
+  pains,
+  todayNames,
+  onResolved,
+}: {
+  open: boolean;
+  onPick: (r: 'low' | 'normal' | 'high') => void;
+  pains: PainInfo[];
+  todayNames: string[];
+  onResolved: (part: string) => void;
+}) {
+  const navigate = useNavigate();
   const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [painState, setPainState] = useState<Record<string, 'ok' | 'still'>>({});
   const complete = READINESS_QUESTIONS.every((q) => answers[q.key] != null);
   const score = READINESS_QUESTIONS.reduce((a, q) => a + (answers[q.key] ?? 1), 0); // 0..6
   const result = score <= 2 ? 'low' : score >= 5 ? 'high' : 'normal';
   return (
     <Modal open={open} onClose={() => onPick('normal')} title="Come ti senti oggi?">
       <p className="-mt-1 mb-4 text-sm text-fg-3">Adattiamo i carichi suggeriti alla tua giornata.</p>
+      {pains.map((p) => {
+        const risky = exercisesStressing(p.part, todayNames);
+        const st = painState[p.part];
+        return (
+          <div key={p.part} className="mb-4 rounded-lg border border-danger/30 bg-danger-bg p-3">
+            <div className="text-base font-semibold text-fg">🩹 Come va {PAIN_LABEL[p.part]}?</div>
+            <p className="mt-0.5 text-sm text-fg-2">L'ultima volta ({new Date(p.last).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}) hai segnalato un fastidio.</p>
+            {!st && (
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button type="button" className="h-11 rounded-md border border-line bg-surface-2 text-sm font-semibold text-fg" onClick={() => (onResolved(p.part), setPainState((x) => ({ ...x, [p.part]: 'ok' })))}>
+                  ✅ Passato
+                </button>
+                <button type="button" className="h-11 rounded-md border border-danger/40 bg-surface-2 text-sm font-semibold text-fg" onClick={() => setPainState((x) => ({ ...x, [p.part]: 'still' }))}>
+                  😣 Ancora un po'
+                </button>
+              </div>
+            )}
+            {st === 'ok' && <p className="mt-2 text-sm text-accent-400">Ottimo! Il coach lo segna come passato.</p>}
+            {st === 'still' && (
+              <div className="mt-2 space-y-2 text-sm text-fg-2">
+                {risky.length ? (
+                  <p>
+                    Oggi caricano {PAIN_LABEL[p.part]}: <strong className="text-fg">{risky.join(', ')}</strong>. Riduci il carico del 20-30%, movimenti controllati e fermati se il dolore aumenta.
+                  </p>
+                ) : (
+                  <p>Gli esercizi di oggi non la caricano molto: procedi con attenzione e fermati se il dolore aumenta.</p>
+                )}
+                <p className="text-xs text-fg-3">Se il dolore dura più di 1-2 settimane o peggiora, senti un medico o un fisioterapista.</p>
+                {risky.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() =>
+                      navigate(
+                        `/coach?tab=chat&q=${encodeURIComponent(`${PAIN_LABEL[p.part].charAt(0).toUpperCase()}${PAIN_LABEL[p.part].slice(1)} mi dà ancora fastidio. Oggi ho ${risky.join(', ')}: con cosa li sostituisco per oggi?`)}`,
+                      )
+                    }
+                  >
+                    Chiedi al coach un'alternativa
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
       <div className="space-y-4">
         {READINESS_QUESTIONS.map((q) => (
           <div key={q.key}>

@@ -59,7 +59,7 @@ function AppShell() {
       <Routes location={location} key={section === '/history' ? location.pathname : section}>
         <Route path="/" element={<Page><Home /></Page>} />
         <Route path="/session/:dayId" element={<Page><Session /></Page>} />
-        <Route path="/history" element={<Navigate to="/training?tab=history" replace />} />
+        <Route path="/history" element={<Navigate to="/training?tab=sessions" replace />} />
         <Route path="/history/session/:id" element={<Page><HistorySession /></Page>} />
         <Route path="/history/exercise/:key" element={<Page><HistoryExercise /></Page>} />
         <Route path="/body" element={<Page><Body /></Page>} />

@@ -1,4 +1,4 @@
-import type { BodyLog, ExerciseLog, Session } from '@/types';
+import type { BodyLog, ExerciseLog, FoodLog, Session } from '@/types';
 import { epley1RM, sessionSetCount, sessionTonnage, weekStreak, workingSets } from './analytics';
 import { libraryIdOf } from './seed-data';
 
@@ -17,9 +17,57 @@ export interface Stats {
   distinctExercises: number;
   bodyLogs: number;
   deloadSessions: number;
+  recaps: number;
+  legSessions: number;
+  groups: number;
+  months: number;
+  comebacks: number;
+  painManaged: number;
+  weekendSessions: number;
+  quickSessions: number;
+  maxSetsSession: number;
+  maxPRsSession: number;
+  bench: number;
+  squat: number;
+  deadlift: number;
+  benchBW: number;
+  bfLogs: number;
+  dietDays: number;
+  dietTargetDays: number;
+  proteinDays: number;
+  dayRecaps: number;
+  noCheatStreak: number;
+  quests: number;
 }
 
-export function computeStats(sessions: Session[], bodyLogs: BodyLog[], nameOf: (l: ExerciseLog) => string): Stats {
+/** Dati extra (dieta, sfide) per traguardi e XP. */
+export interface StatsExtra {
+  foodLogs?: FoodLog[];
+  target?: { kcal: number; protein: number } | null;
+  quests?: number;
+  bodyweight?: number;
+  groupOf?: (l: ExerciseLog) => string;
+}
+
+const DAY_MS = 86400000;
+const kcalOfLog = (l: FoodLog) => l.entries.reduce((a, e) => a + (e.unit === 'g' ? (e.per.kcal * e.qty) / 100 : e.per.kcal * e.qty), 0);
+const protOfLog = (l: FoodLog) => l.entries.reduce((a, e) => a + (e.unit === 'g' ? (e.per.protein * e.qty) / 100 : e.per.protein * e.qty), 0);
+
+function liftBest(sessions: Session[], nameOf: (l: ExerciseLog) => string, id: string): number {
+  const lift = LIFTS.find((l) => l.id === id);
+  if (!lift) return 0;
+  let best = 0;
+  for (const s of sessions)
+    for (const l of s.logs) {
+      const name = nameOf(l);
+      const lib = libraryIdOf({ name, libraryId: undefined });
+      if (!(lib && lift.ids.includes(lib)) && !lift.match.test(name)) continue;
+      for (const set of workingSets(l.sets)) if (set.reps > 0 && set.reps <= 12) best = Math.max(best, epley1RM(set.weight, set.reps));
+    }
+  return best;
+}
+
+export function computeStats(sessions: Session[], bodyLogs: BodyLog[], nameOf: (l: ExerciseLog) => string, extra: StatsExtra = {}): Stats {
   const names = new Set<string>();
   let prs = 0;
   let earliest = 24;
@@ -33,7 +81,54 @@ export function computeStats(sessions: Session[], bodyLogs: BodyLog[], nameOf: (
       prs += l.sets.filter((x) => x.isPersonalRecord).length;
     }
   }
+  const groupOf = extra.groupOf ?? ((l: ExerciseLog) => l.group ?? '');
+  const asc = [...sessions].sort((a, b) => a.date - b.date);
+  const groups = new Set<string>();
+  let legSessions = 0;
+  let comebacks = 0;
+  let painManaged = 0;
+  let maxPRsSession = 0;
+  asc.forEach((s, i) => {
+    const gs = new Set(s.logs.filter((l) => workingSets(l.sets).length).map(groupOf));
+    gs.forEach((g) => g && groups.add(g));
+    if (gs.has('Gambe')) legSessions++;
+    if (i > 0 && s.date - asc[i - 1].date >= 14 * DAY_MS) comebacks++;
+    // fastidio segnalato e, entro 3 settimane, una sessione senza fastidi
+    if (s.recap && !s.recap.pain.length && asc.slice(0, i).some((p) => p.recap?.pain.length && s.date - p.date <= 21 * DAY_MS)) painManaged++;
+    maxPRsSession = Math.max(maxPRsSession, s.logs.reduce((a, l) => a + l.sets.filter((x) => x.isPersonalRecord).length, 0));
+  });
+  const food = (extra.foodLogs ?? []).filter((l) => l.entries.length);
+  const t = extra.target;
+  const recapsAsc = (extra.foodLogs ?? []).filter((l) => l.recap).sort((a, b) => b.date.localeCompare(a.date));
+  let noCheatStreak = 0;
+  for (const l of recapsAsc) {
+    if (l.recap!.cheat) break;
+    noCheatStreak++;
+  }
+  const bench = liftBest(sessions, nameOf, 'bench');
+  const bw = extra.bodyweight ?? bodyLogs.find((b) => b.weight != null)?.weight ?? 0;
   return {
+    recaps: sessions.filter((s) => s.recap).length,
+    legSessions,
+    groups: groups.size,
+    months: new Set(sessions.map((s) => new Date(s.date).toISOString().slice(0, 7))).size,
+    comebacks,
+    painManaged,
+    weekendSessions: sessions.filter((s) => [0, 6].includes(new Date(s.date).getDay())).length,
+    quickSessions: sessions.filter((s) => (s.duration ?? 0) > 0 && (s.duration ?? 0) <= 40 * 60 && sessionSetCount(s) >= 12).length,
+    maxSetsSession: Math.max(0, ...sessions.map(sessionSetCount)),
+    maxPRsSession,
+    bench,
+    squat: liftBest(sessions, nameOf, 'squat'),
+    deadlift: liftBest(sessions, nameOf, 'deadlift'),
+    benchBW: bw > 0 ? Math.round((bench / bw) * 100) : 0,
+    bfLogs: bodyLogs.filter((b) => b.bodyFat != null).length,
+    dietDays: food.length,
+    dietTargetDays: t ? food.filter((l) => Math.abs(kcalOfLog(l) - t.kcal) <= t.kcal * 0.1).length : 0,
+    proteinDays: t ? food.filter((l) => protOfLog(l) >= t.protein * 0.9).length : 0,
+    dayRecaps: recapsAsc.length,
+    noCheatStreak,
+    quests: extra.quests ?? 0,
     sessions: sessions.length,
     sets: sessions.reduce((a, s) => a + sessionSetCount(s), 0),
     volume: sessions.reduce((a, s) => a + sessionTonnage(s), 0),
@@ -52,7 +147,7 @@ export function computeStats(sessions: Session[], bodyLogs: BodyLog[], nameOf: (
 /* ---------- XP e livelli ---------- */
 
 export function xpOf(st: Stats, unlocked: number): number {
-  return st.sessions * 100 + st.sets * 5 + st.prs * 40 + unlocked * 150;
+  return st.sessions * 100 + st.sets * 5 + st.prs * 40 + unlocked * 150 + st.recaps * 20 + st.dietDays * 10 + st.dayRecaps * 10 + st.quests * 150;
 }
 
 /** XP cumulativi necessari per raggiungere il livello L (L1 = 0). */
@@ -111,6 +206,76 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'big', title: 'Seduta monstre', description: 'Oltre 10.000 kg in una sola sessione', emoji: '🦍', tier: 'silver', progress: count('maxSessionVolume', 10000) },
   { id: 'explorer', title: 'Esploratore', description: '20 esercizi diversi allenati', emoji: '🧭', tier: 'silver', progress: count('distinctExercises', 20) },
   { id: 'body', title: 'Occhio al corpo', description: '5 misurazioni corporee registrate', emoji: '⚖️', tier: 'bronze', progress: count('bodyLogs', 5) },
+  // Costanza
+  { id: 's5', title: 'Ci prendo gusto', description: '5 allenamenti completati', emoji: '✋', tier: 'bronze', progress: count('sessions', 5) },
+  { id: 's200', title: 'Bicentenario', description: '200 allenamenti completati', emoji: '🗿', tier: 'legend', progress: count('sessions', 200) },
+  { id: 'st2', title: 'Doppietta', description: '2 settimane consecutive di allenamento', emoji: '✌️', tier: 'bronze', progress: count('streak', 2) },
+  { id: 'st8', title: 'Due mesi di fila', description: '8 settimane consecutive', emoji: '🔗', tier: 'silver', progress: count('streak', 8) },
+  { id: 'st26', title: 'Mezzo anno senza mollare', description: '26 settimane consecutive', emoji: '🛡️', tier: 'legend', progress: count('streak', 26) },
+  { id: 'm3', title: 'Stagione intera', description: 'Allenati in 3 mesi diversi', emoji: '🍂', tier: 'silver', progress: count('months', 3) },
+  { id: 'm6', title: 'Semestre di ferro', description: 'Allenati in 6 mesi diversi', emoji: '⛓️', tier: 'gold', progress: count('months', 6) },
+  { id: 'm12', title: 'Un anno in palestra', description: 'Allenati in 12 mesi diversi', emoji: '🎂', tier: 'legend', progress: count('months', 12) },
+  { id: 'comeback', title: 'Il ritorno', description: 'Torna ad allenarti dopo 2 settimane di stop', emoji: '🦅', tier: 'bronze', progress: count('comebacks', 1) },
+  // Forza
+  { id: 'b60', title: 'Panca 60', description: 'Massimale stimato in panca di 60 kg', emoji: '🪑', tier: 'bronze', progress: count('bench', 60) },
+  { id: 'b80', title: 'Panca 80', description: 'Massimale stimato in panca di 80 kg', emoji: '💥', tier: 'silver', progress: count('bench', 80) },
+  { id: 'b100', title: 'Club dei 100', description: 'Massimale stimato in panca di 100 kg', emoji: '💯', tier: 'gold', progress: count('bench', 100) },
+  { id: 'b140', title: 'Panca da leggenda', description: 'Massimale stimato in panca di 140 kg', emoji: '🐉', tier: 'legend', progress: count('bench', 140) },
+  { id: 'bbw', title: 'Il tuo peso in panca', description: 'Massimale in panca pari al tuo peso corporeo', emoji: '⚖️', tier: 'gold', progress: count('benchBW', 100) },
+  { id: 'q80', title: 'Squat 80', description: 'Massimale stimato nello squat di 80 kg', emoji: '🦵', tier: 'bronze', progress: count('squat', 80) },
+  { id: 'q100', title: 'Squat a tre cifre', description: 'Massimale stimato nello squat di 100 kg', emoji: '🏗️', tier: 'silver', progress: count('squat', 100) },
+  { id: 'q140', title: 'Gambe d’acciaio', description: 'Massimale stimato nello squat di 140 kg', emoji: '🗼', tier: 'gold', progress: count('squat', 140) },
+  { id: 'q180', title: 'Re dello squat', description: 'Massimale stimato nello squat di 180 kg', emoji: '👑', tier: 'legend', progress: count('squat', 180) },
+  { id: 'd100', title: 'Stacco 100', description: 'Massimale stimato nello stacco di 100 kg', emoji: '🪝', tier: 'bronze', progress: count('deadlift', 100) },
+  { id: 'd140', title: 'Stacco 140', description: 'Massimale stimato nello stacco di 140 kg', emoji: '⛏️', tier: 'silver', progress: count('deadlift', 140) },
+  { id: 'd180', title: 'Stacco 180', description: 'Massimale stimato nello stacco di 180 kg', emoji: '🏔️', tier: 'gold', progress: count('deadlift', 180) },
+  { id: 'd220', title: 'Gru umana', description: 'Massimale stimato nello stacco di 220 kg', emoji: '🏗️', tier: 'legend', progress: count('deadlift', 220) },
+  // Record e volume
+  { id: 'pr3', title: 'Tripletta', description: '3 record personali', emoji: '🥉', tier: 'bronze', progress: count('prs', 3) },
+  { id: 'pr25', title: 'Cacciatore di record', description: '25 record personali', emoji: '🎯', tier: 'silver', progress: count('prs', 25) },
+  { id: 'pr100', title: 'Leggenda dei record', description: '100 record personali', emoji: '🌟', tier: 'legend', progress: count('prs', 100) },
+  { id: 'prday', title: 'Giornata da record', description: '3 record in una sola sessione', emoji: '🎆', tier: 'silver', progress: count('maxPRsSession', 3) },
+  { id: 'v250', title: '250 tonnellate', description: '250.000 kg sollevati in totale', emoji: '🚂', tier: 'gold', progress: count('volume', 250000) },
+  { id: 'v500', title: '500 tonnellate', description: '500.000 kg sollevati in totale', emoji: '🚢', tier: 'gold', progress: count('volume', 500000) },
+  { id: 'big5', title: 'Seduta tosta', description: 'Oltre 5.000 kg in una sola sessione', emoji: '🐂', tier: 'bronze', progress: count('maxSessionVolume', 5000) },
+  { id: 'big15', title: 'Seduta titanica', description: 'Oltre 15.000 kg in una sola sessione', emoji: '🦖', tier: 'gold', progress: count('maxSessionVolume', 15000) },
+  { id: 'set100', title: '100 serie', description: '100 serie allenanti completate', emoji: '🧱', tier: 'bronze', progress: count('sets', 100) },
+  { id: 'set1000', title: '1.000 serie', description: '1.000 serie allenanti completate', emoji: '🏰', tier: 'silver', progress: count('sets', 1000) },
+  { id: 'set5000', title: '5.000 serie', description: '5.000 serie allenanti completate', emoji: '🌆', tier: 'gold', progress: count('sets', 5000) },
+  { id: 'set25', title: 'Sessione infinita', description: '25 serie in una sola sessione', emoji: '♾️', tier: 'silver', progress: count('maxSetsSession', 25) },
+  // Varietà
+  { id: 'ex10', title: 'Curioso', description: '10 esercizi diversi allenati', emoji: '🔎', tier: 'bronze', progress: count('distinctExercises', 10) },
+  { id: 'ex40', title: 'Enciclopedia', description: '40 esercizi diversi allenati', emoji: '📚', tier: 'gold', progress: count('distinctExercises', 40) },
+  { id: 'groups', title: 'Corpo completo', description: 'Allena almeno 6 gruppi muscolari diversi', emoji: '🧩', tier: 'silver', progress: count('groups', 6) },
+  { id: 'legs10', title: 'Mai saltare le gambe', description: '10 sessioni con le gambe', emoji: '🍗', tier: 'silver', progress: count('legSessions', 10) },
+  { id: 'legs30', title: 'Leg day lover', description: '30 sessioni con le gambe', emoji: '🦿', tier: 'gold', progress: count('legSessions', 30) },
+  // Coach e recupero
+  { id: 'rc1', title: 'Parla col coach', description: 'Invia il primo resoconto dopo un allenamento', emoji: '🗣️', tier: 'bronze', progress: count('recaps', 1) },
+  { id: 'rc10', title: 'Diario di bordo', description: '10 resoconti inviati al coach', emoji: '📓', tier: 'silver', progress: count('recaps', 10) },
+  { id: 'rc50', title: 'Atleta consapevole', description: '50 resoconti inviati al coach', emoji: '🧠', tier: 'gold', progress: count('recaps', 50) },
+  { id: 'pain', title: 'Recupero intelligente', description: 'Dopo un fastidio, torna ad allenarti senza dolore', emoji: '🩹', tier: 'silver', progress: count('painManaged', 1) },
+  { id: 'quick', title: 'Rapido ed efficace', description: 'Almeno 12 serie in meno di 40 minuti', emoji: '⏱️', tier: 'bronze', progress: count('quickSessions', 1) },
+  { id: 'long', title: 'Maratoneta', description: 'Una sessione di oltre 90 minuti', emoji: '🏃', tier: 'bronze', progress: count('longestSession', 90 * 60) },
+  { id: 'weekend', title: 'Guerriero del weekend', description: '10 allenamenti di sabato o domenica', emoji: '🏖️', tier: 'silver', progress: count('weekendSessions', 10) },
+  // Dieta
+  { id: 'f1', title: 'A tavola!', description: 'Registra la prima giornata nel diario', emoji: '🍽️', tier: 'bronze', progress: count('dietDays', 1) },
+  { id: 'f7', title: 'Una settimana a tavola', description: '7 giornate registrate nel diario', emoji: '🥗', tier: 'bronze', progress: count('dietDays', 7) },
+  { id: 'f30', title: 'Contabile delle calorie', description: '30 giornate registrate nel diario', emoji: '🧾', tier: 'silver', progress: count('dietDays', 30) },
+  { id: 'f90', title: 'Nutrizionista di te stesso', description: '90 giornate registrate nel diario', emoji: '🥑', tier: 'gold', progress: count('dietDays', 90) },
+  { id: 't5', title: 'Centrato!', description: '5 giornate entro il 10% delle calorie obiettivo', emoji: '🎯', tier: 'bronze', progress: count('dietTargetDays', 5) },
+  { id: 't20', title: 'Cecchino', description: '20 giornate in target calorico', emoji: '🏹', tier: 'silver', progress: count('dietTargetDays', 20) },
+  { id: 't60', title: 'Precisione chirurgica', description: '60 giornate in target calorico', emoji: '🔬', tier: 'gold', progress: count('dietTargetDays', 60) },
+  { id: 'p10', title: 'Proteine al top', description: '10 giornate con le proteine in obiettivo', emoji: '🥩', tier: 'silver', progress: count('proteinDays', 10) },
+  { id: 'dr7', title: 'Com’è andata?', description: '7 resoconti della giornata alimentare', emoji: '📝', tier: 'bronze', progress: count('dayRecaps', 7) },
+  { id: 'nc7', title: 'Settimana pulita', description: '7 giornate di fila senza sgarri', emoji: '😇', tier: 'silver', progress: count('noCheatStreak', 7) },
+  { id: 'nc21', title: 'Disciplina di ferro', description: '21 giornate di fila senza sgarri', emoji: '🧘', tier: 'gold', progress: count('noCheatStreak', 21) },
+  // Corpo e sfide
+  { id: 'body20', title: 'Monitoraggio costante', description: '20 misurazioni corporee registrate', emoji: '📏', tier: 'silver', progress: count('bodyLogs', 20) },
+  { id: 'bf3', title: 'Occhio alla massa grassa', description: '3 misurazioni della massa grassa', emoji: '📐', tier: 'bronze', progress: count('bfLogs', 3) },
+  { id: 'qs1', title: 'Prima sfida', description: 'Completa una sfida settimanale', emoji: '🎮', tier: 'bronze', progress: count('quests', 1) },
+  { id: 'qs10', title: 'Cacciatore di sfide', description: '10 sfide settimanali completate', emoji: '🕹️', tier: 'silver', progress: count('quests', 10) },
+  { id: 'qs30', title: 'Giocatore incallito', description: '30 sfide settimanali completate', emoji: '👾', tier: 'gold', progress: count('quests', 30) },
+  { id: 'qs100', title: 'Boss finale', description: '100 sfide settimanali completate', emoji: '🐲', tier: 'legend', progress: count('quests', 100) },
   {
     id: 'early',
     title: 'Mattiniero',

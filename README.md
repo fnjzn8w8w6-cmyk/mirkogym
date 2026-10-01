@@ -155,6 +155,15 @@ e, se l'AI non risponde, l'app continua a funzionare con le regole.
   L'anteprima mostra i pasti realmente cambiati prima di applicare.
 - **Chiedi al coach**: chat con il coach, che conosce profilo, obiettivi e ultimi allenamenti.
 
+## Coach con memoria
+
+- **Profilo dell'atleta** (`src/lib/athlete.ts`, calcolato in locale da tutto lo storico): dolori e fastidi segnalati (resoconti e note, attivi finché non li segni come passati), giorni della scheda saltati, esercizi in stallo, progressi, voto ed energia medi, note, diario alimentare (calorie, proteine, sgarri). Entra in check-in settimanale, chat, modifiche a scheda e dieta, analisi.
+- **Prima della sessione**: se c'è un fastidio attivo il coach chiede come va e indica gli esercizi del giorno che caricano quella zona.
+- **Home → "Il coach ha notato"** e **Allenamento → Analisi**: osservazioni calcolate + resoconto completo del coach (salvato, aggiornabile).
+- **Allenamento** diviso in Scheda · Sessioni (con resoconto e confronto con la volta prima) · Esercizi (ultima sessione vs media, per gruppo muscolare) · Analisi.
+- **In sessione**: riquadro "Volta scorsa" per ogni esercizio e frecce ▲/▼ per ogni serie.
+- **Gioco**: oltre 80 traguardi (forza, costanza, dieta, coach, sfide), 3 sfide settimanali da +150 XP, striscia di settimane in Home.
+
 ## Importazioni con foto e PDF
 
 - **Scheda del personal trainer** (Allenamento → "Hai già un personal trainer?"): Gemini legge foto o PDF e ricava giorni, esercizi, serie, ripetizioni e recuperi; gli esercizi vengono collegati alla libreria quando il nome corrisponde. Anteprima modificabile prima di salvare.

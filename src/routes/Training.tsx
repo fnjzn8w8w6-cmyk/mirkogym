@@ -20,15 +20,17 @@ import { sessionMinutes } from '@/lib/program-generator';
 import { cn } from '@/lib/cn';
 import type { Day } from '@/types';
 import History from './History';
+import { CoachAnalysis } from '@/components/coach/CoachAnalysis';
 
-type Tab = 'plan' | 'history';
+type Tab = 'plan' | 'sessions' | 'exercises' | 'analysis';
 
 /** Allenamento: scheda (giorni, mappa muscolare, strumenti) e storico. */
 export default function Training() {
   const navigate = useNavigate();
   const [importOpen, setImportOpen] = useState(false);
   const [params, setParams] = useSearchParams();
-  const tab: Tab = params.get('tab') === 'history' ? 'history' : 'plan';
+  const raw = params.get('tab');
+  const tab: Tab = raw === 'history' ? 'sessions' : raw === 'sessions' || raw === 'exercises' || raw === 'analysis' ? raw : 'plan';
   const { days } = useSchedule();
   const { sessions, groupOf } = useSessions();
   const { settings } = useSettings();
@@ -79,12 +81,21 @@ export default function Training() {
           onChange={(t) => setParams({ tab: t }, { replace: true })}
           options={[
             { value: 'plan', label: 'Scheda' },
-            { value: 'history', label: 'Storico' },
+            { value: 'sessions', label: 'Sessioni' },
+            { value: 'exercises', label: 'Esercizi' },
+            { value: 'analysis', label: 'Analisi' },
           ]}
         />
         <div className="mt-4 space-y-4">
-          {tab === 'history' ? (
-            <History embedded />
+          {tab === 'sessions' ? (
+            <History embedded section="sessions" />
+          ) : tab === 'exercises' ? (
+            <History embedded section="exercises" />
+          ) : tab === 'analysis' ? (
+            <>
+              <CoachAnalysis />
+              <History embedded section="analytics" />
+            </>
           ) : (
             <>
               <ul className="space-y-3">

@@ -148,6 +148,12 @@ export interface Settings {
   favoriteRecipes?: string[];
   /** Check-in settimanali (il più recente per primo, massimo 12). */
   checkIns?: CheckIn[];
+  /** Zone segnate come "passate" dall'utente (zona → data): il coach smette di considerarle attive. */
+  painResolved?: Record<string, number>;
+  /** Sfide settimanali completate ("lunedì:id"). */
+  questsDone?: string[];
+  /** Ultima analisi completa del coach (tab Analisi). */
+  coachAnalysis?: { text: string; at: number; sessions: number };
   /** Correzione calorica giornaliera applicata dal check-in settimanale (kcal). */
   kcalAdjust?: number;
   restTimerEnabled: boolean;

@@ -143,6 +143,7 @@ export async function interpretDietRequest(
   kcalAdjust: number,
   planSummary: string,
   opts: AIOptions = {},
+  memory = '',
 ): Promise<DietChange> {
   const today = (new Date().getDay() + 6) % 7;
   const prompt = `Sei un dietologo sportivo. Un utente ti chiede una modifica alla sua alimentazione. Fai SOLO ciò che chiede.
@@ -153,7 +154,7 @@ ${planSummary || '(nessun piano ancora)'}
 Profilo: ${profile.sex === 'm' ? 'uomo' : 'donna'}, ${profile.age} anni, ${profile.weightKg} kg, obiettivo ${GOALS.find((g) => g.value === profile.goal)?.label}.
 Impostazioni attuali: dieta ${prefs.diet}, ${prefs.meals} pasti, tempo per cucinare ${prefs.cooking}, stile macro ${prefs.style ?? 'standard'}, allergie "${prefs.allergies}", non graditi "${prefs.dislikes}", preferiti "${prefs.likes}".
 Obiettivo attuale: ${target.target} kcal, proteine ${target.protein} g, carboidrati ${target.carbs} g, grassi ${target.fat} g (correzione già applicata ${kcalAdjust} kcal).
-
+${memory ? `Storico dell'atleta (contesto, non fare modifiche non richieste):\n${memory.slice(0, 1200)}\n` : ''}
 RICHIESTA DELL'UTENTE: """${request.slice(0, 1200)}"""
 
 Distingui:
@@ -347,11 +348,29 @@ export async function askCoach(question: string, history: ChatMessage[], context
     .slice(-8)
     .map((m) => `${m.role === 'user' ? 'Utente' : 'Coach'}: ${m.text}`)
     .join('\n');
-  const prompt = `Sei il coach di HowToGym: personal trainer e nutrizionista sportivo. Rispondi in italiano, in modo pratico e motivante, massimo 150 parole, con elenchi brevi se utile. Basati sulle evidenze scientifiche. Se la domanda riguarda dolori, patologie, farmaci o disturbi alimentari, dai indicazioni generali e consiglia di rivolgersi a un medico o professionista. Non proporre diete sotto 1200 kcal né pratiche pericolose.
+  const prompt = `Sei il coach di HowToGym: personal trainer e nutrizionista sportivo. Rispondi in italiano, in modo pratico e motivante, massimo 150 parole, con elenchi brevi se utile. Basati sulle evidenze scientifiche. Usa la MEMORIA DEL COACH: rispondi in base allo storico di questa persona (dolori segnalati, stalli, giorni saltati, note, dieta) e citalo quando è pertinente. Se la domanda riguarda dolori, patologie, farmaci o disturbi alimentari, dai indicazioni generali e consiglia di rivolgersi a un medico o professionista. Non proporre diete sotto 1200 kcal né pratiche pericolose.
 CONTESTO UTENTE:
 ${context}
 ${convo ? `CONVERSAZIONE:\n${convo}\n` : ''}Utente: ${question.slice(0, 1000)}
 Coach:`;
   const text = await callAI([{ text: prompt }], { temperature: 0.6, label: 'Il coach sta scrivendo…', ...opts });
   return text.trim().slice(0, 2500);
+}
+
+/** Analisi completa del coach su tutto lo storico (tab Analisi). */
+export async function analyzeAthlete(memory: string, profile: UserProfile, opts: AIOptions = {}): Promise<string> {
+  const prompt = `Sei il personal trainer e nutrizionista di questa persona e la segui da tempo. Analizza TUTTO il suo storico qui sotto e scrivi un resoconto personale, concreto, con numeri e nomi di esercizi presi dai dati. Niente consigli generici: ogni frase deve riferirsi a qualcosa che c'è nei dati. In italiano, seconda persona, senza markdown (niente asterischi o #).
+Usa ESATTAMENTE queste 4 sezioni, ognuna con il titolo su una riga e 2-4 righe brevi che iniziano con "• ":
+✅ COSA STA ANDANDO BENE
+⚠️ COSA MIGLIORARE
+🩹 DOLORI E RECUPERO (se non ci sono fastidi segnalati scrivi che è tutto ok e come prevenirli)
+🎯 3 AZIONI PER LA PROSSIMA SETTIMANA
+Se ci sono pochi dati dillo in una riga e dai comunque indicazioni sulla base di quelli disponibili.
+Profilo: ${profile.sex === 'm' ? 'uomo' : 'donna'}, ${profile.age} anni, obiettivo ${GOALS.find((g) => g.value === profile.goal)?.label}, livello ${EXPERIENCE.find((e) => e.value === profile.experience)?.label}.
+STORICO:
+${memory}`;
+  const text = await callAI([{ text: prompt }], { temperature: 0.4, label: 'Il coach analizza il tuo storico…', ...opts });
+  const clean = text.replace(/[*#`]/g, '').trim();
+  if (clean.length < 80) throw new Error('Analisi troppo breve, riprova');
+  return clean.slice(0, 3000);
 }

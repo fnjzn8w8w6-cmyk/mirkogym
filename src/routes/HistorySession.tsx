@@ -12,13 +12,15 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { epley1RM, exerciseKey, formatKg, formatTonnage, groupColor, logVolume, sessionTonnage } from '@/lib/analytics';
-import { formatDuration, formatLongDate } from '@/lib/date-utils';
+import { formatDuration, formatLongDate, formatShortDate } from '@/lib/date-utils';
+import { WorkoutRecapForm } from '@/components/coach/Recaps';
+import { settle } from '@/lib/firestore';
 
 export default function HistorySession() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
-  const { byId, nameOf, groupOf, remove, duplicate } = useSessions();
+  const { sessions, byId, nameOf, groupOf, remove, duplicate, save } = useSessions();
   const { getDay } = useSchedule();
   const [confirm, setConfirm] = useState(false);
   const s = byId.get(id);
@@ -26,13 +28,23 @@ export default function HistorySession() {
   if (!s) {
     return (
       <div>
-        <TopBar title="Sessione" back="/history" />
-        <EmptyState title="Sessione non trovata" action={<Button onClick={() => navigate('/history')}>Torna allo storico</Button>} />
+        <TopBar title="Sessione" back="/training?tab=sessions" />
+        <EmptyState title="Sessione non trovata" action={<Button onClick={() => navigate('/training?tab=sessions')}>Torna allo storico</Button>} />
       </div>
     );
   }
 
   const day = getDay(s.dayId);
+  // sessione precedente dello stesso giorno della scheda (per il confronto)
+  const prev = sessions.filter((x) => x.dayId === s.dayId && x.date < s.date).sort((a, b) => b.date - a.date)[0];
+  const prevLog = (name: string) => {
+    for (const x of sessions.filter((x) => x.date < s.date).sort((a, b) => b.date - a.date)) {
+      const l = x.logs.find((ll) => exerciseKey(nameOf(ll)) === exerciseKey(name) && ll.sets.length);
+      if (l) return { log: l, date: x.date };
+    }
+    return null;
+  };
+  const pct = (a: number, b: number) => (b > 0 ? Math.round(((a - b) / b) * 100) : null);
   const prCount = s.logs.reduce((a, l) => a + l.sets.filter((x) => x.isPersonalRecord).length, 0);
 
   return (
@@ -40,7 +52,7 @@ export default function HistorySession() {
       <TopBar
         title={`${day?.name ?? 'Sessione'} · ${day?.subtitle ?? ''}`}
         subtitle={formatLongDate(s.date)}
-        back="/history"
+        back="/training?tab=sessions"
         right={
           <>
             <IconButton
@@ -77,6 +89,40 @@ export default function HistorySession() {
           <Mini icon={<Scale className="h-3.5 w-3.5" />} label="Peso corp." value={s.bodyweightSnapshot ? `${formatKg(s.bodyweightSnapshot)} kg` : '—'} />
         </div>
         {s.deload && <Chip tone="info">Settimana di deload</Chip>}
+        {prev && (
+          <Card className="border-violet-500/30 p-4">
+            <div className="section-title !mb-1">Rispetto alla volta prima ({formatShortDate(prev.date)})</div>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              {[
+                ['Volume', pct(sessionTonnage(s), sessionTonnage(prev))],
+                ['Durata', s.duration && prev.duration ? pct(s.duration, prev.duration) : null],
+                ['Serie', pct(s.logs.reduce((a, l) => a + l.sets.length, 0), prev.logs.reduce((a, l) => a + l.sets.length, 0))],
+              ].map(([label, v]) => (
+                <div key={String(label)} className="rounded-md bg-surface-2 py-2">
+                  <Delta v={v as number | null} />
+                  <div className="text-xs uppercase text-fg-3">{label}</div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+        <Card className="p-4">
+          <div className="section-title">Il tuo resoconto per il coach</div>
+          {s.recap ? (
+            <div className="space-y-1 text-base text-fg-2">
+              <div>
+                ⭐ Voto <strong className="text-fg">{s.recap.rating}/5</strong> · ⚡ Energia <strong className="text-fg">{s.recap.energy}/5</strong>
+              </div>
+              {s.recap.pain.length > 0 && <div>🩹 Fastidi: {s.recap.pain.join(', ')}</div>}
+              {s.recap.note && <p className="whitespace-pre-wrap">📝 {s.recap.note}</p>}
+            </div>
+          ) : (
+            <>
+              <p className="mb-3 text-sm text-fg-3">Non l'hai compilato: puoi farlo ora, il coach lo userà nelle prossime analisi.</p>
+              <WorkoutRecapForm onSend={(r) => settle(save({ ...s, recap: r }))} />
+            </>
+          )}
+        </Card>
         {s.notes && (
           <Card className="p-4">
             <div className="section-title">Note</div>
@@ -106,6 +152,19 @@ export default function HistorySession() {
                   <span className="block text-base font-bold text-fg">{formatTonnage(logVolume(l))}</span>
                 </span>
               </button>
+              {(() => {
+                const p = prevLog(name);
+                if (!p) return null;
+                const work = p.log.sets.filter((x) => x.type !== 'warmup');
+                return (
+                  <div className="mx-4 mt-2 flex items-center justify-between gap-2 rounded-md bg-violet-500/10 px-3 py-1.5 text-sm">
+                    <span className="min-w-0 truncate text-fg-2">
+                      Volta prima ({formatShortDate(p.date)}): {work.map((x) => `${formatKg(x.weight, 2)}×${x.reps}`).join(', ')}
+                    </span>
+                    <Delta v={pct(logVolume(l), logVolume(p.log))} small />
+                  </div>
+                );
+              })()}
               <table className="mt-3 w-full text-base">
                 <thead>
                   <tr className="border-b border-line-subtle text-xs uppercase text-fg-3">
@@ -154,10 +213,20 @@ export default function HistorySession() {
         onConfirm={async () => {
           await remove(s.id);
           toast.success('Sessione eliminata');
-          navigate('/history', { replace: true });
+          navigate('/training?tab=sessions', { replace: true });
         }}
       />
     </div>
+  );
+}
+
+function Delta({ v, small }: { v: number | null; small?: boolean }) {
+  if (v == null) return <span className={small ? 'text-sm text-fg-3' : 'text-lg text-fg-3'}>—</span>;
+  return (
+    <span className={`${small ? 'shrink-0 text-sm' : 'text-lg'} font-bold ${v > 0 ? 'text-accent-400' : v < 0 ? 'text-danger' : 'text-fg-2'}`}>
+      {v > 0 ? '▲ +' : v < 0 ? '▼ ' : '= '}
+      {v}%
+    </span>
   );
 }
 

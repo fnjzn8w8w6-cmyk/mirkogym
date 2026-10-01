@@ -10,6 +10,7 @@ import { TextArea } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { AIBusy, AINote, useAITask } from './AIBusy';
+import { useAthlete } from '@/hooks/use-athlete';
 import { useRecipes } from '@/components/food/shared';
 import { planPrefs } from '@/components/food/NutritionPlanner';
 import { settle } from '@/lib/firestore';
@@ -106,6 +107,7 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
   const { settings, update } = useSettings();
   const toast = useToast();
   const ai = useAITask();
+  const athleteMem = useAthlete();
   const { data } = useRecipes();
   const [request, setRequest] = useState('');
   const [proposal, setProposal] = useState<Proposal | null>(null);
@@ -126,7 +128,7 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
   const submit = async () => {
     const text = request.trim();
     if (text.length < 5 || !data) return;
-    const change = await ai.run((o) => interpretDietRequest(text, profile, prefs, current, adjust, planSummary, o));
+    const change = await ai.run((o) => interpretDietRequest(text, profile, prefs, current, adjust, planSummary, o, athleteMem.text));
     if (!change) return;
     const prefChange = change.scope !== 'meals';
     const nextPrefs = prefChange ? applyDietChange(prefs, change, text) : prefs;
@@ -204,7 +206,7 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
         </div>
         <div className="mt-3">
           {ai.busy ? (
-            <AIBusy status={ai.status} onCancel={ai.cancel} />
+            <AIBusy persona="diet" status={ai.status} onCancel={ai.cancel} />
           ) : (
             <Button fullWidth icon={<Sparkles className="h-5 w-5" />} disabled={request.trim().length < 5 || !data} onClick={() => void submit()}>
               Adatta la mia dieta

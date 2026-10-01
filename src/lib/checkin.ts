@@ -126,9 +126,13 @@ export async function checkInSummary(
   r: CheckInResult,
   profile: UserProfile,
   opts: AIOptions = {},
+  memory = '',
 ): Promise<string> {
   const goal = GOALS.find((g) => g.value === profile.goal)?.label ?? profile.goal;
-  const prompt = `Sei il personal trainer e dietologo di un utente. Scrivi il commento al suo check-in settimanale: 4-6 frasi in italiano, seconda persona, tono motivante ma concreto, niente elenchi puntati, niente markdown.
+  const prompt = `Sei il personal trainer e dietologo di un utente e lo segui da tempo: conosci il suo storico (sotto). Scrivi il commento al suo check-in settimanale: 5-8 frasi in italiano, seconda persona, tono da coach vero, diretto e concreto, niente elenchi puntati, niente markdown.
+REGOLE: consigli SPECIFICI per questa persona, mai generici. Se nello storico ci sono dolori o fastidi ATTIVI devi parlarne per primi: chiedi come va, indica quali esercizi della sua scheda alleggerire o sostituire e quando consultare un professionista. Cita con i numeri giorni saltati, esercizi in stallo, progressi e sgarri se presenti. Collega le note che ha scritto dopo gli allenamenti.
+STORICO DELL'ATLETA:
+${memory || 'nessun dato storico'}
 Obiettivo: ${goal}. Allenamenti ${s.sessions}/${s.planned}, volume ${s.tonnage} kg (settimana prima ${s.prevTonnage} kg), record ${s.prs}.
 Risposte (1-5): energia ${a.energy}, fame ${a.hunger}, qualità del sonno ${a.sleep}, stress ${a.stress}, dieta seguita ${a.adherence}, indolenzimento ${a.soreness}.${a.note ? `\nNota dell'utente: """${a.note.slice(0, 400)}"""` : ''}
 Decisioni già prese dall'app (non cambiarle, spiegale): ${r.points.join(' ')}

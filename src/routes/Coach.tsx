@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAthlete } from '@/hooks/use-athlete';
 import { Dumbbell, Library, MessageCircle, RefreshCw, Send, Sparkles } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { useSchedule } from '@/hooks/use-schedule';
@@ -146,6 +147,7 @@ function ProgramPreview({ days }: { days: Day[] }) {
 }
 
 function TrainingCoach({ profile }: { profile: UserProfile }) {
+  const athleteMem = useAthlete();
   const { settings, update } = useSettings();
   const { save, days: currentDays } = useSchedule();
   const toast = useToast();
@@ -157,7 +159,7 @@ function TrainingCoach({ profile }: { profile: UserProfile }) {
   const submit = async () => {
     const text = request.trim();
     if (text.length < 5) return;
-    const change = await ai.run((o) => interpretTrainingChange(text, profile, currentDays, current, o));
+    const change = await ai.run((o) => interpretTrainingChange(text, profile, currentDays, current, o, athleteMem.text));
     if (!change) return;
     if (change.scope === 'rebuild' || currentDays.length === 0) {
       setProposal({ prefs: change.prefs, days: generateProgram(profile, change.prefs), diff: [], rebuild: true });
@@ -334,6 +336,7 @@ function ChatCoach({ profile }: { profile: UserProfile }) {
       return [];
     }
   });
+  const athlete = useAthlete();
   const [input, setInput] = useState(() => new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('q') ?? '');
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -352,7 +355,7 @@ function ChatCoach({ profile }: { profile: UserProfile }) {
     const history = [...messages, { role: 'user' as const, text: q }];
     setMessages(history);
     setInput('');
-    const ctx = coachContext(profile, userNutrition(profile, settings), sessions, bodyLogs);
+    const ctx = `${coachContext(profile, userNutrition(profile, settings), sessions, bodyLogs)}\nMEMORIA DEL COACH (storico completo):\n${athlete.text}`;
     const answer = await ai.run((o) => askCoach(q, messages, ctx, o));
     if (answer) setMessages([...history, { role: 'coach', text: answer }]);
   };

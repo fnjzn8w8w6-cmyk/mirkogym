@@ -3,6 +3,18 @@ import { motion } from 'framer-motion';
 import { Trophy } from 'lucide-react';
 import type { DraftSet, SetType } from '@/types';
 import { cn } from '@/lib/cn';
+import { parseNum } from '@/hooks/use-active-session';
+
+/** Confronto di una serie con la stessa serie della volta scorsa (peso × ripetizioni, stima 1RM). */
+export function setTrend(set: DraftSet, prev?: { weight: string; reps: number }): 'up' | 'same' | 'down' | null {
+  const w = parseNum(set.weight);
+  const r = Number(set.reps);
+  if (!prev || set.type === 'warmup' || w == null || !(r > 0)) return null;
+  const score = (kg: number, reps: number) => kg * (1 + reps / 30);
+  const a = score(w, r);
+  const b = score(parseNum(prev.weight) ?? 0, prev.reps);
+  return Math.abs(a - b) <= 0.005 * b ? 'same' : a > b ? 'up' : 'down';
+}
 
 export const SET_GRID = 'grid grid-cols-[34px_42px_1fr_1fr_44px_46px] items-center gap-1.5';
 
@@ -44,6 +56,7 @@ export function SetRow({
   onToggleDone,
   exerciseName,
 }: SetRowProps) {
+  const trend = setTrend(set, prev);
   const repsRef = useRef<HTMLInputElement>(null);
   const [shake, setShake] = useState(0);
 
@@ -94,7 +107,17 @@ export function SetRow({
         {prev ? (
           <>
             <span className="font-semibold text-fg-2">{prev.weight}</span>
-            <span>×{prev.reps}</span>
+            <span>
+              ×{prev.reps}
+              {trend && (
+                <span
+                  aria-label={trend === 'up' ? 'meglio della volta scorsa' : trend === 'down' ? 'peggio della volta scorsa' : 'come la volta scorsa'}
+                  className={cn('ml-0.5 font-bold', trend === 'up' ? 'text-accent-400' : trend === 'down' ? 'text-danger' : 'text-fg-3')}
+                >
+                  {trend === 'up' ? '▲' : trend === 'down' ? '▼' : '='}
+                </span>
+              )}
+            </span>
           </>
         ) : (
           '—'

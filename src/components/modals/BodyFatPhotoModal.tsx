@@ -6,6 +6,7 @@ import { bfCategory } from '@/lib/metabolism';
 import { formatKg } from '@/lib/analytics';
 import { cn } from '@/lib/cn';
 import { Modal } from '../ui/Modal';
+import { AIPersona } from '@/components/coach/AIBusy';
 import { Button } from '../ui/Button';
 
 interface Props {
@@ -121,7 +122,7 @@ export function BodyFatPhotoModal({ open, onClose, subject, onUse }: Props) {
           )}
           {busy ? (
             <div className="rounded-lg border border-accent-500/30 bg-accent-glow p-4 text-center" role="status" aria-live="polite">
-              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-accent-500 border-t-transparent" aria-hidden />
+              <AIPersona persona="photo" />
               <div className="mt-2 text-base font-semibold text-fg">{status || 'Analisi in corso…'}</div>
               <div className="text-sm text-fg-3">{elapsed}s · di solito 5–20 secondi</div>
               <Button

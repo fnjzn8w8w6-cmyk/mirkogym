@@ -102,7 +102,7 @@ export function MealPhotoModal({ open, onClose, mealLabel, onAdd }: { open: bool
       <div className="space-y-3">
         {preview && <img src={preview} alt="Il tuo piatto" className="max-h-48 w-full rounded-lg object-cover" />}
         {ai.busy ? (
-          <AIBusy status={ai.status} onCancel={ai.cancel} />
+          <AIBusy persona="photo" status={ai.status} onCancel={ai.cancel} />
         ) : items ? (
           <>
             <p className="text-sm text-fg-2">Controlla e correggi i grammi: la stima da foto può sbagliare del 20-30%, soprattutto su olio e condimenti.</p>
@@ -150,7 +150,7 @@ export function DietImportModal({ open, onClose }: { open: boolean; onClose: () 
     <Modal open={open} onClose={close} title="Importa la dieta del nutrizionista">
       <div className="space-y-3">
         {ai.busy ? (
-          <AIBusy status={ai.status} onCancel={ai.cancel} />
+          <AIBusy persona="diet" status={ai.status} onCancel={ai.cancel} />
         ) : diet ? (
           <>
             <p className="text-sm text-fg-2">
@@ -207,7 +207,7 @@ export function ScheduleImportModal({ open, onClose }: { open: boolean; onClose:
     <Modal open={open} onClose={close} title="Importa la scheda del personal trainer">
       <div className="space-y-3">
         {ai.busy ? (
-          <AIBusy status={ai.status} onCancel={ai.cancel} />
+          <AIBusy persona="scan" status={ai.status} onCancel={ai.cancel} />
         ) : days ? (
           <>
             <p className="text-sm text-fg-2">

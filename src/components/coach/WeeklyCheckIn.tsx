@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ClipboardCheck, Sparkles } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { useSessions } from '@/hooks/use-sessions';
+import { useAthlete } from '@/hooks/use-athlete';
 import { useBodyLogs } from '@/hooks/use-body-logs';
 import { useMesocycle } from '@/hooks/use-mesocycle';
 import { Card } from '@/components/ui/Card';
@@ -56,6 +57,7 @@ function Scale({ value, options, onChange, label }: { value: number; options: st
 export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; autoOpen?: boolean }) {
   const { settings, update } = useSettings();
   const { sessions } = useSessions();
+  const athlete = useAthlete();
   const { bodyLogs } = useBodyLogs();
   const meso = useMesocycle();
   const toast = useToast();
@@ -89,7 +91,7 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
     setStep('result');
     setApplyKcal(result.kcalChange !== 0);
     setApplyDeload(result.deload);
-    const text = await ai.run((o) => checkInSummary(answers, stats, result, profile, o));
+    const text = await ai.run((o) => checkInSummary(answers, stats, result, profile, o, athlete.text));
     setSummary(text);
   };
 
@@ -103,14 +105,14 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
       stats,
       kcalChange,
       deload,
-      summary: summary ?? result.points.join(' '),
+      summary: summary ?? [...result.points, ...athlete.report.insights.map((i) => i.text)].join(' '),
     };
     const newAdjust = Math.max(-600, Math.min(600, (settings.kcalAdjust ?? 0) + kcalChange));
     const patch: Parameters<typeof update>[0] = { checkIns: [entry, ...history].slice(0, 12) };
     if (kcalChange !== 0) {
       patch.kcalAdjust = newAdjust;
       // il piano pasti segue il nuovo obiettivo (stesse ricette, porzioni ricalcolate)
-      if (settings.weekPlan) {
+      if (settings.weekPlan && settings.weekPlan.source !== 'nutrizionista') {
         try {
           const data = await loadRecipes();
           patch.weekPlan = rescalePlan(
@@ -221,7 +223,7 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
             </div>
 
             {ai.busy ? (
-              <AIBusy status={ai.status} onCancel={ai.cancel} />
+              <AIBusy persona="both" status={ai.status} onCancel={ai.cancel} />
             ) : summary ? (
               <div className="rounded-lg border border-accent-500/30 bg-accent-glow p-3">
                 <div className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-accent-400">
@@ -240,6 +242,19 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
                 </li>
               ))}
             </ul>
+
+            {athlete.report.insights.length > 0 && (
+              <div className="rounded-lg border border-violet-500/30 bg-violet-500/10 p-3">
+                <div className="section-title !mb-1">Dal tuo storico</div>
+                <ul className="space-y-1.5">
+                  {athlete.report.insights.map((i) => (
+                    <li key={i.text} className="text-sm text-fg-2">
+                      {i.emoji} {i.text}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {(result.kcalChange !== 0 || result.deload) && (
               <div className="space-y-2 rounded-lg bg-surface-2 p-3">

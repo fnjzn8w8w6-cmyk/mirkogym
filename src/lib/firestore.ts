@@ -6,6 +6,8 @@ import {
   getDoc,
   getDocs,
   onSnapshot,
+  query,
+  where,
   setDoc,
   writeBatch,
   type DocumentData,
@@ -174,6 +176,14 @@ export function subscribeFoodLog(uid: string, date: string, cb: (l: FoodLog) => 
   return onSnapshot(
     doc(foodLogsCol(uid), date),
     (d) => cb({ date, entries: d.exists() ? ((d.data().entries as FoodLog['entries']) ?? []) : [], recap: d.exists() ? (d.data().recap as FoodLog['recap']) : undefined }),
+    onError,
+  );
+}
+/** Diario degli ultimi giorni (per la memoria del coach). */
+export function subscribeRecentFoodLogs(uid: string, from: string, cb: (l: FoodLog[]) => void, onError: OnError): Unsubscribe {
+  return onSnapshot(
+    query(foodLogsCol(uid), where('date', '>=', from)),
+    (snap) => cb(snap.docs.map((d) => ({ date: d.id, entries: (d.data().entries as FoodLog['entries']) ?? [], recap: d.data().recap as FoodLog['recap'] }))),
     onError,
   );
 }

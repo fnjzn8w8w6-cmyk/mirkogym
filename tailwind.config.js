@@ -40,6 +40,22 @@ export default {
           core: '#84CC16',
         },
       },
+      keyframes: {
+        'bounce-slow': { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-3px)' } },
+        think: { '0%,100%': { transform: 'rotate(-6deg) translateY(0)' }, '50%': { transform: 'rotate(6deg) translateY(-4px)' } },
+        read: { '0%,100%': { transform: 'rotate(-3deg)' }, '50%': { transform: 'rotate(3deg) translateX(2px)' } },
+        float: { '0%': { transform: 'translateY(4px) scale(0.6)', opacity: '0' }, '30%': { opacity: '1' }, '100%': { transform: 'translateY(-18px) scale(1)', opacity: '0' } },
+        lift: { '0%,100%': { transform: 'translateY(4px)' }, '50%': { transform: 'translateY(-6px)' } },
+        flip: { '0%,100%': { transform: 'scaleX(1)' }, '50%': { transform: 'scaleX(-1)' } },
+      },
+      animation: {
+        'bounce-slow': 'bounce-slow 1.8s ease-in-out infinite',
+        think: 'think 1.6s ease-in-out infinite',
+        read: 'read 2.2s ease-in-out infinite',
+        float: 'float 1.8s ease-out infinite',
+        lift: 'lift 1s ease-in-out infinite',
+        flip: 'flip 1.2s steps(1) infinite',
+      },
       fontFamily: {
         sans: ['"Inter Variable"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
         display: ['Unbounded', '"Inter Variable"', 'sans-serif'],

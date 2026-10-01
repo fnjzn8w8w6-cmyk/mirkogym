@@ -65,6 +65,7 @@ export async function interpretTrainingChange(
   days: Day[],
   current: CoachPrefs | null | undefined,
   opts: AIOptions = {},
+  memory = '',
 ): Promise<TrainingChange> {
   const exerciseList = Object.entries(NAME_IT)
     .filter(([id]) => availableFor(id, profile.equipment))
@@ -72,7 +73,7 @@ export async function interpretTrainingChange(
     .join('\n');
   const prompt = `Sei un personal trainer esperto. L'utente ha già una scheda e ti chiede una modifica. Fai SOLO le modifiche richieste, lasciando il resto della scheda invariato.
 Profilo: ${profile.sex === 'm' ? 'uomo' : 'donna'}, ${profile.age} anni, livello ${EXPERIENCE.find((e) => e.value === profile.experience)?.label}, obiettivo ${GOALS.find((g) => g.value === profile.goal)?.label}.
-
+${memory ? `Storico dell'atleta (usalo per scegliere alternative compatibili con dolori e stalli; NON fare modifiche non richieste):\n${memory.slice(0, 1500)}\n` : ''}
 SCHEDA ATTUALE:
 ${days.map(describeDay).join('\n')}
 

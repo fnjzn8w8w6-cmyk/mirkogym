@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronRight, Dumbbell, Play, Timer } from 'lucide-react';
@@ -24,6 +24,9 @@ import { OfflineBadge } from '@/components/layout/TopBar';
 import { formatAgo, formatLongDate, fromISODate, daysBetween, todayISO } from '@/lib/date-utils';
 import { dayGroups, nextDay, plannedSets } from '@/lib/schedule-utils';
 import { MicButton } from '@/components/ui/MicButton';
+import { QUEST_XP } from '@/lib/quests';
+import { settle } from '@/lib/firestore';
+import { useAthlete } from '@/hooks/use-athlete';
 import { useFoodLog } from '@/hooks/use-food';
 import { entryMacros } from '@/components/food/FoodDiary';
 import { sumMacros } from '@/lib/foods';
@@ -81,6 +84,47 @@ function Ring({ value, target, color, label, unit }: { value: number; target: nu
   );
 }
 
+/** Sfide della settimana + striscia: completare una sfida dà XP (salvata nelle impostazioni). */
+function WeeklyQuests() {
+  const { quests, streak } = useProgress();
+  const { settings, update } = useSettings();
+  const toast = useToast();
+  const claiming = useRef(new Set<string>());
+  useEffect(() => {
+    const fresh = quests.filter((q) => q.done && !q.claimed && !claiming.current.has(q.id));
+    if (!fresh.length) return;
+    fresh.forEach((q) => claiming.current.add(q.id));
+    void settle(update({ questsDone: [...(settings.questsDone ?? []), ...fresh.map((q) => q.id)].slice(-300) }));
+    fresh.forEach((q) => toast.success(`🎮 Sfida completata: ${q.title} · +${QUEST_XP} XP`));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quests.map((q) => `${q.id}${q.done}${q.claimed}`).join()]);
+  const done = quests.filter((q) => q.done).length;
+  return (
+    <Card className="p-4">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold uppercase tracking-wider text-fg-3">Sfide della settimana · {done}/3</span>
+        <span className={cn('rounded-full px-2.5 py-1 text-sm font-bold', streak > 0 ? 'bg-accent-glow text-accent-400' : 'bg-surface-2 text-fg-3')}>
+          <span className={streak > 0 ? 'inline-block animate-bounce-slow' : ''}>🔥</span> {streak} {streak === 1 ? 'settimana' : 'settimane'}
+        </span>
+      </div>
+      <ul className="mt-3 space-y-3">
+        {quests.map((q) => (
+          <li key={q.id} className="flex items-center gap-3">
+            <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-xl', q.done ? 'bg-accent-500' : 'bg-surface-2')}>{q.done ? '✅' : q.emoji}</span>
+            <span className="min-w-0 flex-1">
+              <span className={cn('block text-sm font-semibold', q.done ? 'text-accent-400 line-through decoration-2' : 'text-fg')}>{q.title}</span>
+              <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-surface-3">
+                <span className="block h-full rounded-full bg-accent-500 transition-all" style={{ width: `${(q.value / q.target) * 100}%` }} />
+              </span>
+            </span>
+            <span className="shrink-0 text-xs font-bold text-fg-3">+{QUEST_XP} XP</span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
 function TodayDiet({ onOpen }: { onOpen: () => void }) {
   const { settings } = useSettings();
   const { bodyLogs } = useBodyLogs();
@@ -121,6 +165,7 @@ export default function Home() {
   const [pendingDay, setPendingDay] = useState<Day | null>(null);
   const [starting, setStarting] = useState(false);
   const { level } = useProgress();
+  const athlete = useAthlete();
 
   const next = useMemo(() => nextDay(days, sessions), [days, sessions]);
   const activeDay = activeSession ? days.find((d) => d.id === activeSession.dayId) : undefined;
@@ -258,6 +303,8 @@ export default function Home() {
         {/* Dieta di oggi: anelli dei macro */}
         {settings.profile && <TodayDiet onOpen={() => navigate('/food')} />}
 
+        <WeeklyQuests />
+
         {/* Peso + mesociclo */}
         <div className="grid grid-cols-2 gap-3">
           <Card interactive className="p-4" onClick={() => navigate('/body')} role="link" aria-label="Apri corpo">
@@ -319,6 +366,22 @@ export default function Home() {
               <span className="block text-sm text-fg-2">2 minuti: il coach aggiusta calorie e carichi</span>
             </span>
             <ChevronRight className="h-5 w-5 text-fg-3" aria-hidden />
+          </Card>
+        )}
+
+        {/* Il coach ha notato… (dalla memoria del coach, senza AI) */}
+        {athlete.report.insights.length > 0 && (
+          <Card className="space-y-2 border-violet-500/40 p-4" interactive onClick={() => navigate('/training?tab=analysis')} role="link" aria-label="Apri l'analisi del coach">
+            <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-violet-400">
+              <span className="animate-bounce-slow inline-block">🧐</span> Il coach ha notato
+            </span>
+            <ul className="space-y-1.5">
+              {athlete.report.insights.slice(0, 3).map((i) => (
+                <li key={i.text} className={cn('text-sm', i.tone === 'bad' ? 'text-fg' : 'text-fg-2')}>
+                  {i.emoji} {i.text}
+                </li>
+              ))}
+            </ul>
           </Card>
         )}
 
