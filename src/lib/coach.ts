@@ -3,6 +3,7 @@ import { callAI, callAIJson, num, oneOf, str, strArr, type AIOptions } from './a
 import { GOALS, EXPERIENCE, MACRO_STYLE_LABEL, nutrition, type Goal, type MacroStyle, type Nutrition, type UserProfile } from './metabolism';
 import { PRIORITY_KEYS, SLOT_IDS, SLOT_LABEL, type CoachPrefs } from './program-generator';
 import { NAME_IT } from './exercise-library';
+import { planRate, type GoalPlan } from './goal-plan';
 import { sessionTonnage } from './analytics';
 
 /* =====================================================================
@@ -83,8 +84,12 @@ export interface NutritionPrefs {
 }
 
 /** Obiettivi dell'utente: calorie con la correzione del check-in e stile dei macro scelto con il coach. */
-export const userNutrition = (p: UserProfile, s: { kcalAdjust?: number; nutritionPrefs?: NutritionPrefs }): Nutrition =>
-  nutrition(p, s.kcalAdjust ?? 0, s.nutritionPrefs?.style ?? 'standard');
+export const userNutrition = (p: UserProfile, s: { kcalAdjust?: number; nutritionPrefs?: NutritionPrefs; goalPlan?: GoalPlan | null }): Nutrition => {
+  // Obiettivo a fasi: la fase in corso decide tipo di obiettivo e ritmo (calorie)
+  const phase = s.goalPlan?.phases[s.goalPlan.current];
+  const prof = phase ? { ...p, goal: phase.type } : p;
+  return nutrition(prof, s.kcalAdjust ?? 0, s.nutritionPrefs?.style ?? 'standard', phase ? planRate(s.goalPlan, [], p.weightKg) : null);
+};
 
 export const DEFAULT_NUTRITION: NutritionPrefs = { diet: 'onnivora', meals: 4, allergies: '', dislikes: '', likes: '', cooking: 'medio' };
 
@@ -286,7 +291,7 @@ export interface Adaptive {
   message: string;
 }
 
-export function adaptiveCalories(logs: BodyLog[], profile: UserProfile): Adaptive | null {
+export function adaptiveCalories(logs: BodyLog[], profile: UserProfile, expectedRate: number | null = null): Adaptive | null {
   const since = Date.now() - 28 * 86400000;
   const pts = logs
     .filter((l) => l.weight != null && new Date(l.date).getTime() >= since)
@@ -299,7 +304,7 @@ export function adaptiveCalories(logs: BodyLog[], profile: UserProfile): Adaptiv
   const my = pts.reduce((a, p) => a + p.y, 0) / pts.length;
   const slope = pts.reduce((a, p) => a + (p.x - mx) * (p.y - my), 0) / pts.reduce((a, p) => a + (p.x - mx) ** 2, 0); // kg/giorno
   const actual = slope * 7;
-  const expected = EXPECTED_RATE[profile.goal] * my;
+  const expected = expectedRate ?? EXPECTED_RATE[profile.goal] * my;
   // 1 kg di tessuto ≈ 7700 kcal
   const raw = ((expected - actual) * 7700) / 7;
   const suggestion = Math.max(-300, Math.min(300, Math.round(raw / 50) * 50));

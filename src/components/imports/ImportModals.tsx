@@ -119,7 +119,9 @@ export function MealPhotoModal({ open, onClose, mealLabel, onAdd }: { open: bool
                 Nota facoltativa (es. "2 cucchiai d'olio", "80 g di pasta")
               </label>
               <textarea id="meal-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} className="w-full rounded-md border border-line bg-surface-2 p-3 text-base text-fg" />
-              <MicButton size="sm" className="absolute right-2 top-8" onText={(t) => setNote((n) => appendText(n, t))} />
+              <div className="absolute right-2 top-8">
+          <MicButton size="sm" onText={(t) => setNote((n) => appendText(n, t))} />
+        </div>
             </div>
             <PickFiles camera label="Scatta o scegli la foto" icon={<Camera className="h-5 w-5" />} onFiles={(f) => void analyze(f[0])} />
           </>

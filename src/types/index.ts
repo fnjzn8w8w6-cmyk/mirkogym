@@ -131,6 +131,7 @@ import type { Lang } from '@/lib/exercise-i18n';
 import type { WeekPlan } from '@/lib/recipes';
 import type { Food, Macros } from '@/lib/foods';
 import type { CheckIn } from '@/lib/checkin';
+import type { GoalPlan } from '@/lib/goal-plan';
 
 export interface Settings {
   /** Lingua dei contenuti (istruzioni degli esercizi). */
@@ -150,6 +151,8 @@ export interface Settings {
   checkIns?: CheckIn[];
   /** Zone segnate come "passate" dall'utente (zona → data): il coach smette di considerarle attive. */
   painResolved?: Record<string, number>;
+  /** Obiettivo a fasi con scadenze (es. massa → cut). */
+  goalPlan?: GoalPlan | null;
   /** Sfide settimanali completate ("lunedì:id"). */
   questsDone?: string[];
   /** Ultima analisi completa del coach (tab Analisi). */
@@ -285,4 +288,25 @@ export interface UserRecipe {
   photo?: string;
   createdAt: number;
   updatedAt: number;
+}
+
+/** Foto settimanale dei progressi (metadati + miniatura). */
+export interface ProgressPhoto {
+  /** YYYY-MM-DD (anche id del documento) */
+  date: string;
+  /** miniatura JPEG come data URL (~10 KB) */
+  thumb: string;
+  weight?: number;
+  bodyFat?: number;
+  low?: number;
+  high?: number;
+  /** osservazioni del coach e confronto con la foto precedente */
+  comment?: string;
+  hasSide?: boolean;
+  createdAt: number;
+}
+/** Immagini complete (caricate solo quando servono). */
+export interface PhotoImages {
+  front: string;
+  side?: string;
 }

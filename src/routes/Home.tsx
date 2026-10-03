@@ -32,6 +32,7 @@ import { entryMacros } from '@/components/food/FoodDiary';
 import { sumMacros } from '@/lib/foods';
 import { formatKg, groupColor, trendDelta } from '@/lib/analytics';
 import { cn } from '@/lib/cn';
+import { GoalCard } from '@/components/goal/GoalPlan';
 import type { Day } from '@/types';
 
 function Sparkline({ values }: { values: number[] }) {
@@ -299,6 +300,8 @@ export default function Home() {
             </button>
           </section>
         )}
+
+        {settings.profile && <GoalCard />}
 
         {/* Dieta di oggi: anelli dei macro */}
         {settings.profile && <TodayDiet onOpen={() => navigate('/food')} />}

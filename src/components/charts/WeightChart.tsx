@@ -5,23 +5,27 @@ import { chart, Legend, TooltipShell } from './chart-theme';
 
 export interface WeightPoint {
   t: number;
-  value: number;
-  trend: number;
+  value?: number;
+  trend?: number;
+  /** percorso previsto dall'obiettivo (linea tratteggiata) */
+  plan?: number;
 }
 
 /** Valori giornalieri (punti) + media mobile 7 giorni (linea). */
-export function WeightChart({ data, unit, label }: { data: WeightPoint[]; unit: string; label: string }) {
+export function WeightChart({ data, unit, label, plan }: { data: WeightPoint[]; unit: string; label: string; plan?: { t: number; plan: number }[] }) {
+  const rows: WeightPoint[] = plan?.length ? [...data, ...plan].sort((a, b) => a.t - b.t) : data;
   return (
     <div>
       <Legend
         items={[
           { label, color: chart.accentSoft },
           { label: 'Media 7 giorni', color: chart.accent },
+          ...(plan?.length ? [{ label: 'Percorso obiettivo', color: '#C084FC' }] : []),
         ]}
       />
       <div className="mt-2 h-48">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+          <ComposedChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
             <CartesianGrid stroke={chart.grid} vertical={false} />
             <XAxis
               dataKey="t"
@@ -50,8 +54,9 @@ export function WeightChart({ data, unit, label }: { data: WeightPoint[]; unit: 
                   <TooltipShell
                     title={formatShortDate(p.t)}
                     rows={[
-                      { label, value: `${formatKg(p.value)}${unit}`, color: chart.accentSoft },
-                      { label: 'Media 7gg', value: `${formatKg(p.trend)}${unit}`, color: chart.accent },
+                      ...(p.value != null ? [{ label, value: `${formatKg(p.value)}${unit}`, color: chart.accentSoft }] : []),
+                      ...(p.trend != null ? [{ label: 'Media 7gg', value: `${formatKg(p.trend)}${unit}`, color: chart.accent }] : []),
+                      ...(p.plan != null ? [{ label: 'Obiettivo', value: `${formatKg(p.plan)}${unit}`, color: '#C084FC' }] : []),
                     ]}
                   />
                 );
@@ -65,7 +70,10 @@ export function WeightChart({ data, unit, label }: { data: WeightPoint[]; unit: 
               activeDot={{ r: 6, fill: chart.accent, stroke: chart.surface, strokeWidth: 2 }}
               isAnimationActive={false}
             />
-            <Line type="monotone" dataKey="trend" stroke={chart.accent} strokeWidth={2} dot={false} isAnimationActive={false} />
+            <Line type="monotone" dataKey="trend" stroke={chart.accent} strokeWidth={2} dot={false} connectNulls isAnimationActive={false} />
+            {plan?.length ? (
+              <Line type="linear" dataKey="plan" stroke="#C084FC" strokeWidth={2} strokeDasharray="6 4" dot={{ r: 3, fill: '#C084FC', strokeWidth: 0 }} connectNulls isAnimationActive={false} />
+            ) : null}
           </ComposedChart>
         </ResponsiveContainer>
       </div>

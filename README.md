@@ -155,6 +155,13 @@ e, se l'AI non risponde, l'app continua a funzionare con le regole.
   L'anteprima mostra i pasti realmente cambiati prima di applicare.
 - **Chiedi al coach**: chat con il coach, che conosce profilo, obiettivi e ultimi allenamenti.
 
+## Obiettivo a fasi e foto settimanali
+
+- **Obiettivo con scadenza** (`src/lib/goal-plan.ts`): in registrazione (o da Home/Coach/Profilo) descrivi l'obiettivo a parole, anche in più fasi (es. massa fino a 82-83 kg al 17%, poi cut fino a 78-79 kg al 10%). Il coach crea le fasi con le date; se una scadenza non è sicura la sposta e lo spiega. Tutto è modificabile.
+- **Calorie dal ritmo necessario**: kg da guadagnare/perdere ÷ settimane rimaste (entro ritmi sicuri), 1 kg/sett ≈ 1100 kcal/giorno. Il check-in confronta il peso di tendenza con il percorso previsto e, se il diario è abbastanza completo, usa il fabbisogno reale stimato (calorie mangiate vs variazione di peso).
+- **Fine fase**: quando l'obiettivo della fase è raggiunto (o la scadenza è passata) la Home propone di passare alla fase successiva; confermi tu.
+- **Foto settimanale nel check-in**: compressa (~100 KB) e salvata solo nel tuo account Firestore (piano gratuito). Il coach stima la massa grassa e la confronta con la foto precedente. In Corpo: galleria e confronto prima/dopo con cursore; sui grafici di peso e massa grassa compare il percorso previsto.
+
 ## Coach con memoria
 
 - **Profilo dell'atleta** (`src/lib/athlete.ts`, calcolato in locale da tutto lo storico): dolori e fastidi segnalati (resoconti e note, attivi finché non li segni come passati), giorni della scheda saltati, esercizi in stallo, progressi, voto ed energia medi, note, diario alimentare (calorie, proteine, sgarri). Entra in check-in settimanale, chat, modifiche a scheda e dieta, analisi.

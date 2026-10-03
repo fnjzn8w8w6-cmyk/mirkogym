@@ -22,6 +22,7 @@ import { formatRelativeDay, fromISODate, toISODate } from '@/lib/date-utils';
 import { cn } from '@/lib/cn';
 import { CompositionCard, GoalStatus, Measurements } from '@/components/body/BodyOverview';
 import { MuscleWeekCard } from '@/components/body/MuscleWeek';
+import { ProgressPhotos } from '@/components/body/ProgressPhotos';
 
 const PERIODS: [number, string][] = [
   [30, '1M'],
@@ -54,6 +55,18 @@ export default function Body() {
   const weightData = useMemo(() => series(bodyLogs, 'weight', period), [bodyLogs, period]);
   const bfData = useMemo(() => series(bodyLogs, 'bodyFat', period), [bodyLogs, period]);
   const wTrend = useMemo(() => trendDelta(bodyLogs, 'weight', 7), [bodyLogs]);
+  // Percorso previsto dall'obiettivo a fasi (dalla fase in corso in poi)
+  const goalPaths = useMemo(() => {
+    const plan = settings.goalPlan;
+    if (!plan) return { w: undefined, bf: undefined };
+    const ts = (iso: string) => new Date(`${iso}T12:00:00`).getTime();
+    const phases = plan.phases.slice(plan.current);
+    const w = [{ t: ts(phases[0].start), plan: phases[0].startWeight }, ...phases.map((p) => ({ t: ts(p.end), plan: (p.weightMin + p.weightMax) / 2 }))];
+    const lastBf = bodyLogs.find((b) => b.bodyFat != null);
+    const bfPts = phases.filter((p) => p.targetBf != null).map((p) => ({ t: ts(p.end), plan: p.targetBf as number }));
+    const bf = lastBf && bfPts.length ? [{ t: ts(lastBf.date), plan: lastBf.bodyFat as number }, ...bfPts] : undefined;
+    return { w, bf };
+  }, [settings.goalPlan, bodyLogs]);
   const bfTrend = useMemo(() => trendDelta(bodyLogs, 'bodyFat', 30), [bodyLogs]);
 
   const openNew = () => {
@@ -106,6 +119,7 @@ export default function Body() {
             <CompositionCard />
             <GoalStatus />
             <MuscleWeekCard />
+            <ProgressPhotos />
 
             <div className="flex justify-end gap-1.5">
               {PERIODS.map(([d, l]) => (
@@ -125,14 +139,14 @@ export default function Body() {
                 <h2 className="section-title !mb-0">Peso</h2>
                 {wTrend && <TrendLine delta={wTrend.delta} label="7gg" unit=" kg" />}
               </div>
-              {weightData.length > 1 ? <WeightChart data={weightData} unit=" kg" label="Peso" /> : <p className="mt-2 text-base text-fg-3">Servono almeno 2 pesate nel periodo.</p>}
+              {weightData.length > 1 ? <WeightChart data={weightData} unit=" kg" label="Peso" plan={goalPaths.w} /> : <p className="mt-2 text-base text-fg-3">Servono almeno 2 pesate nel periodo.</p>}
             </Card>
             <Card className="p-4">
               <div className="flex items-baseline justify-between">
                 <h2 className="section-title !mb-0">Massa grassa</h2>
                 {bfTrend && <TrendLine delta={bfTrend.delta} label="30gg" unit="%" polarity="down-good" />}
               </div>
-              {bfData.length > 1 ? <WeightChart data={bfData} unit="%" label="BF" /> : <p className="mt-2 text-base text-fg-3">Servono almeno 2 misure della massa grassa nel periodo.</p>}
+              {bfData.length > 1 ? <WeightChart data={bfData} unit="%" label="BF" plan={goalPaths.bf} /> : <p className="mt-2 text-base text-fg-3">Servono almeno 2 misure della massa grassa nel periodo.</p>}
             </Card>
             <Measurements logs={bodyLogs} />
 

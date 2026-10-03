@@ -5,6 +5,7 @@ import { subscribeRecentFoodLogs } from '@/lib/firestore';
 import { toISODate } from '@/lib/date-utils';
 import { athleteReport, athleteText } from '@/lib/athlete';
 import { userNutrition } from '@/lib/coach';
+import { planStatus, planText } from '@/lib/goal-plan';
 import { useData } from './data-context';
 import { useSessions } from './use-sessions';
 import { useSchedule } from './use-schedule';
@@ -44,8 +45,10 @@ export function useAthlete() {
       groupOf,
     });
     const lastCheck = settings.checkIns?.[0];
+    const plan = settings.goalPlan;
     const text =
       athleteText(report) +
+      (plan && p ? `\n${planText(plan, planStatus(plan, bodyLogs, p.weightKg))}` : '') +
       (lastCheck ? `\nUltimo check-in (${new Date(lastCheck.date).toLocaleDateString('it-IT')}): ${lastCheck.summary.slice(0, 400)}` : '') +
       (settings.coachAnalysis ? `\nUltima analisi del coach: ${settings.coachAnalysis.text.slice(0, 500)}` : '');
     return { report, text };

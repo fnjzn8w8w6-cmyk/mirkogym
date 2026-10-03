@@ -34,6 +34,11 @@ export interface CheckInStats {
   weightRate: number | null;
   expectedRate: number | null;
   weightSuggestion: number;
+  /** fabbisogno reale stimato dal diario (se abbastanza completo) */
+  diaryTdee?: number;
+  diaryDays?: number;
+  /** stato dell'obiettivo a fasi (testo pronto) */
+  goalLine?: string;
 }
 
 export interface CheckInResult {
@@ -55,12 +60,21 @@ export interface CheckIn {
 
 const WEEK = 7 * 86400000;
 
-export function weekStats(sessions: Session[], bodyLogs: BodyLog[], profile: UserProfile, now = Date.now()): CheckInStats {
+export function weekStats(
+  sessions: Session[],
+  bodyLogs: BodyLog[],
+  profile: UserProfile,
+  now = Date.now(),
+  extra: { expectedRate?: number | null; diary?: { tdee: number; days: number; desired: number; current: number } | null; goalLine?: string } = {},
+): CheckInStats {
   const inRange = (from: number, to: number) => sessions.filter((s) => s.date >= from && s.date < to);
   const cur = inRange(now - WEEK, now + 1);
   const prev = inRange(now - 2 * WEEK, now - WEEK);
   const vol = (l: Session[]) => Math.round(l.reduce((a, s) => a + sessionTonnage(s), 0));
-  const adaptive = adaptiveCalories(bodyLogs, profile);
+  const adaptive = adaptiveCalories(bodyLogs, profile, extra.expectedRate ?? null);
+  const d = extra.diary;
+  // Con un diario completo la correzione si basa sul fabbisogno reale (più preciso della sola bilancia)
+  const diaryFix = d ? Math.max(-300, Math.min(300, Math.round((d.desired - d.current) / 50) * 50)) : null;
   return {
     sessions: cur.length,
     planned: profile.daysPerWeek,
@@ -69,12 +83,16 @@ export function weekStats(sessions: Session[], bodyLogs: BodyLog[], profile: Use
     prs: cur.reduce((a, s) => a + s.logs.reduce((b, l) => b + l.sets.filter((x) => x.isPersonalRecord).length, 0), 0),
     weightRate: adaptive ? Math.round(adaptive.actual * 100) / 100 : null,
     expectedRate: adaptive ? Math.round(adaptive.expected * 100) / 100 : null,
-    weightSuggestion: adaptive?.suggestion ?? 0,
+    weightSuggestion: diaryFix != null ? (Math.abs(diaryFix) < 100 ? 0 : diaryFix) : (adaptive?.suggestion ?? 0),
+    ...(d ? { diaryTdee: d.tdee, diaryDays: d.days } : {}),
+    ...(extra.goalLine ? { goalLine: extra.goalLine } : {}),
   };
 }
 
 export function evaluate(a: CheckInAnswers, s: CheckInStats, deloadAvailable: boolean): CheckInResult {
   const points: string[] = [];
+  if (s.goalLine) points.push(s.goalLine);
+  if (s.diaryTdee) points.push(`🍽️ Dal tuo diario (${s.diaryDays} giornate) il tuo fabbisogno reale è circa ${s.diaryTdee} kcal: uso questo dato per correggere le calorie.`);
   // Fatica: energia e sonno bassi, stress e indolenzimento alti
   const fatigue = Math.round((((5 - a.energy) + (5 - a.sleep) + (a.stress - 1) + (a.soreness - 1)) / 16) * 100);
   const volDrop = s.prevTonnage > 0 ? (s.tonnage - s.prevTonnage) / s.prevTonnage : 0;

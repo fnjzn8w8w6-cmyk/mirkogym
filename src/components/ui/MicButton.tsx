@@ -145,7 +145,9 @@ export function MicButton({ onText, className, size = 'md' }: { onText: (text: s
       aria-label={active ? 'Ferma la dettatura' : 'Detta con la voce'}
       aria-pressed={active}
       className={cn(
-        'relative flex shrink-0 items-center justify-center rounded-full transition-colors',
+        // 'relative' solo se non è già posizionato dall'esterno (con cn le classi non si sovrascrivono)
+        !className?.includes('absolute') && 'relative',
+        'flex shrink-0 items-center justify-center rounded-full transition-colors',
         dim,
         active ? 'bg-danger text-white' : 'bg-accent-500 text-onaccent shadow-glow',
         className,

@@ -15,6 +15,7 @@ import { ACTIVITY, EXPERIENCE, GOALS, bfCategory, composition } from '@/lib/meta
 import { userNutrition } from '@/lib/coach';
 import { Button } from '@/components/ui/Button';
 import { settle } from '@/lib/firestore';
+import { GoalCard } from '@/components/goal/GoalPlan';
 import { cn } from '@/lib/cn';
 
 export default function Profile() {
@@ -152,6 +153,8 @@ export default function Profile() {
           </Card>
           <p className="mt-2 text-xs text-fg-3">Standard indicativi basati sul rapporto 1RM stimato / peso corporeo.</p>
         </section>
+
+        <GoalCard compact />
 
         {/* Traguardi */}
         <section>

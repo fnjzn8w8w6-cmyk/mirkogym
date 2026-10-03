@@ -15,7 +15,6 @@ import {
   bfCategory,
   bmiCategory,
   composition,
-  nutrition,
   type Equipment,
   type Experience,
   type Goal,
@@ -35,10 +34,13 @@ import { AIBusy, useAITask } from '../coach/AIBusy';
 import { interpretTrainingRequest } from '@/lib/coach';
 import type { CoachPrefs } from '@/lib/program-generator';
 import { TextArea } from '../ui/Input';
+import { GoalPlanEditor } from '@/components/goal/GoalPlan';
+import type { GoalPlan } from '@/lib/goal-plan';
+import { userNutrition } from '@/lib/coach';
 import { BF_METHOD_LABEL } from '@/lib/metabolism';
 
-type Step = 'lang' | 'body' | 'activity' | 'experience' | 'goal' | 'availability' | 'results' | 'program';
-const STEPS: Step[] = ['lang', 'body', 'activity', 'experience', 'goal', 'availability', 'results', 'program'];
+type Step = 'lang' | 'body' | 'activity' | 'experience' | 'goal' | 'target' | 'availability' | 'results' | 'program';
+const STEPS: Step[] = ['lang', 'body', 'activity', 'experience', 'goal', 'target', 'availability', 'results', 'program'];
 
 const EQUIPMENT: { value: Equipment; label: string; description: string; emoji: string }[] = [
   { value: 'gym', label: 'Palestra completa', description: 'Bilancieri, macchine e cavi', emoji: '🏟️' },
@@ -77,6 +79,7 @@ export function ProfileSetup() {
   const [bfKnown, setBfKnown] = useState(prev?.bodyFatPct != null ? String(prev.bodyFatPct).replace('.', ',') : '');
   const [bfSource, setBfSource] = useState<'manual' | 'photo' | undefined>(prev?.bodyFatSource);
   const [photoOpen, setPhotoOpen] = useState(false);
+  const [goalPlan, setGoalPlan] = useState<GoalPlan | null>(settings.goalPlan ?? null);
 
   const idx = STEPS.indexOf(step);
   const next = () => setStep(STEPS[Math.min(idx + 1, STEPS.length - 1)]);
@@ -96,7 +99,7 @@ export function ProfileSetup() {
           weightKg: w as number,
           activity,
           experience,
-          goal,
+          goal: goalPlan?.phases[goalPlan.current]?.type ?? goal,
           daysPerWeek: days,
           equipment,
           waistCm: parseNum(waist) ?? undefined,
@@ -107,7 +110,7 @@ export function ProfileSetup() {
         }
       : null;
 
-  const analysis = useMemo(() => (profile ? { n: nutrition(profile), c: composition(profile) } : null), [profile]);
+  const analysis = useMemo(() => (profile ? { n: userNutrition(profile, { goalPlan }), c: composition(profile) } : null), [profile, goalPlan]);
   const generated = useMemo(() => (profile ? generateProgram(profile, coachPrefs) : []), [profile, coachPrefs]);
   const hasHistory = sessions.length > 0;
 
@@ -117,6 +120,7 @@ export function ProfileSetup() {
     activity: activity != null,
     experience: experience != null,
     goal: goal != null,
+    target: true,
     availability: true,
     results: true,
     program: programChoice !== 'template' || template != null,
@@ -142,6 +146,7 @@ export function ProfileSetup() {
         language: lang,
         profile,
         profileCompleted: true,
+        ...(goalPlan ? { goalPlan } : {}),
         ...(programChoice === 'generated' && coachPrefs ? { coachPrefs } : {}),
         weeklySetsMin: ws.min,
         weeklySetsMax: ws.max,
@@ -247,6 +252,19 @@ export function ProfileSetup() {
                   <Option key={o.value} active={goal === o.value} onClick={() => setGoal(o.value)} label={o.label} description={o.description} emoji={o.emoji} />
                 ))}
               </div>
+            </>
+          )}
+
+          {step === 'target' && bodyValid && (
+            <>
+              <Title title="Dove vuoi arrivare, e entro quando?" subtitle="Facoltativo ma consigliato: il coach crea un piano a fasi con scadenze e adatta calorie e controlli settimana dopo settimana" />
+              <GoalPlanEditor
+                profile={{ sex: sex as Sex, age: a as number, heightCm: h as number, weightKg: w as number, activity: activity ?? 2, experience: experience ?? 'beginner', goal: goal ?? 'maintain', daysPerWeek: days, equipment }}
+                current={{ weight: w as number, bf: parseNum(bfKnown) ?? undefined }}
+                initial={goalPlan}
+                onChange={setGoalPlan}
+              />
+              <p className="mt-3 text-xs text-fg-3">Puoi saltare questo passaggio e impostarlo più tardi dalla Home.</p>
             </>
           )}
 

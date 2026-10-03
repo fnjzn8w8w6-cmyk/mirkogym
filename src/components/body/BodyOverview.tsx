@@ -12,6 +12,7 @@ import { bfCategory, composition, type UserProfile } from '@/lib/metabolism';
 import { formatKg } from '@/lib/analytics';
 import { formatRelativeDay, fromISODate } from '@/lib/date-utils';
 import { cn } from '@/lib/cn';
+import { planRate } from '@/lib/goal-plan';
 import type { BodyLog } from '@/types';
 
 /** Profilo con l'ultimo peso e l'ultima massa grassa registrati. */
@@ -107,7 +108,10 @@ export function GoalStatus() {
   const { bodyLogs } = useBodyLogs();
   const toast = useToast();
   const { p } = useCurrentProfile();
-  const a = useMemo(() => (p ? adaptiveCalories(bodyLogs, p) : null), [bodyLogs, p]);
+  const a = useMemo(
+    () => (p ? adaptiveCalories(bodyLogs, p, settings.goalPlan ? planRate(settings.goalPlan, bodyLogs, p.weightKg) : null) : null),
+    [bodyLogs, p, settings.goalPlan],
+  );
   if (!p) return null;
 
   if (!a) {

@@ -1,8 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ClipboardCheck, Sparkles } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { useSessions } from '@/hooks/use-sessions';
-import { useAthlete } from '@/hooks/use-athlete';
+import { useAthlete, useRecentFoodLogs } from '@/hooks/use-athlete';
+import { usePhotos } from '@/hooks/use-photos';
+import { analyzeWeekPhoto, compressPhoto, thumbOf, type WeekPhotoResult } from '@/lib/progress-photos';
+import { toISODate } from '@/lib/date-utils';
+import { estimateTdee, planRate, planStatus } from '@/lib/goal-plan';
+import { userNutrition } from '@/lib/coach';
 import { useBodyLogs } from '@/hooks/use-body-logs';
 import { useMesocycle } from '@/hooks/use-mesocycle';
 import { Card } from '@/components/ui/Card';
@@ -15,7 +20,7 @@ import { settle } from '@/lib/firestore';
 import { cn } from '@/lib/cn';
 import { MicButton, appendText } from '@/components/ui/MicButton';
 import { formatTonnage } from '@/lib/analytics';
-import { nutrition, type UserProfile } from '@/lib/metabolism';
+import type { UserProfile } from '@/lib/metabolism';
 import { checkInDue, checkInSummary, evaluate, weekStats, type CheckIn, type CheckInAnswers } from '@/lib/checkin';
 import { loadRecipes, rescalePlan } from '@/lib/recipes';
 import { DEFAULT_NUTRITION, planPrefs } from '@/components/food/NutritionPlanner';
@@ -76,14 +81,46 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
     if (autoOpen && due) setOpen(true);
   }, [autoOpen, due]);
 
-  const stats = useMemo(() => weekStats(sessions, bodyLogs, profile), [sessions, bodyLogs, profile]);
+  const foodLogs = useRecentFoodLogs(28);
+  const stats = useMemo(() => {
+    const plan = settings.goalPlan;
+    const st = plan ? planStatus(plan, bodyLogs, profile.weightKg) : null;
+    const rate = plan ? planRate(plan, bodyLogs, profile.weightKg) : null;
+    const est = estimateTdee(foodLogs, bodyLogs);
+    const current = userNutrition(profile, settings).target;
+    const desired = est ? est.tdee + (rate ?? 0) * 1100 + 0 : 0;
+    let goalLine: string | undefined;
+    if (st) {
+      const kg = (v: number) => v.toFixed(1).replace('.', ',');
+      goalLine =
+        st.state === 'reached'
+          ? `🏁 Obiettivo della fase "${st.phase.label}" raggiunto (${kg(st.current)} kg)! Dalla Home puoi passare alla fase successiva.`
+          : st.state === 'late'
+            ? `⚠️ ${st.phase.label}: con un ritmo sicuro arrivi a ${kg((st.phase.weightMin + st.phase.weightMax) / 2)} kg il ${new Date(st.suggestedEnd!).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}. Correggo le calorie al massimo sicuro e ti propongo di spostare la scadenza.`
+            : `🎯 ${st.phase.label}: peso di tendenza ${kg(st.current)} kg, previsto oggi ${kg(st.expectedToday)} kg → ${st.state === 'on-track' ? 'in linea' : st.state === 'ahead' ? `in anticipo di ${Math.abs(st.weeksOff)} sett.` : st.state === 'behind' ? `in ritardo di ${Math.abs(st.weeksOff)} sett.` : 'scadenza superata'}. Mancano ${Math.round(st.weeksLeft)} settimane.`;
+    }
+    return weekStats(sessions, bodyLogs, profile, Date.now(), {
+      expectedRate: rate,
+      diary: est ? { ...est, desired, current } : null,
+      goalLine,
+    });
+  }, [sessions, bodyLogs, profile, settings, foodLogs]);
   const deloadAvailable = Boolean(meso.mesocycle) && !meso.isDeloadWeek;
   const result = useMemo(() => evaluate(answers, stats, deloadAvailable), [answers, stats, deloadAvailable]);
+
+  const photosApi = usePhotos();
+  const { save: saveBody } = useBodyLogs();
+  const [front, setFront] = useState<string | null>(null);
+  const [side, setSide] = useState<string | null>(null);
+  const [photoRes, setPhotoRes] = useState<WeekPhotoResult | null>(null);
 
   const start = () => {
     setStep('ask');
     setSummary(null);
     setAnswers(DEFAULT_ANSWERS);
+    setFront(null);
+    setSide(null);
+    setPhotoRes(null);
     setOpen(true);
   };
 
@@ -91,7 +128,34 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
     setStep('result');
     setApplyKcal(result.kcalChange !== 0);
     setApplyDeload(result.deload);
-    const text = await ai.run((o) => checkInSummary(answers, stats, result, profile, o, athlete.text));
+    let photoNote = '';
+    if (front) {
+      const today = toISODate(new Date());
+      const prevMeta = photosApi.photos.find((x) => x.date < today);
+      const prevImg = prevMeta ? await photosApi.images(prevMeta.date).catch(() => null) : null;
+      const weight = bodyLogs.find((b) => b.weight != null)?.weight ?? profile.weightKg;
+      const phase = settings.goalPlan?.phases[settings.goalPlan.current];
+      const pr = await ai.run((o) =>
+        analyzeWeekPhoto(
+          { front, side: side ?? undefined },
+          prevImg && prevMeta ? { front: prevImg.front, date: prevMeta.date, bodyFat: prevMeta.bodyFat } : null,
+          { sex: profile.sex, age: profile.age, heightCm: profile.heightCm, weightKg: weight, goal: phase ? `${phase.label} (${phase.type})` : profile.goal },
+          o,
+        ),
+      );
+      // la foto si salva comunque, anche se la stima non è riuscita
+      await photosApi.save(
+        { date: today, thumb: await thumbOf(front), weight, ...(pr ? { bodyFat: pr.bodyFat, low: pr.low, high: pr.high, comment: pr.comment } : {}), hasSide: Boolean(side), createdAt: Date.now() },
+        { front, ...(side ? { side } : {}) },
+      );
+      if (pr) {
+        setPhotoRes(pr);
+        const todayLog = bodyLogs.find((b) => b.date === today);
+        await settle(saveBody(todayLog ? { ...todayLog, bodyFat: pr.bodyFat } : { date: today, bodyFat: pr.bodyFat, notes: 'Massa grassa: stima AI dalla foto del check-in' }));
+        photoNote = `\nFOTO DI QUESTA SETTIMANA: massa grassa stimata ${pr.bodyFat}% (forbice ${pr.low}-${pr.high}%). Osservazioni: ${pr.comment}`;
+      }
+    }
+    const text = await ai.run((o) => checkInSummary(answers, stats, result, profile, o, athlete.text + photoNote));
     setSummary(text);
   };
 
@@ -118,7 +182,7 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
           patch.weekPlan = rescalePlan(
             settings.weekPlan,
             data,
-            nutrition(profile, newAdjust, settings.nutritionPrefs?.style),
+            userNutrition(profile, { ...settings, kcalAdjust: newAdjust }),
             planPrefs(settings.nutritionPrefs ?? DEFAULT_NUTRITION, settings.favoriteRecipes ?? []),
           );
         } catch {
@@ -190,6 +254,16 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
               />
               <MicButton size="sm" className="absolute right-2 top-2" onText={(t) => setAnswers((a) => ({ ...a, note: appendText(a.note ?? '', t) }))} />
             </div>
+            <div className="rounded-lg border border-violet-500/30 bg-violet-500/10 p-3">
+              <div className="text-base font-semibold text-fg">📸 Foto della settimana</div>
+              <p className="mt-0.5 text-xs text-fg-2">
+                Per confrontarle bene: stesso posto e stessa luce, al mattino a digiuno, busto scoperto, braccia rilassate. Restano solo nel tuo account.
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <PhotoPick label="Fronte" value={front} onChange={setFront} />
+                <PhotoPick label="Profilo (facoltativa)" value={side} onChange={setSide} />
+              </div>
+            </div>
             <Button fullWidth size="lg" onClick={() => void analyze()}>
               Analizza la mia settimana
             </Button>
@@ -222,8 +296,22 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
               </div>
             </div>
 
+            {photoRes && (
+              <div className="flex gap-3 rounded-lg border border-violet-500/30 bg-violet-500/10 p-3">
+                {front && <img src={front} alt="Foto della settimana" className="h-24 w-18 shrink-0 rounded-md object-cover" style={{ width: 72 }} />}
+                <div className="min-w-0 text-sm">
+                  <div className="font-semibold text-fg">
+                    📸 Massa grassa stimata: <span className="font-display text-accent-400">{String(photoRes.bodyFat).replace('.', ',')}%</span>{' '}
+                    <span className="text-xs text-fg-3">
+                      ({photoRes.low}–{photoRes.high}%)
+                    </span>
+                  </div>
+                  <p className="mt-1 text-fg-2">{photoRes.comment}</p>
+                </div>
+              </div>
+            )}
             {ai.busy ? (
-              <AIBusy persona="both" status={ai.status} onCancel={ai.cancel} />
+              <AIBusy persona={front && !photoRes ? 'photo' : 'both'} status={ai.status} onCancel={ai.cancel} />
             ) : summary ? (
               <div className="rounded-lg border border-accent-500/30 bg-accent-glow p-3">
                 <div className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-accent-400">
@@ -284,5 +372,34 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
         )}
       </Modal>
     </>
+  );
+}
+
+/** Scelta di una foto (fotocamera o galleria), compressa subito sul telefono. */
+function PhotoPick({ label, value, onChange }: { label: string; value: string | null; onChange: (v: string | null) => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div>
+      <input
+        ref={ref}
+        type="file"
+        accept="image/*"
+        hidden
+        data-testid={`photo-${label}`}
+        onChange={async (e) => {
+          const f = e.target.files?.[0];
+          e.target.value = '';
+          if (f) onChange(await compressPhoto(f).catch(() => null));
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => (value ? onChange(null) : ref.current?.click())}
+        className="relative flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-md border border-dashed border-line-strong bg-surface-2 text-sm text-fg-3"
+      >
+        {value ? <img src={value} alt={label} className="h-full w-full object-cover" /> : <span className="px-2 text-center">📷 {label}</span>}
+        {value && <span className="absolute right-1 top-1 rounded-full bg-black/60 px-2 text-xs text-white">✕</span>}
+      </button>
+    </div>
   );
 }

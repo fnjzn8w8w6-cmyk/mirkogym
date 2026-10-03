@@ -122,12 +122,14 @@ export const MACRO_STYLE_LABEL: Record<MacroStyle, string> = {
 };
 
 /** Calorie obiettivo e macronutrienti (proteine 1,8–2,2 g/kg, grassi ~0,9 g/kg, resto carboidrati). */
-export function nutrition(p: UserProfile, adjust = 0, style: MacroStyle = 'standard'): Nutrition {
+export function nutrition(p: UserProfile, adjust = 0, style: MacroStyle = 'standard', rateKgWeek: number | null = null): Nutrition {
   const t = tdee(p);
   const goal = GOALS.find((g) => g.value === p.goal) ?? GOALS[3];
   // Minimo di sicurezza: mai sotto il metabolismo basale né sotto 1500/1200 kcal
   const floor = Math.max(bmr(p), p.sex === 'm' ? 1500 : 1200);
-  const target = Math.max(floor, Math.round((t * (1 + goal.kcal) + adjust) / 10) * 10);
+  // Con un obiettivo a scadenza le calorie seguono il ritmo necessario (1 kg/sett ≈ 1100 kcal/giorno)
+  const base = rateKgWeek != null ? t + rateKgWeek * 1100 : t * (1 + goal.kcal);
+  const target = Math.max(floor, Math.round((base + adjust) / 10) * 10);
   let protein = Math.round(p.weightKg * (p.goal === 'cut' ? 2.2 : 1.8));
   let fat = Math.round(p.weightKg * 0.9);
   if (style === 'high-protein') protein = Math.round(p.weightKg * 2.4);

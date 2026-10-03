@@ -14,7 +14,7 @@ import {
   type DocumentReference,
   type Unsubscribe,
 } from 'firebase/firestore';
-import type { ActiveSession, BackupFile, BodyLog, Day, FoodLog, Mesocycle, Schedule, Session, Settings, UserRecipe } from '@/types';
+import type { ActiveSession, BackupFile, BodyLog, Day, FoodLog, Mesocycle, PhotoImages, ProgressPhoto, Schedule, Session, Settings, UserRecipe } from '@/types';
 import type { Food } from './foods';
 import { db } from './firebase';
 import { DEFAULT_SETTINGS, SEED_DAYS } from './seed-data';
@@ -31,6 +31,9 @@ const bodyLogsCol = (uid: string) => collection(userDoc(uid), 'bodyLogs');
 const mesocyclesCol = (uid: string) => collection(userDoc(uid), 'mesocycles');
 const foodLogsCol = (uid: string) => collection(userDoc(uid), 'foodLogs');
 const recipesCol = (uid: string) => collection(userDoc(uid), 'recipes');
+/** Foto dei progressi: metadati + miniatura (leggeri) e immagini complete in documenti separati. */
+const photosCol = (uid: string) => collection(userDoc(uid), 'photos');
+const photoImagesCol = (uid: string) => collection(userDoc(uid), 'photoImages');
 const myFoodsRef = (uid: string) => doc(userDoc(uid), 'config', 'foods');
 
 export const newId = (uid: string): string => doc(sessionsCol(uid)).id;
@@ -187,6 +190,16 @@ export function subscribeRecentFoodLogs(uid: string, from: string, cb: (l: FoodL
     onError,
   );
 }
+export function subscribePhotos(uid: string, cb: (p: ProgressPhoto[]) => void, onError: OnError): Unsubscribe {
+  return onSnapshot(photosCol(uid), (snap) => cb(snap.docs.map((d) => d.data() as ProgressPhoto).sort((a, b) => b.date.localeCompare(a.date))), onError);
+}
+export const savePhoto = (uid: string, meta: ProgressPhoto, images: PhotoImages) =>
+  Promise.all([setDoc(doc(photosCol(uid), meta.date), clean(meta)), setDoc(doc(photoImagesCol(uid), meta.date), clean(images))]);
+export const getPhotoImages = async (uid: string, date: string): Promise<PhotoImages | null> => {
+  const d = await getDoc(doc(photoImagesCol(uid), date));
+  return d.exists() ? (d.data() as PhotoImages) : null;
+};
+export const deletePhoto = (uid: string, date: string) => Promise.all([deleteDoc(doc(photosCol(uid), date)), deleteDoc(doc(photoImagesCol(uid), date))]);
 export const saveFoodLog = (uid: string, log: FoodLog) =>
   setDoc(doc(foodLogsCol(uid), log.date), clean({ date: log.date, entries: log.entries, updatedAt: Timestamp.now() }), { merge: true });
 export const saveDayRecap = (uid: string, date: string, recap: NonNullable<FoodLog['recap']>) =>

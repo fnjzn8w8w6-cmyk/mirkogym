@@ -25,6 +25,7 @@ import { DietCoach } from '@/components/coach/DietCoach';
 import { groupColor } from '@/lib/analytics';
 import { cn } from '@/lib/cn';
 import { MicButton, appendText } from '@/components/ui/MicButton';
+import { GoalCard } from '@/components/goal/GoalPlan';
 import type { Day } from '@/types';
 
 type Tab = 'train' | 'diet' | 'chat';
@@ -53,6 +54,11 @@ export default function Coach() {
         }
       />
       <div className="page pt-3">
+        {profile && tab !== 'chat' && (
+          <div className="mb-3">
+            <GoalCard compact />
+          </div>
+        )}
         <Segmented<Tab>
           label="Sezione coach"
           value={tab}

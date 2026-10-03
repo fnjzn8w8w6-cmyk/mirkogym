@@ -14,7 +14,7 @@ import { useAthlete } from '@/hooks/use-athlete';
 import { useRecipes } from '@/components/food/shared';
 import { planPrefs } from '@/components/food/NutritionPlanner';
 import { settle } from '@/lib/firestore';
-import { MACRO_STYLE_LABEL, nutrition, type Nutrition, type UserProfile } from '@/lib/metabolism';
+import { MACRO_STYLE_LABEL, type Nutrition, type UserProfile } from '@/lib/metabolism';
 import {
   DEFAULT_NUTRITION,
   DIETS,
@@ -133,7 +133,7 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
     const prefChange = change.scope !== 'meals';
     const nextPrefs = prefChange ? applyDietChange(prefs, change, text) : prefs;
     const nextAdjust = prefChange ? adjust + change.kcalDelta : adjust;
-    const target = nutrition(profile, nextAdjust, nextPrefs.style ?? 'standard');
+    const target = userNutrition(profile, { ...settings, kcalAdjust: nextAdjust, nutritionPrefs: nextPrefs });
     const pp = planPrefs(nextPrefs, settings.favoriteRecipes ?? []);
     const notes: string[] = [];
     let plan = settings.weekPlan;
