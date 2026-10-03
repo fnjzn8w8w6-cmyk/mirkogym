@@ -26,6 +26,8 @@ import {
   type DietChange,
   type NutritionPrefs,
 } from '@/lib/coach';
+import { weekTargets } from '@/lib/habits';
+import { SectionTitle } from '@/components/ui/Help';
 import {
   SLOT_LABEL,
   adaptPlanToPrefs,
@@ -139,7 +141,7 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
     let plan = settings.weekPlan;
     let rebuilt = false;
     if (!plan || change.scope === 'rebuild') {
-      plan = planWeek(data, target, pp, Date.now());
+      plan = planWeek(data, target, pp, Date.now(), settings.carbCycling?.length ? weekTargets(target, settings.carbCycling) : undefined);
       rebuilt = true;
     } else if (prefChange) {
       // cambio solo i pasti che non rispettano più le preferenze, poi ricalcolo le porzioni
@@ -182,7 +184,7 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
     <div className="space-y-4">
       <Card variant="elevated" className="p-4">
         <div className="flex items-center gap-2 text-lg text-fg">
-          <Apple className="h-5 w-5 text-accent-500" aria-hidden /> Il tuo dietologo
+          <Apple className="h-5 w-5 text-accent-500" aria-hidden /> <SectionTitle help="coach-diet">Il tuo dietologo</SectionTitle>
         </div>
         <p className="mt-1 text-sm text-fg-2">
           Dimmi cosa vuoi cambiare: obiettivo più veloce o più lento, intolleranze, cibi che ami o eviti, tempo per cucinare, numero di pasti, più

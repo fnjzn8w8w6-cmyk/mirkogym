@@ -17,6 +17,7 @@ import { sessionMinutes } from '@/lib/program-generator';
 import { cn } from '@/lib/cn';
 import type { Day } from '@/types';
 import History from './History';
+import { HelpTip, SectionTitle } from '@/components/ui/Help';
 import { CoachAnalysis } from '@/components/coach/CoachAnalysis';
 
 type Tab = 'plan' | 'sessions' | 'exercises' | 'analysis';
@@ -87,6 +88,10 @@ export default function Training() {
             </>
           ) : (
             <>
+              <div className="flex items-center justify-between">
+                <span className="section-title !mb-0">I giorni della tua scheda</span>
+                <HelpTip id="train-plan" />
+              </div>
               <ul className="space-y-3">
                 {days.map((d) => {
                   const last = lastForDay(d.id);
@@ -136,7 +141,9 @@ export default function Training() {
                   <FileUp className="h-5 w-5" aria-hidden />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-base font-semibold text-fg">Hai già un personal trainer?</span>
+                  <span className="block text-base font-semibold text-fg">
+                    <SectionTitle help="train-import">Hai già un personal trainer?</SectionTitle>
+                  </span>
                   <span className="block text-sm text-fg-2">Carica foto o PDF della tua scheda</span>
                 </span>
               </Card>

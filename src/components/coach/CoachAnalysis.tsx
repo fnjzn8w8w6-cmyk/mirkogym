@@ -7,6 +7,7 @@ import { useAthlete } from '@/hooks/use-athlete';
 import { analyzeAthlete } from '@/lib/coach';
 import { settle } from '@/lib/firestore';
 import { cn } from '@/lib/cn';
+import { SectionTitle } from '@/components/ui/Help';
 import { AIBusy, AINote, AIPersona, useAITask } from './AIBusy';
 
 /** Analisi del coach: osservazioni calcolate (sempre) + resoconto AI salvato, aggiornabile. */
@@ -28,7 +29,9 @@ export function CoachAnalysis() {
     <div className="space-y-4">
       <Card className="border-violet-500/40 p-4" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.22), rgba(21,15,34,0.95))' }}>
         <div className="flex items-center justify-between gap-2">
-          <h2 className="font-display text-lg font-extrabold text-fg">Analisi del coach</h2>
+          <h2 className="font-display text-lg font-extrabold text-fg">
+            <SectionTitle help="train-analysis">Analisi del coach</SectionTitle>
+          </h2>
           {saved && <span className="text-xs text-fg-3">{new Date(saved.at).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</span>}
         </div>
         {ai.busy ? (

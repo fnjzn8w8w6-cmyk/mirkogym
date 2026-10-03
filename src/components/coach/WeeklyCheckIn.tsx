@@ -4,6 +4,10 @@ import { useSettings } from '@/hooks/use-settings';
 import { useSessions } from '@/hooks/use-sessions';
 import { useAthlete, useRecentFoodLogs } from '@/hooks/use-athlete';
 import { usePhotos } from '@/hooks/use-photos';
+import { useLearnedFavorites, useProposals } from '@/hooks/use-habits';
+import { useSchedule } from '@/hooks/use-schedule';
+import { weekTargets } from '@/lib/habits';
+import { SectionTitle } from '@/components/ui/Help';
 import { analyzeWeekPhoto, compressPhoto, thumbOf, type WeekPhotoResult } from '@/lib/progress-photos';
 import { toISODate } from '@/lib/date-utils';
 import { estimateTdee, planRate, planStatus } from '@/lib/goal-plan';
@@ -22,7 +26,7 @@ import { MicButton, appendText } from '@/components/ui/MicButton';
 import { formatTonnage } from '@/lib/analytics';
 import type { UserProfile } from '@/lib/metabolism';
 import { checkInDue, checkInSummary, evaluate, weekStats, type CheckIn, type CheckInAnswers } from '@/lib/checkin';
-import { loadRecipes, rescalePlan } from '@/lib/recipes';
+import { loadRecipes, rescalePlan, setCustomMeal, type WeekPlan } from '@/lib/recipes';
 import { DEFAULT_NUTRITION, planPrefs } from '@/components/food/NutritionPlanner';
 
 const QUESTIONS: { key: keyof Omit<CheckInAnswers, 'note'>; label: string; scale: string[] }[] = [
@@ -78,8 +82,9 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (autoOpen && due) setOpen(true);
-  }, [autoOpen, due]);
+    // aperto dal link (Home, Corpo): si apre sempre, anche se il check-in non è ancora "dovuto"
+    if (autoOpen) setOpen(true);
+  }, [autoOpen]);
 
   const foodLogs = useRecentFoodLogs(28);
   const stats = useMemo(() => {
@@ -101,14 +106,19 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
     }
     return weekStats(sessions, bodyLogs, profile, Date.now(), {
       expectedRate: rate,
-      diary: est ? { ...est, desired, current } : null,
+      diary: est && !settings.metabolism ? { ...est, desired, current } : null,
       goalLine,
+      metabolism: settings.metabolism?.tdee ?? null,
     });
   }, [sessions, bodyLogs, profile, settings, foodLogs]);
   const deloadAvailable = Boolean(meso.mesocycle) && !meso.isDeloadWeek;
   const result = useMemo(() => evaluate(answers, stats, deloadAvailable), [answers, stats, deloadAvailable]);
 
   const photosApi = usePhotos();
+  const proposals = useProposals();
+  const learned = useLearnedFavorites();
+  const { days, save: saveSchedule } = useSchedule();
+  const [picked, setPicked] = useState<Record<string, boolean>>({});
   const { save: saveBody } = useBodyLogs();
   const [front, setFront] = useState<string | null>(null);
   const [side, setSide] = useState<string | null>(null);
@@ -145,7 +155,7 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
       );
       // la foto si salva comunque, anche se la stima non è riuscita
       await photosApi.save(
-        { date: today, thumb: await thumbOf(front), weight, ...(pr ? { bodyFat: pr.bodyFat, low: pr.low, high: pr.high, comment: pr.comment } : {}), hasSide: Boolean(side), createdAt: Date.now() },
+        { date: today, thumb: await thumbOf(front), weight, ...(pr ? { bodyFat: pr.bodyFat, low: pr.low, high: pr.high, comment: pr.comment, ...(pr.regions ? { regions: pr.regions } : {}) } : {}), hasSide: Boolean(side), createdAt: Date.now() },
         { front, ...(side ? { side } : {}) },
       );
       if (pr) {
@@ -179,22 +189,54 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
       if (settings.weekPlan && settings.weekPlan.source !== 'nutrizionista') {
         try {
           const data = await loadRecipes();
+          const t = userNutrition(profile, { ...settings, kcalAdjust: newAdjust });
           patch.weekPlan = rescalePlan(
             settings.weekPlan,
             data,
-            userNutrition(profile, { ...settings, kcalAdjust: newAdjust }),
+            t,
             planPrefs(settings.nutritionPrefs ?? DEFAULT_NUTRITION, settings.favoriteRecipes ?? []),
+            settings.carbCycling?.length ? weekTargets(t, settings.carbCycling) : undefined,
           );
         } catch {
           /* il piano verrà ricalibrato dalla sezione Dieta */
         }
       }
     }
+    // Proposte accettate (niente cambia senza conferma)
+    const accepted = proposals.filter((p) => picked[p.id]);
+    if (accepted.length) {
+      const target = userNutrition(profile, { ...settings, ...patch });
+      const pp = planPrefs(settings.nutritionPrefs ?? DEFAULT_NUTRITION, [...(settings.favoriteRecipes ?? []), ...learned.map((l) => l.id)]);
+      let plan: WeekPlan | undefined = patch.weekPlan ?? settings.weekPlan ?? undefined;
+      let cycling = settings.carbCycling ?? null;
+      let schedule = days;
+      for (const pr of accepted) {
+        if (pr.kind === 'meso') schedule = pr.days;
+        if (pr.kind === 'reorder') {
+          const moved = schedule.find((d) => d.id === pr.dayId);
+          if (moved) schedule = [moved, ...schedule.filter((d) => d.id !== pr.dayId)].map((d, i) => ({ ...d, order: i + 1 }));
+        }
+        if (pr.kind === 'cycling') cycling = pr.weekdays;
+      }
+      if (plan && plan.source !== 'nutrizionista') {
+        try {
+          const data = await loadRecipes();
+          for (const pr of accepted)
+            if (pr.kind === 'cheat' && plan) plan = setCustomMeal(plan, pr.weekday, 'cena', 'Pasto libero (sgarro pianificato)', { kcal: 900, protein: 35, carbs: 100, fat: 38 }, data, target, pp);
+          if (plan && accepted.some((p) => p.kind === 'cycling')) plan = rescalePlan(plan, data, target, pp, weekTargets(target, cycling));
+          patch.weekPlan = plan;
+        } catch {
+          /* il piano verrà aggiornato dalla sezione Dieta */
+        }
+      }
+      if (cycling !== (settings.carbCycling ?? null)) patch.carbCycling = cycling;
+      if (schedule !== days) await settle(saveSchedule(schedule));
+    }
     await settle(update(patch));
     if (deload) await settle(meso.forceDeload());
     setSaving(false);
     setOpen(false);
-    toast.success(kcalChange || deload ? 'Check-in salvato e piano aggiornato' : 'Check-in salvato');
+    toast.success(kcalChange || deload || accepted.length ? 'Check-in salvato e piano aggiornato' : 'Check-in salvato');
   };
 
   const last = history[0];
@@ -203,7 +245,7 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
     <>
       <Card className={cn('p-4', due && 'border-accent-500/50')}>
         <div className="flex items-center gap-2 text-base font-semibold text-fg">
-          <ClipboardCheck className="h-5 w-5 text-accent-500" aria-hidden /> Check-in settimanale
+          <ClipboardCheck className="h-5 w-5 text-accent-500" aria-hidden /> <SectionTitle help="coach-checkin">Check-in settimanale</SectionTitle>
         </div>
         {due ? (
           <p className="mt-1 text-sm text-fg-2">
@@ -360,6 +402,27 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
                     Settimana di scarico (carichi −{settings.deloadPercentage}%)
                   </label>
                 )}
+              </div>
+            )}
+            {proposals.length > 0 && (
+              <div className="space-y-2">
+                <div className="section-title !mb-0">
+                  <SectionTitle help="coach-proposals" isNew>
+                    Proposte per la prossima settimana
+                  </SectionTitle>
+                </div>
+                {proposals.map((pr) => (
+                  <label key={pr.id} className={cn('flex cursor-pointer gap-3 rounded-lg border p-3', picked[pr.id] ? 'border-accent-500 bg-accent-glow' : 'border-line-subtle bg-surface-2')}>
+                    <input type="checkbox" className="mt-1 h-5 w-5 shrink-0 accent-[#39FF88]" checked={Boolean(picked[pr.id])} onChange={(e) => setPicked((x) => ({ ...x, [pr.id]: e.target.checked }))} />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-fg">
+                        {pr.emoji} {pr.title}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-fg-2">{pr.detail}</span>
+                    </span>
+                  </label>
+                ))}
+                <p className="text-xs text-fg-3">Si applicano solo quelle che selezioni, quando salvi il check-in.</p>
               </div>
             )}
             <Button fullWidth size="lg" loading={saving} onClick={() => void finish()}>

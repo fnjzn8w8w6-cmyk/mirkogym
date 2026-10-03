@@ -9,6 +9,8 @@ export interface WeightPoint {
   trend?: number;
   /** percorso previsto dall'obiettivo (linea tratteggiata) */
   plan?: number;
+  /** pesata gonfiata da acqua/glicogeno */
+  water?: boolean;
 }
 
 /** Valori giornalieri (punti) + media mobile 7 giorni (linea). */
@@ -19,7 +21,8 @@ export function WeightChart({ data, unit, label, plan }: { data: WeightPoint[]; 
       <Legend
         items={[
           { label, color: chart.accentSoft },
-          { label: 'Media 7 giorni', color: chart.accent },
+          { label: unit.trim() === 'kg' ? 'Peso reale' : 'Media 7 giorni', color: chart.accent },
+          ...(data.some((d) => d.water) ? [{ label: 'Acqua', color: '#38BDF8' }] : []),
           ...(plan?.length ? [{ label: 'Percorso obiettivo', color: '#C084FC' }] : []),
         ]}
       />
@@ -55,7 +58,7 @@ export function WeightChart({ data, unit, label, plan }: { data: WeightPoint[]; 
                     title={formatShortDate(p.t)}
                     rows={[
                       ...(p.value != null ? [{ label, value: `${formatKg(p.value)}${unit}`, color: chart.accentSoft }] : []),
-                      ...(p.trend != null ? [{ label: 'Media 7gg', value: `${formatKg(p.trend)}${unit}`, color: chart.accent }] : []),
+                      ...(p.trend != null ? [{ label: unit.trim() === 'kg' ? 'Peso reale' : 'Media 7gg', value: `${formatKg(p.trend)}${unit}`, color: chart.accent }] : []),
                       ...(p.plan != null ? [{ label: 'Obiettivo', value: `${formatKg(p.plan)}${unit}`, color: '#C084FC' }] : []),
                     ]}
                   />
@@ -66,7 +69,21 @@ export function WeightChart({ data, unit, label, plan }: { data: WeightPoint[]; 
             <Line
               dataKey="value"
               stroke="none"
-              dot={{ r: 4, fill: chart.accentSoft, stroke: chart.surface, strokeWidth: 2 }}
+              dot={(props: { cx?: number; cy?: number; payload?: WeightPoint; index?: number }) =>
+                props.cx == null || props.cy == null || props.payload?.value == null ? (
+                  <g key={`d${props.index}`} />
+                ) : (
+                  <circle
+                    key={`d${props.index}`}
+                    cx={props.cx}
+                    cy={props.cy}
+                    r={props.payload.water ? 5 : 4}
+                    fill={props.payload.water ? '#38BDF8' : chart.accentSoft}
+                    stroke={chart.surface}
+                    strokeWidth={2}
+                  />
+                )
+              }
               activeDot={{ r: 6, fill: chart.accent, stroke: chart.surface, strokeWidth: 2 }}
               isAnimationActive={false}
             />

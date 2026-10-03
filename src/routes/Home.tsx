@@ -33,6 +33,9 @@ import { sumMacros } from '@/lib/foods';
 import { formatKg, groupColor, trendDelta } from '@/lib/analytics';
 import { cn } from '@/lib/cn';
 import { GoalCard } from '@/components/goal/GoalPlan';
+import { useTrainingModel } from '@/hooks/use-training-model';
+import { HelpTip, NewBadge, SectionTitle } from '@/components/ui/Help';
+import { useDayTarget, useProposals } from '@/hooks/use-habits';
 import type { Day } from '@/types';
 
 function Sparkline({ values }: { values: number[] }) {
@@ -103,7 +106,9 @@ function WeeklyQuests() {
   return (
     <Card className="p-4">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold uppercase tracking-wider text-fg-3">Sfide della settimana · {done}/3</span>
+        <span className="text-xs font-bold uppercase tracking-wider text-fg-3">
+          <SectionTitle help="home-quests">Sfide della settimana · {done}/3</SectionTitle>
+        </span>
         <span className={cn('rounded-full px-2.5 py-1 text-sm font-bold', streak > 0 ? 'bg-accent-glow text-accent-400' : 'bg-surface-2 text-fg-3')}>
           <span className={streak > 0 ? 'inline-block animate-bounce-slow' : ''}>🔥</span> {streak} {streak === 1 ? 'settimana' : 'settimane'}
         </span>
@@ -132,16 +137,24 @@ function TodayDiet({ onOpen }: { onOpen: () => void }) {
   const { entries } = useFoodLog(todayISO());
   const profile = settings.profile!;
   const w = bodyLogs.find((b) => b.weight != null)?.weight ?? profile.weightKg;
-  const target = userNutrition({ ...profile, weightKg: w }, settings);
+  const dayT = useDayTarget(profile);
+  const target = dayT?.day ?? userNutrition({ ...profile, weightKg: w }, settings);
   const t = sumMacros(entries.map(entryMacros));
   return (
     <Card interactive className="p-4" onClick={onOpen} role="link" aria-label="Apri la dieta">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold uppercase tracking-wider text-fg-3">Dieta di oggi</span>
+        <span className="text-xs font-bold uppercase tracking-wider text-fg-3">
+          <SectionTitle help="home-diet">Dieta di oggi</SectionTitle>
+        </span>
         <span className="text-sm text-fg-2">
           <strong className="font-display text-fg">{t.kcal}</strong> / {target.target} kcal
         </span>
       </div>
+      {dayT && dayT.day.delta > 0 && (
+        <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-violet-500/15 px-2.5 py-1 text-xs font-bold text-violet-400">
+          🏋️ Giorno di allenamento: +{Math.round(dayT.day.delta / 4)} g carboidrati <NewBadge />
+        </div>
+      )}
       <div className="mt-3 grid grid-cols-3">
         <Ring value={t.protein} target={target.protein} color="#39FF88" label="Proteine" unit="g" />
         <Ring value={t.carbs} target={target.carbs} color="#C084FC" label="Carbo" unit="g" />
@@ -167,6 +180,8 @@ export default function Home() {
   const [starting, setStarting] = useState(false);
   const { level } = useProgress();
   const athlete = useAthlete();
+  const tModel = useTrainingModel();
+  const proposals = useProposals();
 
   const next = useMemo(() => nextDay(days, sessions), [days, sessions]);
   const activeDay = activeSession ? days.find((d) => d.id === activeSession.dayId) : undefined;
@@ -261,7 +276,9 @@ export default function Home() {
             style={{ background: 'radial-gradient(120% 90% at 100% 0%, rgba(139,92,246,0.45), transparent 60%), radial-gradient(90% 80% at 0% 100%, rgba(57,255,136,0.18), transparent 60%), linear-gradient(#150F22,#150F22)' }}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold uppercase tracking-[0.2em] text-accent-400">Allenamento di oggi</span>
+              <span className="text-xs font-bold uppercase tracking-[0.2em] text-accent-400">
+                <SectionTitle help="home-workout">Allenamento di oggi</SectionTitle>
+              </span>
               {meso.isDeloadWeek && <Chip tone="accent">DELOAD -{settings.deloadPercentage}%</Chip>}
             </div>
             <h2 className="mt-2 font-display text-3xl font-extrabold uppercase leading-tight text-fg">{next.subtitle || next.name}</h2>
@@ -275,6 +292,14 @@ export default function Home() {
                 </Chip>
               ))}
             </div>
+            {dayGroups(next)
+              .map((g) => tModel.fatigue.get(g))
+              .filter((f) => f?.light)
+              .map((f) => (
+                <div key={f!.group} className="mt-2 inline-flex items-center gap-1 rounded-full bg-warning-bg px-2.5 py-1 text-xs font-bold text-warning">
+                  🩹 {f!.group}: settimana leggera −30% <NewBadge /> <HelpTip id="session-fatigue" />
+                </div>
+              ))}
             <div className="mt-4 flex gap-6 text-sm text-fg-2">
               <span className="flex items-center gap-1.5">
                 <Dumbbell className="h-4 w-4 text-accent-400" aria-hidden />
@@ -311,7 +336,9 @@ export default function Home() {
         {/* Peso + mesociclo */}
         <div className="grid grid-cols-2 gap-3">
           <Card interactive className="p-4" onClick={() => navigate('/body')} role="link" aria-label="Apri corpo">
-            <span className="text-xs font-bold uppercase tracking-wider text-fg-3">Peso</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-fg-3">
+              <SectionTitle help="home-weight">Peso</SectionTitle>
+            </span>
             {showBody && latestBody?.weight != null ? (
               <>
                 <div className="mt-1 font-display text-2xl font-extrabold text-fg">
@@ -328,7 +355,9 @@ export default function Home() {
             )}
           </Card>
           <Card interactive className="p-4" onClick={() => navigate('/mesocycle')} role="link" aria-label="Apri mesociclo">
-            <span className="text-xs font-bold uppercase tracking-wider text-fg-3">Mesociclo</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-fg-3">
+              <SectionTitle help="home-meso">Mesociclo</SectionTitle>
+            </span>
             <div className="mt-1 font-display text-2xl font-extrabold text-fg">
               {meso.currentWeek}
               <span className="text-sm font-semibold text-fg-3">/{meso.totalWeeks} sett.</span>
@@ -365,7 +394,9 @@ export default function Home() {
               <ClipboardCheck className="h-6 w-6" aria-hidden />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-base font-semibold text-fg">Check-in settimanale</span>
+              <span className="block text-base font-semibold text-fg">
+                <SectionTitle help="home-checkin">Check-in settimanale</SectionTitle>
+              </span>
               <span className="block text-sm text-fg-2">2 minuti: il coach aggiusta calorie e carichi</span>
             </span>
             <ChevronRight className="h-5 w-5 text-fg-3" aria-hidden />
@@ -373,11 +404,23 @@ export default function Home() {
         )}
 
         {/* Il coach ha notato… (dalla memoria del coach, senza AI) */}
-        {athlete.report.insights.length > 0 && (
+        {(athlete.report.insights.length > 0 || proposals.length > 0) && (
           <Card className="space-y-2 border-violet-500/40 p-4" interactive onClick={() => navigate('/training?tab=analysis')} role="link" aria-label="Apri l'analisi del coach">
             <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-violet-400">
-              <span className="animate-bounce-slow inline-block">🧐</span> Il coach ha notato
+              <span className="animate-bounce-slow inline-block">🧐</span> <SectionTitle help="home-coach-noticed">Il coach ha notato</SectionTitle>
             </span>
+            {proposals.length > 0 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate('/food?tab=plan&checkin=1');
+                }}
+                className="w-full rounded-md border border-accent-500/40 bg-accent-glow px-3 py-2 text-left text-sm text-fg"
+              >
+                ✨ Ho <strong>{proposals.length} {proposals.length === 1 ? 'proposta' : 'proposte'}</strong> per la prossima settimana: le trovi nel check-in → <NewBadge />
+              </button>
+            )}
             <ul className="space-y-1.5">
               {athlete.report.insights.slice(0, 3).map((i) => (
                 <li key={i.text} className={cn('text-sm', i.tone === 'bad' ? 'text-fg' : 'text-fg-2')}>
@@ -392,7 +435,7 @@ export default function Home() {
         <Card className="flex items-center gap-3 border-violet-500/40 p-4" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.25), rgba(21,15,34,0.95))' }}>
           <button type="button" onClick={() => navigate('/coach?tab=chat')} className="min-w-0 flex-1 text-left">
             <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-violet-400">
-              <Sparkles className="h-4 w-4" aria-hidden /> Coach
+              <Sparkles className="h-4 w-4" aria-hidden /> <SectionTitle help="home-coach">Coach</SectionTitle>
             </span>
             <span className="mt-1 block text-base font-semibold text-fg">Chiedimi qualcosa</span>
             <span className="block text-sm text-fg-2">Tocca il microfono e parla: scheda, dieta, dolori…</span>

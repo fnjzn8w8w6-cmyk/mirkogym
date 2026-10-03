@@ -26,6 +26,7 @@ import { groupColor } from '@/lib/analytics';
 import { cn } from '@/lib/cn';
 import { MicButton, appendText } from '@/components/ui/MicButton';
 import { GoalCard } from '@/components/goal/GoalPlan';
+import { SectionTitle } from '@/components/ui/Help';
 import type { Day } from '@/types';
 
 type Tab = 'train' | 'diet' | 'chat';
@@ -188,7 +189,7 @@ function TrainingCoach({ profile }: { profile: UserProfile }) {
     <div className="space-y-4">
       <Card variant="elevated" className="p-4">
         <div className="flex items-center gap-2 text-lg text-fg">
-          <Dumbbell className="h-5 w-5 text-accent-500" aria-hidden /> Il tuo personal trainer
+          <Dumbbell className="h-5 w-5 text-accent-500" aria-hidden /> <SectionTitle help="coach-training">Il tuo personal trainer</SectionTitle>
         </div>
         <p className="mt-1 text-sm text-fg-2">
           Scrivi cosa vuoi, come parleresti a un trainer: muscoli da migliorare, dolori, tempo a disposizione, esercizi che non ti piacciono.
@@ -371,7 +372,7 @@ function ChatCoach({ profile }: { profile: UserProfile }) {
       {messages.length === 0 && (
         <Card className="p-4">
           <div className="flex items-center gap-2 text-lg text-fg">
-            <MessageCircle className="h-5 w-5 text-accent-500" aria-hidden /> Chiedi al coach
+            <MessageCircle className="h-5 w-5 text-accent-500" aria-hidden /> <SectionTitle help="coach-chat">Chiedi al coach</SectionTitle>
           </div>
           <p className="mt-1 text-sm text-fg-2">Allenamento, alimentazione, recupero: il coach conosce il tuo profilo e i tuoi ultimi allenamenti.</p>
           <div className="mt-3 flex flex-wrap gap-2">

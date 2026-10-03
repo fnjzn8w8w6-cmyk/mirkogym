@@ -18,6 +18,9 @@ import { mealInfo, simpleFoodPer100, type PlannedMeal, type Recipe } from '@/lib
 import type { DiaryEntry, DiaryMeal } from '@/types';
 import { FoodPicker } from './FoodPicker';
 import { DayRecapForm } from '@/components/coach/Recaps';
+import { useDayTarget } from '@/hooks/use-habits';
+import { WhyKcal } from './NutritionPlanner';
+import { HelpTip } from '@/components/ui/Help';
 import { MacroBar, fmtNum, useRecipes } from './shared';
 
 const MEALS: { key: DiaryMeal; label: string; emoji: string }[] = [
@@ -54,7 +57,8 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
   const [photoFor, setPhotoFor] = useState<DiaryMeal | null>(null);
   const [editing, setEditing] = useState<DiaryEntry | null>(null);
   const [editQty, setEditQty] = useState('');
-  const target = useMemo(() => userNutrition(profile, settings), [profile, settings]);
+  const dayT = useDayTarget(profile, date);
+  const target = useMemo(() => dayT?.day ?? userNutrition(profile, settings), [dayT, profile, settings]);
   const totals = useMemo(() => sumMacros(entries.map(entryMacros)), [entries]);
   const left = target.target - totals.kcal;
 
@@ -95,9 +99,12 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
         <IconButton label="Giorno precedente" onClick={() => setDate(toISODate(addDays(fromISODate(date), -1)))}>
           <ChevronLeft className="h-6 w-6" />
         </IconButton>
-        <button type="button" onClick={() => setDate(todayISO())} className="text-lg font-semibold text-fg">
-          {dayLabel(date)}
-        </button>
+        <span className="flex items-center gap-2">
+          <button type="button" onClick={() => setDate(todayISO())} className="text-lg font-semibold text-fg">
+            {dayLabel(date)}
+          </button>
+          <HelpTip id="diet-diary" />
+        </span>
         <IconButton label="Giorno successivo" onClick={() => setDate(toISODate(addDays(fromISODate(date), 1)))}>
           <ChevronRight className="h-6 w-6" />
         </IconButton>
@@ -121,6 +128,13 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
         <MacroBar label="Proteine" value={totals.protein} target={target.protein} unit="g" color="#39FF88" />
         <MacroBar label="Carboidrati" value={totals.carbs} target={target.carbs} unit="g" color="#C084FC" />
         <MacroBar label="Grassi" value={totals.fat} target={target.fat} unit="g" color="#EAB308" />
+        {dayT && dayT.day.delta !== 0 && (
+          <p className="text-xs text-fg-2">
+            {dayT.day.training ? `🏋️ Giorno di allenamento: +${dayT.day.delta} kcal di carboidrati` : `😴 Giorno di riposo: ${dayT.day.delta} kcal`}
+            <HelpTip id="diet-cycling" className="ml-1" />
+          </p>
+        )}
+        <WhyKcal base={dayT?.base ?? target} day={dayT?.day} />
       </Card>
 
       {planDay.length > 0 && !loading && entries.length === 0 && (

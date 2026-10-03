@@ -36,6 +36,7 @@ import {
   weeklyVolumeByGroup,
 } from '@/lib/analytics';
 import { formatDuration, formatRelativeDay, formatShortDate } from '@/lib/date-utils';
+import { HelpTip, SectionTitle } from '@/components/ui/Help';
 import { cn } from '@/lib/cn';
 
 export type HistoryTab = 'sessions' | 'exercises' | 'analytics';
@@ -102,7 +103,10 @@ function SessionsTab() {
 
   return (
     <>
-      <p className="mb-3 text-sm text-fg-3">Tocca una sessione per i dettagli e il confronto. Scorri a sinistra per duplicarla o eliminarla.</p>
+      <p className="mb-3 flex items-start gap-2 text-sm text-fg-3">
+        <span className="flex-1">Tocca una sessione per i dettagli e il confronto. Scorri a sinistra per duplicarla o eliminarla.</span>
+        <HelpTip id="train-sessions" />
+      </p>
       <ul className="space-y-2">
         {sessions.map((s, idx) => {
           const day = getDay(s.dayId);
@@ -312,7 +316,9 @@ function SummaryCard() {
   ];
   return (
     <Card className="p-4">
-      <h2 className="section-title">Ultima sessione vs media ({sessions.length} sessioni)</h2>
+      <h2 className="section-title">
+        <SectionTitle help="train-exercises">Ultima sessione vs media ({sessions.length} sessioni)</SectionTitle>
+      </h2>
       <table className="w-full text-sm">
         <thead>
           <tr className="text-xs uppercase text-fg-3">

@@ -34,6 +34,9 @@ import { useFoodLog, useMyRecipes } from '@/hooks/use-food';
 import { todayISO } from '@/lib/date-utils';
 import type { DiaryMeal, UserRecipe } from '@/types';
 import { RecipeDetail } from './RecipeDetail';
+import { useLearnedFavorites } from '@/hooks/use-habits';
+import { weekTargets } from '@/lib/habits';
+import { HelpTip, NewBadge, SectionTitle } from '@/components/ui/Help';
 import { RecipeGallery } from './RecipeGallery';
 
 export { DEFAULT_NUTRITION };
@@ -226,7 +229,7 @@ export function AddToPlanModal({ recipe, plan, data, onClose, onPlace }: {
   );
 }
 
-function DayPills({ value, onChange, plan, target }: { value: number; onChange: (d: number) => void; plan?: WeekPlan; target?: Nutrition }) {
+function DayPills({ value, onChange, plan, target, cycling }: { value: number; onChange: (d: number) => void; plan?: WeekPlan; target?: Nutrition; cycling?: number[] | null }) {
   const today = todayIdx();
   return (
     <div className="grid grid-cols-7 gap-1" role="tablist" aria-label="Giorno della settimana">
@@ -244,12 +247,59 @@ function DayPills({ value, onChange, plan, target }: { value: number; onChange: 
               value === i ? 'border-accent-500 bg-accent-glow font-bold text-accent-400' : 'border-line bg-surface-2 text-fg-2',
             )}
           >
-            {d}
+            <span>
+              {d}
+              {cycling?.includes(i) ? '🏋️' : ''}
+            </span>
             {i === today && <span className="text-[10px] font-semibold uppercase">oggi</span>}
             {i !== today && kcal != null && <span className="text-[10px] text-fg-3">{Math.round(kcal / 10) * 10}</span>}
           </button>
         );
       })}
+    </div>
+  );
+}
+
+/** "Perché queste calorie?": scomposizione dell'obiettivo del giorno. */
+export function WhyKcal({ base, day }: { base: Nutrition; day?: Nutrition & { delta?: number } }) {
+  const { settings } = useSettings();
+  const [open, setOpen] = useState(false);
+  const real = settings.metabolism;
+  const adj = real ? 0 : (settings.kcalAdjust ?? 0);
+  const total = day?.target ?? base.target;
+  const delta = day?.delta ?? 0;
+  const ritmo = base.target - base.tdee - adj;
+  const phase = settings.goalPlan?.phases[settings.goalPlan.current];
+  const rows: [string, number, boolean?][] = [
+    [real ? `Il tuo metabolismo (dal diario, ${real.days} giornate)` : 'Fabbisogno stimato (formula)', base.tdee],
+    [phase ? `Ritmo per l'obiettivo "${phase.label}"` : 'Obiettivo (surplus/deficit)', ritmo, true],
+    ...(adj ? ([['Correzione dei check-in', adj, true]] as [string, number, boolean][]) : []),
+    ...(delta ? ([[delta > 0 ? 'Giorno di allenamento (+ carboidrati)' : 'Giorno di riposo (riequilibrio)', delta, true]] as [string, number, boolean][]) : []),
+  ];
+  return (
+    <div className="pt-1">
+      <button type="button" className="flex items-center gap-1 text-sm font-semibold text-violet-400" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+        Perché {total.toLocaleString('it-IT')} kcal? <NewBadge />
+      </button>
+      {open && (
+        <table className="mt-2 w-full text-sm">
+          <tbody>
+            {rows.map(([l, v, signed]) => (
+              <tr key={l} className="border-t border-line-subtle">
+                <td className="py-1.5 text-fg-2">{l}</td>
+                <td className={cn('py-1.5 text-right font-semibold', signed && v > 0 ? 'text-accent-400' : signed && v < 0 ? 'text-warning' : 'text-fg')}>
+                  {signed && v > 0 ? '+' : ''}
+                  {Math.round(v).toLocaleString('it-IT')}
+                </td>
+              </tr>
+            ))}
+            <tr className="border-t border-line">
+              <td className="py-1.5 font-bold text-fg">Totale</td>
+              <td className="py-1.5 text-right font-bold text-fg">{total.toLocaleString('it-IT')}</td>
+            </tr>
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
@@ -284,8 +334,13 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
   const [openSimple, setOpenSimple] = useState<SimpleMeal | null>(null);
   const adjust = settings.kcalAdjust ?? 0;
   const target = useMemo(() => userNutrition(profile, settings), [profile, settings]);
-  const favorites = settings.favoriteRecipes ?? [];
+  const learned = useLearnedFavorites();
+  // preferiti + ricette che mangi davvero (imparate dal diario)
+  const favorites = useMemo(() => [...(settings.favoriteRecipes ?? []), ...learned.map((l) => l.id)], [settings.favoriteRecipes, learned]);
   const pp = useMemo(() => planPrefs(settings.nutritionPrefs ?? prefs, favorites), [settings.nutritionPrefs, prefs, favorites]);
+  // calorie che seguono la scheda: un obiettivo per ogni giorno (se attivo)
+  const cycling = settings.carbCycling?.length ? settings.carbCycling : null;
+  const week = useMemo(() => (cycling ? weekTargets(target, cycling) : undefined), [target, cycling]);
   const plan = settings.weekPlan;
   const byId = useMemo(() => new Map((data?.recipes ?? []).map((r) => [r.id, r])), [data]);
 
@@ -294,7 +349,8 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
   const create = async () => {
     if (!data) return;
     // obiettivi ricalcolati con lo stile dei macro appena scelto
-    const p = planWeek(data, userNutrition(profile, { ...settings, nutritionPrefs: prefs }), planPrefs(prefs, favorites), Date.now());
+    const t = userNutrition(profile, { ...settings, nutritionPrefs: prefs });
+    const p = planWeek(data, t, planPrefs(prefs, favorites), Date.now(), cycling ? weekTargets(t, cycling) : undefined);
     await save(p, { nutritionPrefs: prefs });
     setEditPrefs(false);
     toast.success('Piano settimanale pronto: 7 giorni tutti diversi');
@@ -315,7 +371,7 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
   const targets = (
     <Card variant="elevated" className="p-4">
       <div className="flex items-center gap-2 text-lg text-fg">
-        <Apple className="h-5 w-5 text-accent-500" aria-hidden /> I tuoi obiettivi giornalieri
+        <Apple className="h-5 w-5 text-accent-500" aria-hidden /> <SectionTitle help="diet-why-kcal">I tuoi obiettivi giornalieri</SectionTitle>
       </div>
       <div className="mt-3 grid grid-cols-4 gap-2 text-center">
         {[
@@ -352,7 +408,9 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
         {header}
         {importCard}
         <Card className="space-y-3 p-4">
-          <div className="text-base font-semibold text-fg">Il tuo piano settimanale</div>
+          <div className="text-base font-semibold text-fg">
+            <SectionTitle help="diet-plan">Il tuo piano settimanale</SectionTitle>
+          </div>
           <p className="text-sm text-fg-2">
             7 giorni di pasti diversi scelti tra centinaia di ricette italiane (e le tue), con porzioni calcolate sulle tue calorie e proteine.
           </p>
@@ -455,7 +513,7 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
             className="mt-2"
             size="sm"
             onClick={() => {
-              void save(rescalePlan(plan, data, target, pp));
+              void save(rescalePlan(plan, data, target, pp, week));
               toast.success('Porzioni ricalcolate');
             }}
           >
@@ -464,14 +522,22 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
         </Card>
       )}
 
-      <DayPills value={day} onChange={setDay} plan={plan} target={target} />
+      <DayPills value={day} onChange={setDay} plan={plan} target={target} cycling={cycling} />
 
       <Card className="space-y-2 p-4">
-        <div className="text-base font-semibold text-fg">{DAY_LONG[day]}</div>
-        <MacroBar label="Calorie" value={totals.kcal} target={target.target} unit="kcal" color="#39FF88" />
-        <MacroBar label="Proteine" value={totals.protein} target={target.protein} unit="g" color="#39FF88" />
-        <MacroBar label="Carboidrati" value={totals.carbs} target={target.carbs} unit="g" color="#C084FC" />
-        <MacroBar label="Grassi" value={totals.fat} target={target.fat} unit="g" color="#EAB308" />
+        <div className="flex items-center justify-between gap-2 text-base font-semibold text-fg">
+          <span>{DAY_LONG[day]}</span>
+          {cycling && (
+            <span className={cn('rounded-full px-2 py-0.5 text-xs font-bold', cycling.includes(day) ? 'bg-violet-500/20 text-violet-400' : 'bg-surface-3 text-fg-3')}>
+              {cycling.includes(day) ? '🏋️ Allenamento' : '😴 Riposo'} <HelpTip id="diet-cycling" />
+            </span>
+          )}
+        </div>
+        <MacroBar label="Calorie" value={totals.kcal} target={(week?.[day] ?? target).target} unit="kcal" color="#39FF88" />
+        <MacroBar label="Proteine" value={totals.protein} target={(week?.[day] ?? target).protein} unit="g" color="#39FF88" />
+        <MacroBar label="Carboidrati" value={totals.carbs} target={(week?.[day] ?? target).carbs} unit="g" color="#C084FC" />
+        <MacroBar label="Grassi" value={totals.fat} target={(week?.[day] ?? target).fat} unit="g" color="#EAB308" />
+        <WhyKcal base={target} day={week?.[day]} />
       </Card>
 
       {!data ? (
@@ -492,6 +558,19 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
         ))
       )}
 
+      {learned.length > 0 && (
+        <Card className="p-4">
+          <div className="section-title !mb-1">
+            <SectionTitle help="diet-tastes" isNew>
+              Il piano impara i tuoi gusti
+            </SectionTitle>
+          </div>
+          <p className="text-sm text-fg-2">
+            ✅ Proposte più spesso, perché le mangi davvero: {learned.slice(0, 3).map((l) => `${l.name} (${l.count}×)`).join(', ')}.
+          </p>
+        </Card>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <Button variant="secondary" icon={<ShoppingCart className="h-5 w-5" />} onClick={() => setShopOpen(true)}>
           Spesa settimana
@@ -502,7 +581,7 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
           disabled={!data}
           onClick={() => {
             if (!data) return;
-            void save(planWeek(data, target, pp, Date.now()));
+            void save(planWeek(data, target, pp, Date.now(), week));
             toast.success('Nuova settimana generata');
           }}
         >

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { TextArea } from '@/components/ui/Input';
 import { MicButton, appendText } from '@/components/ui/MicButton';
 import { cn } from '@/lib/cn';
+import { NewBadge } from '@/components/ui/Help';
 import type { DayRecap, WorkoutRecap } from '@/types';
 
 function Scale({ label, value, onChange, options }: { label: string; value: number; onChange: (v: number) => void; options: string[] }) {
@@ -103,10 +104,12 @@ export function DayRecapForm({ initial, onSend }: { initial?: DayRecap; onSend: 
   const [hunger, setHunger] = useState(initial?.hunger ?? 3);
   const [cheat, setCheat] = useState(initial?.cheat ?? '');
   const [note, setNote] = useState(initial?.note ?? '');
+  const [complete, setComplete] = useState(initial?.complete ?? true);
   const [sent, setSent] = useState(Boolean(initial));
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     setSent(Boolean(initial));
+    setComplete(initial?.complete ?? true);
     setAdherence(initial?.adherence ?? 4);
     setHunger(initial?.hunger ?? 3);
     setCheat(initial?.cheat ?? '');
@@ -123,6 +126,25 @@ export function DayRecapForm({ initial, onSend }: { initial?: DayRecap; onSend: 
     );
   return (
     <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3 rounded-md bg-surface-2 p-3">
+        <span className="text-sm text-fg">
+          Giornata registrata tutta? <NewBadge id="complete-day" />
+          <span className="block text-xs text-fg-3">Se manca qualche pasto, il calcolo del tuo metabolismo la ignora.</span>
+        </span>
+        <div className="flex shrink-0 gap-1">
+          {[true, false].map((v) => (
+            <button
+              key={String(v)}
+              type="button"
+              aria-pressed={complete === v}
+              onClick={() => setComplete(v)}
+              className={complete === v ? 'rounded-full bg-accent-500 px-3 py-1 text-sm font-bold text-onaccent' : 'rounded-full px-3 py-1 text-sm text-fg-3'}
+            >
+              {v ? 'Sì' : 'No'}
+            </button>
+          ))}
+        </div>
+      </div>
       <Scale label="Quanto hai seguito il piano?" value={adherence} onChange={setAdherence} options={['😬', '😕', '😐', '🙂', '🎯']} />
       <Scale label="Fame durante il giorno" value={hunger} onChange={setHunger} options={['🙂', '😊', '😐', '😋', '🤤']} />
       <div className="relative [&_textarea]:pr-14">
@@ -136,7 +158,7 @@ export function DayRecapForm({ initial, onSend }: { initial?: DayRecap; onSend: 
         icon={<Send className="h-5 w-5" />}
         onClick={async () => {
           setBusy(true);
-          await onSend({ adherence, hunger, cheat: cheat.trim() || undefined, note: note.trim() || undefined, at: Date.now() });
+          await onSend({ adherence, hunger, complete, cheat: cheat.trim() || undefined, note: note.trim() || undefined, at: Date.now() });
           setBusy(false);
           setSent(true);
         }}

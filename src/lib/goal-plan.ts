@@ -8,6 +8,7 @@ import type { BodyLog, FoodLog } from '@/types';
 import { callAIJson, num, oneOf, str, type AIOptions } from './ai';
 import { GOALS, type Goal, type UserProfile } from './metabolism';
 import { toISODate } from './date-utils';
+import { realWeight } from './body-model';
 
 const DAY = 86400000;
 const WEEK = 7 * DAY;
@@ -164,9 +165,7 @@ export function reflow(plan: GoalPlan): GoalPlan {
 
 /** Peso di tendenza: media delle pesate degli ultimi 7 giorni (più stabile della singola pesata). */
 export function trendWeight(logs: BodyLog[], fallback: number): number {
-  const recent = logs.filter((l) => l.weight != null && Date.now() - new Date(l.date).getTime() <= 7 * DAY).map((l) => l.weight as number);
-  if (recent.length) return Math.round((recent.reduce((a, b) => a + b, 0) / recent.length) * 10) / 10;
-  return logs.find((l) => l.weight != null)?.weight ?? fallback;
+  return realWeight(logs, fallback);
 }
 
 export interface PlanStatus {

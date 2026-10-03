@@ -16,6 +16,7 @@ import { userNutrition } from '@/lib/coach';
 import { Button } from '@/components/ui/Button';
 import { settle } from '@/lib/firestore';
 import { GoalCard } from '@/components/goal/GoalPlan';
+import { SectionTitle } from '@/components/ui/Help';
 import { cn } from '@/lib/cn';
 
 export default function Profile() {
@@ -60,7 +61,9 @@ export default function Profile() {
               <span className="-mt-1 text-3xl text-fg">{level.level}</span>
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-2xl text-fg">{level.title}</div>
+              <div className="text-2xl text-fg">
+                <SectionTitle help="profile-level">{level.title}</SectionTitle>
+              </div>
               {email && <div className="truncate text-sm text-fg-3">{email}</div>}
               <ProgressBar className="mt-2" value={level.progress} label="Avanzamento livello" />
               <div className="mt-1 text-sm text-fg-3">
@@ -115,7 +118,9 @@ export default function Profile() {
 
         {/* Ranghi di forza */}
         <section>
-          <h2 className="section-title">Ranghi di forza</h2>
+          <h2 className="section-title">
+            <SectionTitle help="profile-ranks">Ranghi di forza</SectionTitle>
+          </h2>
           <Card className="divide-y divide-line-subtle">
             {!bodyweight && (
               <button type="button" onClick={() => navigate('/body')} className="flex w-full items-center gap-2 p-4 text-left text-sm text-warning">
@@ -159,7 +164,9 @@ export default function Profile() {
         {/* Traguardi */}
         <section>
           <div className="mb-3 flex items-baseline justify-between">
-            <h2 className="section-title !mb-0">Traguardi</h2>
+            <h2 className="section-title !mb-0">
+              <SectionTitle help="profile-achievements">Traguardi</SectionTitle>
+            </h2>
             <span className="text-sm text-fg-3">
               {unlocked}/{achievements.length}
             </span>

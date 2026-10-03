@@ -22,6 +22,11 @@ import { formatRelativeDay, fromISODate, toISODate } from '@/lib/date-utils';
 import { cn } from '@/lib/cn';
 import { CompositionCard, GoalStatus, Measurements } from '@/components/body/BodyOverview';
 import { MuscleWeekCard } from '@/components/body/MuscleWeek';
+import { useRecentFoodLogs } from '@/hooks/use-athlete';
+import { useSessions } from '@/hooks/use-sessions';
+import { userNutrition } from '@/lib/coach';
+import { completeDays, waterEvents, weightTrend } from '@/lib/body-model';
+import { SectionTitle } from '@/components/ui/Help';
 import { ProgressPhotos } from '@/components/body/ProgressPhotos';
 
 const PERIODS: [number, string][] = [
@@ -52,7 +57,19 @@ export default function Body() {
   const [toDelete, setToDelete] = useState<BodyLog | null>(null);
 
   const [period, setPeriod] = useState(90);
-  const weightData = useMemo(() => series(bodyLogs, 'weight', period), [bodyLogs, period]);
+  // Peso: pesate + peso reale (media mobile esponenziale) + pesate gonfiate da acqua
+  const foodLogs = useRecentFoodLogs(120);
+  const { sessions, groupOf } = useSessions();
+  const target = settings.profile ? userNutrition(settings.profile, settings).target : null;
+  const water = useMemo(() => waterEvents(bodyLogs, foodLogs, sessions, target, groupOf), [bodyLogs, foodLogs, sessions, target, groupOf]);
+  const weightData = useMemo(() => {
+    const since = toISODate(subDays(new Date(), period));
+    const wset = new Set(water.map((w) => w.date));
+    return weightTrend(bodyLogs)
+      .filter((p) => p.weight != null && p.date >= since)
+      .map((p) => ({ t: fromISODate(p.date).getTime(), value: p.weight, trend: p.trend, ...(wset.has(p.date) ? { water: true } : {}) }));
+  }, [bodyLogs, period, water]);
+  const real = weightData.length ? weightData[weightData.length - 1] : null;
   const bfData = useMemo(() => series(bodyLogs, 'bodyFat', period), [bodyLogs, period]);
   const wTrend = useMemo(() => trendDelta(bodyLogs, 'weight', 7), [bodyLogs]);
   // Percorso previsto dall'obiettivo a fasi (dalla fase in corso in poi)
@@ -136,14 +153,35 @@ export default function Body() {
             </div>
             <Card className="p-4">
               <div className="flex items-baseline justify-between">
-                <h2 className="section-title !mb-0">Peso</h2>
+                <h2 className="section-title !mb-0">
+                  <SectionTitle help="body-weight-chart" isNew>Peso</SectionTitle>
+                </h2>
                 {wTrend && <TrendLine delta={wTrend.delta} label="7gg" unit=" kg" />}
               </div>
-              {weightData.length > 1 ? <WeightChart data={weightData} unit=" kg" label="Peso" plan={goalPaths.w} /> : <p className="mt-2 text-base text-fg-3">Servono almeno 2 pesate nel periodo.</p>}
+              {real?.trend != null && (
+                <p className="mt-1 text-sm text-fg-2">
+                  Peso reale <strong className="text-fg">{formatKg(real.trend)} kg</strong>
+                  {real.value != null && Math.abs(real.value - real.trend) >= 0.2 ? <span className="text-fg-3"> · bilancia {formatKg(real.value)}</span> : null}
+                </p>
+              )}
+              {weightData.length > 1 ? <WeightChart data={weightData} unit=" kg" label="Pesate" plan={goalPaths.w} /> : <p className="mt-2 text-base text-fg-3">Servono almeno 2 pesate nel periodo.</p>}
+              {water
+                .filter((w) => w.date >= toISODate(subDays(new Date(), 21)))
+                .slice(-2)
+                .reverse()
+                .map((w) => (
+                  <p key={w.date} className="mt-2 border-l-2 border-sky-400 pl-2 text-sm text-fg-2">
+                    💧 <strong className="text-fg">{fromISODate(w.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}: +{formatKg(w.delta)} kg</strong> sopra il peso reale → acqua e glicogeno ({w.reason}).
+                    Grasso reale stimato <strong className="text-fg">+{formatKg(w.fat)} kg</strong>: rientra in 2–3 giorni, il coach non cambia le calorie.
+                  </p>
+                ))}
+              <MetabolismLine />
             </Card>
             <Card className="p-4">
               <div className="flex items-baseline justify-between">
-                <h2 className="section-title !mb-0">Massa grassa</h2>
+                <h2 className="section-title !mb-0">
+                  <SectionTitle help="body-bf-chart">Massa grassa</SectionTitle>
+                </h2>
                 {bfTrend && <TrendLine delta={bfTrend.delta} label="30gg" unit="%" polarity="down-good" />}
               </div>
               {bfData.length > 1 ? <WeightChart data={bfData} unit="%" label="BF" plan={goalPaths.bf} /> : <p className="mt-2 text-base text-fg-3">Servono almeno 2 misure della massa grassa nel periodo.</p>}
@@ -227,5 +265,30 @@ function EnergyDots({ value }: { value: number }) {
         <span key={i} className={`h-2 w-2 rounded-full ${i <= value ? 'bg-accent-500' : 'bg-surface-3'}`} />
       ))}
     </span>
+  );
+}
+
+/** Metabolismo reale (dal diario) o quanto manca per calcolarlo. */
+function MetabolismLine() {
+  const { settings } = useSettings();
+  const foodLogs = useRecentFoodLogs(21);
+  const m = settings.metabolism;
+  const complete = completeDays(foodLogs).length;
+  return (
+    <div className="mt-3 rounded-md bg-surface-2 p-3 text-sm text-fg-2">
+      <SectionTitle help="body-metabolism" isNew className="text-xs font-bold uppercase tracking-wider text-fg-3">
+        Il tuo metabolismo
+      </SectionTitle>
+      {m ? (
+        <p className="mt-1">
+          🔥 <strong className="font-display text-fg">{m.tdee.toLocaleString('it-IT')} kcal</strong> al giorno (±{m.sd}), dal diario di {m.days} giornate complete. Si
+          aggiorna ogni giorno.
+        </p>
+      ) : (
+        <p className="mt-1">
+          Per calcolarlo dai tuoi dati servono 7 giornate complete nel diario negli ultimi 21 giorni (ora {Math.min(complete, 7)}/7) e qualche pesata. Fino ad allora uso la formula.
+        </p>
+      )}
+    </div>
   );
 }

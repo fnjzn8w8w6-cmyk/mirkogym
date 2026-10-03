@@ -9,6 +9,7 @@ import { Chip } from '../ui/Chip';
 import { IconButton } from '../ui/Button';
 import { SET_GRID, SetRow } from './SetRow';
 import { ExerciseDemo } from '../library/ExerciseDemo';
+import { HelpTip } from '@/components/ui/Help';
 import { SuggestionBox } from './SuggestionBox';
 
 /** Confronto diretto con l'ultima volta che hai fatto l'esercizio. */
@@ -25,7 +26,9 @@ function PrevCompare({ prevSets, lastDate, sets, lastText }: { prevSets: { weigh
   return (
     <div className="mt-2 rounded-md border border-violet-500/30 bg-violet-500/10 px-3 py-2">
       <div className="flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-wider text-violet-400">
-        <span>Volta scorsa · {new Date(lastDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</span>
+        <span className="inline-flex items-center gap-1.5">
+          Volta scorsa · {new Date(lastDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} <HelpTip id="session-previous" />
+        </span>
         {diff != null && (
           <span className={cn('normal-case tracking-normal', diff > 0 ? 'text-accent-400' : diff < 0 ? 'text-danger' : 'text-fg-2')}>
             {diff > 0 ? '▲' : diff < 0 ? '▼' : '='} {diff > 0 ? '+' : ''}

@@ -13,6 +13,7 @@ import { formatKg } from '@/lib/analytics';
 import { formatRelativeDay, fromISODate } from '@/lib/date-utils';
 import { cn } from '@/lib/cn';
 import { planRate } from '@/lib/goal-plan';
+import { SectionTitle } from '@/components/ui/Help';
 import type { BodyLog } from '@/types';
 
 /** Profilo con l'ultimo peso e l'ultima massa grassa registrati. */
@@ -67,7 +68,9 @@ export function CompositionCard() {
   const fatKg = p.weightKg - c.lean;
   return (
     <Card variant="elevated" className="p-4">
-      <div className="section-title">Composizione corporea</div>
+      <div className="section-title">
+        <SectionTitle help="body-composition">Composizione corporea</SectionTitle>
+      </div>
       <div className="flex items-center gap-4">
         <div className="relative shrink-0">
           <Ring value={bf} max={p.sex === 'm' ? 30 : 40} />
@@ -149,12 +152,18 @@ export function GoalStatus() {
     <Card className={cn('flex gap-3 p-4', ok ? 'border-success/40 bg-success-bg' : 'border-warning/40 bg-warning-bg')}>
       {ok ? <CheckCircle2 className="h-6 w-6 shrink-0 text-success" aria-hidden /> : cutting && a.actual > a.expected ? <AlertTriangle className="h-6 w-6 shrink-0 text-warning" aria-hidden /> : <TrendingDown className="h-6 w-6 shrink-0 text-warning" aria-hidden />}
       <div className="min-w-0 flex-1">
-        <div className="text-base font-bold text-fg">{title}</div>
-        <p className="text-sm text-fg-2">{text}</p>
+        <div className="text-base font-bold text-fg">
+          <SectionTitle help="body-status">{title}</SectionTitle>
+        </div>
+        <p className="text-sm text-fg-2">
+          {settings.metabolism && !ok
+            ? `Peso reale ${fmtRate(a.actual)} a settimana contro ${fmtRate(a.expected)} atteso. Le calorie si correggono già da sole ogni giorno (metabolismo reale ${settings.metabolism.tdee} kcal).`
+            : text}
+        </p>
         <p className="mt-1 text-xs text-fg-3">
           Basato su {a.points} pesate in {a.days} giorni.
         </p>
-        {!ok && (
+        {!ok && !settings.metabolism && (
           <Button
             className="mt-2"
             size="sm"
@@ -190,7 +199,9 @@ export function Measurements({ logs }: { logs: BodyLog[] }) {
   if (!rows.length) return null;
   return (
     <Card className="p-4">
-      <h2 className="section-title">Misurazioni</h2>
+      <h2 className="section-title">
+        <SectionTitle help="body-measurements">Misurazioni</SectionTitle>
+      </h2>
       <ul className="divide-y divide-line-subtle">
         {rows.map((r) => (
           <li key={r.label} className="flex items-center justify-between py-2.5">

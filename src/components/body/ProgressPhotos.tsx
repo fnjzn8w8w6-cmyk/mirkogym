@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { usePhotos } from '@/hooks/use-photos';
 import { cn } from '@/lib/cn';
+import { SectionTitle } from '@/components/ui/Help';
 import type { PhotoImages, ProgressPhoto } from '@/types';
 
 const fmt = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
@@ -28,7 +29,9 @@ export function ProgressPhotos() {
   return (
     <Card className="p-4">
       <div className="flex items-center justify-between">
-        <h2 className="section-title !mb-0">Foto dei progressi</h2>
+        <h2 className="section-title !mb-0">
+          <SectionTitle help="body-photos">Foto dei progressi</SectionTitle>
+        </h2>
         <span className="text-xs text-fg-3">{photos.length} foto</span>
       </div>
       {photos.length === 0 ? (

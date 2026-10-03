@@ -37,7 +37,11 @@ export interface WeekPhotoResult {
   low: number;
   high: number;
   comment: string;
+  /** cambiamento per zona rispetto alla foto precedente (−2 … +2) */
+  regions?: Record<string, number>;
 }
+
+export const PHOTO_REGIONS = ['Spalle', 'Petto', 'Braccia', 'Dorso', 'Addome', 'Gambe'] as const;
 
 export async function analyzeWeekPhoto(
   images: { front: string; side?: string },
@@ -56,7 +60,8 @@ Persona: ${subject.sex === 'm' ? 'uomo' : 'donna'}, ${subject.age} anni, ${subje
 1) Stima la massa grassa di QUESTA settimana (definizione addominale, vene, separazioni, accumulo su addome e fianchi).
 2) ${previous ? 'Confronta con la foto precedente: cosa è cambiato (vita, addome, spalle, definizione). Sii onesto: se luce o posa sono diverse dillo e non trarre conclusioni forzate.' : 'È la prima foto: descrivi il punto di partenza.'}
 3) Un consiglio pratico per la prossima foto o per la fase in corso.
-Rispondi SOLO con JSON: {"bodyFat": numero, "low": numero, "high": numero, "comment": "3 frasi brevi in italiano, seconda persona"}`,
+${previous ? `4) Per ogni zona dai un punteggio di cambiamento visibile rispetto alla foto precedente da -2 (peggiorata/meno definita) a +2 (molto migliorata), 0 se invariata o non valutabile: ${PHOTO_REGIONS.join(', ')}. Per l'addome "migliorato" = più asciutto/definito.` : ''}
+Rispondi SOLO con JSON: {"bodyFat": numero, "low": numero, "high": numero, "comment": "3 frasi brevi in italiano, seconda persona"${previous ? ', "regions": {"Spalle": 0, "Petto": 0, "Braccia": 0, "Dorso": 0, "Addome": 0, "Gambe": 0}' : ''}}`,
     (raw) => {
       const r = (raw ?? {}) as Record<string, unknown>;
       const bf = Number(r.bodyFat);
@@ -66,6 +71,13 @@ Rispondi SOLO con JSON: {"bodyFat": numero, "low": numero, "high": numero, "comm
         low: Math.round(Number(r.low) || bf - 3),
         high: Math.round(Number(r.high) || bf + 3),
         comment: String(r.comment ?? '').replace(/[*#`]/g, '').slice(0, 500),
+        ...(r.regions && typeof r.regions === 'object'
+          ? {
+              regions: Object.fromEntries(
+                PHOTO_REGIONS.map((k) => [k, Math.max(-2, Math.min(2, Math.round(Number((r.regions as Record<string, unknown>)[k]) || 0)))]),
+              ),
+            }
+          : {}),
       };
     },
     { prefer: 'flash', temperature: 0.2, label: 'Il coach guarda le tue foto…', ...opts },

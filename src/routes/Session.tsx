@@ -39,6 +39,8 @@ import { haptics, unlockAudio } from '@/lib/haptics';
 import { MUSCLE_GROUPS } from '@/lib/seed-data';
 import { useAthlete } from '@/hooks/use-athlete';
 import { useStatsExtra } from '@/hooks/use-progress';
+import { useTrainingModel } from '@/hooks/use-training-model';
+import { calibrationBump, convertLoad, kindOf, rirCalibration, type Conversion } from '@/lib/training-model';
 import { PAIN_LABEL, exercisesStressing, type PainInfo } from '@/lib/athlete';
 
 export default function SessionRoute() {
@@ -140,6 +142,27 @@ function SessionView({ initial }: { initial: ActiveSession }) {
   const [libPick, setLibPick] = useState<{ mode: 'extra' } | { mode: 'swap'; idx: number } | null>(null);
   const [info, setInfo] = useState<LibraryExercise | null>(null);
   const library = useLibrary();
+  const model = useTrainingModel();
+  const [conversions, setConversions] = useState<Record<string, Conversion>>({});
+  /** Sostituzione con carico equivalente calcolato dal vecchio esercizio. */
+  const swapWith = (idx: number, choice: { exerciseId: string; name: string; group: string; extra?: boolean; libraryId?: string }) => {
+    const old = draft.exercises[idx];
+    const typed = parseNum(old?.sets.find((x) => x.type !== 'warmup' && x.weight)?.weight ?? '');
+    const w = typed ?? suggestions[idx]?.suggestion.weight ?? null;
+    const oldEx = exercises[idx];
+    const conv =
+      w != null && oldEx
+        ? convertLoad(
+            { name: oldEx.name, equipment: oldEx.libraryId ? library.byId.get(oldEx.libraryId)?.e : undefined, weight: w },
+            { name: choice.name, equipment: choice.libraryId ? library.byId.get(choice.libraryId)?.e : undefined },
+            sessions,
+            nameOf,
+          )
+        : null;
+    if (conv) setConversions((c) => ({ ...c, [choice.exerciseId]: conv }));
+    replaceExercise(idx, choice);
+    toast.success(conv ? `Sostituito con ${choice.name}: carico equivalente ${conv.label}` : `Sostituito con ${choice.name}`);
+  };
 
   useWakeLock(settings.keepScreenOn && !result);
 
@@ -170,7 +193,24 @@ function SessionView({ initial }: { initial: ActiveSession }) {
       exercises.map((ex) => {
         const prev = previousLogsFor(ex, sessions);
         const last = prev[prev.length - 1];
-        const base = calculateSuggestion(ex, prev, draft.deload, settings.deloadPercentage);
+        let base = calculateSuggestion(ex, prev, draft.deload, settings.deloadPercentage);
+        const libEq = ex.libraryId ? library.byId.get(ex.libraryId)?.e : undefined;
+        const dumbbell = kindOf(ex.name, libEq) === 'dumbbell';
+        // Carico equivalente dopo una sostituzione (se non c'è ancora storico per il nuovo esercizio)
+        const conv = conversions[ex.id];
+        if (conv && (base.type === 'first' || base.type === 'start'))
+          base = { weight: conv.weight, hint: `Carico equivalente: ${conv.label}${conv.personal ? ' (dai tuoi dati)' : ' (stima standard)'}`, type: 'start' };
+        // RIR calibrato: se lasci più ripetizioni di quelle che dichiari, si sale un po' di più
+        const cal = rirCalibration(prev);
+        if (base.weight != null && (base.type === 'progress' || base.type === 'maintain')) {
+          const bump = calibrationBump(base.weight, cal, dumbbell);
+          if (bump > 0)
+            base = { ...base, weight: base.weight + bump, hint: `${base.hint} · RIR calibrato: ti restano ~${String(cal!.offset).replace('.', ',')} rip. in più → +${formatKg(bump, 2)} kg` };
+        }
+        // Settimana leggera mirata per i gruppi affaticati
+        const fat = model.fatigue.get(ex.group);
+        if (fat?.light && base.weight != null && !draft.deload)
+          base = { ...base, weight: Math.round(base.weight * 0.7 * 4) / 4, hint: `Settimana leggera ${ex.group.toLowerCase()} (fatica ${fat.score}/100): −30% e una serie in meno`, type: 'deload' };
         // Autoregolazione: giornata "no" → -10% sul carico suggerito
         const suggestion =
           draft.readiness === 'low' && base.weight != null && !draft.deload
@@ -187,7 +227,7 @@ function SessionView({ initial }: { initial: ActiveSession }) {
           repTargets: repTargets(ex, last, suggestion, Math.max(ex.sets, 10)),
         };
       }),
-    [exercises, sessions, draft.deload, draft.readiness, settings.deloadPercentage],
+    [exercises, sessions, draft.deload, draft.readiness, settings.deloadPercentage, conversions, model, library.byId],
   );
 
   // Storico set per nome esercizio (PR detection)
@@ -527,9 +567,8 @@ function SessionView({ initial }: { initial: ActiveSession }) {
         onClose={() => setSwapFor(null)}
         onPick={(c) => {
           if (swapFor == null) return;
-          replaceExercise(swapFor, c);
+          swapWith(swapFor, c);
           setSwapFor(null);
-          toast.success(`Sostituito con ${c.name}`);
         }}
         onLibrary={() => {
           if (swapFor == null) return;
@@ -546,8 +585,7 @@ function SessionView({ initial }: { initial: ActiveSession }) {
             if (!pick) return;
             const choice = { exerciseId: `lib-${lib.id}`, name: displayName(lib), group: groupForLibrary(lib), extra: true, libraryId: lib.id };
             if (pick.mode === 'swap') {
-              replaceExercise(pick.idx, choice);
-              toast.success(`Sostituito con ${choice.name}`);
+              swapWith(pick.idx, choice);
             } else {
               addExercise(choice.name, choice.group, 3, lib.id);
               toast.success(`${choice.name} aggiunto`);

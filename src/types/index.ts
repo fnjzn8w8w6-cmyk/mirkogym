@@ -91,6 +91,8 @@ export interface DayRecap {
   hunger: number;
   /** sgarro della giornata (vuoto = nessuno) */
   cheat?: string;
+  /** false = giornata registrata solo in parte (esclusa dal calcolo del metabolismo) */
+  complete?: boolean;
   note?: string;
   at: number;
 }
@@ -126,7 +128,7 @@ export interface Mesocycle {
 
 import type { UserProfile } from '@/lib/metabolism';
 import type { CoachPrefs } from '@/lib/program-generator';
-import type { NutritionPrefs } from '@/lib/coach';
+import type { MetabolismState, NutritionPrefs } from '@/lib/coach';
 import type { Lang } from '@/lib/exercise-i18n';
 import type { WeekPlan } from '@/lib/recipes';
 import type { Food, Macros } from '@/lib/foods';
@@ -151,6 +153,10 @@ export interface Settings {
   checkIns?: CheckIn[];
   /** Zone segnate come "passate" dall'utente (zona → data): il coach smette di considerarle attive. */
   painResolved?: Record<string, number>;
+  /** Giorni di allenamento (0 = lunedì) per distribuire le calorie: più carboidrati in quei giorni. */
+  carbCycling?: number[] | null;
+  /** Metabolismo reale stimato dal diario (null = si usa la formula). */
+  metabolism?: MetabolismState | null;
   /** Obiettivo a fasi con scadenze (es. massa → cut). */
   goalPlan?: GoalPlan | null;
   /** Sfide settimanali completate ("lunedì:id"). */
@@ -302,6 +308,8 @@ export interface ProgressPhoto {
   high?: number;
   /** osservazioni del coach e confronto con la foto precedente */
   comment?: string;
+  /** cambiamento visibile per zona rispetto alla foto precedente (−2 … +2) */
+  regions?: Record<string, number>;
   hasSide?: boolean;
   createdAt: number;
 }

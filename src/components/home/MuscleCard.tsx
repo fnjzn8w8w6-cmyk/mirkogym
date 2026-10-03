@@ -5,6 +5,7 @@ import { useSettings } from '@/hooks/use-settings';
 import { formatTonnage, groupColor, muscleStatus, weekSummary } from '@/lib/analytics';
 import { sortGroups } from '@/components/charts/chart-theme';
 import { Card } from '../ui/Card';
+import { SectionTitle } from '@/components/ui/Help';
 import { cn } from '@/lib/cn';
 
 /** Riepilogo settimana + serie per muscolo vs obiettivo (volume landmarks) + recupero. */
@@ -22,7 +23,9 @@ export function WeekCard() {
   return (
     <Card className="p-4">
       <div className="flex items-baseline justify-between">
-        <h2 className="section-title !mb-0">Questa settimana</h2>
+        <h2 className="section-title !mb-0">
+          <SectionTitle help="home-week">Questa settimana</SectionTitle>
+        </h2>
         {delta != null && (
           <span className={cn('text-sm font-semibold', delta >= 0 ? 'text-success' : 'text-fg-3')}>
             {delta >= 0 ? '+' : ''}

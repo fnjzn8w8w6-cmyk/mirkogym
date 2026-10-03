@@ -417,7 +417,8 @@ export function mealCandidates(data: RecipeData, prefs: PlanPrefs, slot: SlotKey
 }
 
 /** Crea un piano di 7 giorni vario, calibrato su calorie e macro. */
-export function planWeek(data: RecipeData, target: Nutrition, prefs: PlanPrefs, seed = Date.now()): WeekPlan {
+export function planWeek(data: RecipeData, target: Nutrition, prefs: PlanPrefs, seed = Date.now(), dayTargets?: Nutrition[]): WeekPlan {
+  if (dayTargets) return rescalePlan(planWeek(data, target, prefs, seed), data, target, prefs, dayTargets);
   const rand = rng(seed);
   const byId = new Map(data.recipes.map((r) => [r.id, r]));
   const split = SPLITS[prefs.meals] ?? SPLITS[4];
@@ -578,13 +579,16 @@ export function replaceMeal(
 }
 
 /** Ricalcola porzioni e integrazioni con un nuovo obiettivo calorico, mantenendo le stesse ricette. */
-export function rescalePlan(plan: WeekPlan, data: RecipeData, target: Nutrition, prefs: PlanPrefs): WeekPlan {
+export function rescalePlan(plan: WeekPlan, data: RecipeData, target: Nutrition, prefs: PlanPrefs, dayTargets?: Nutrition[]): WeekPlan {
   const byId = new Map(data.recipes.map((r) => [r.id, r]));
   const excl = exclusionPatterns(`${prefs.allergies},${prefs.dislikes}`);
-  const days = plan.days.map((day) => ({
+  // dayTargets: obiettivo diverso per ogni giorno (più carboidrati nei giorni di allenamento)
+  const days = plan.days.map((day, i) => ({
     meals: balanceDay(
-      day.meals.map((m) => (m.kind === 'custom' ? m : (buildMeal(m.slot, { kind: m.kind, id: m.refId }, slotKcal(prefs.meals, m.slot, target.target), byId) ?? m))),
-      target,
+      day.meals.map((m) =>
+        m.kind === 'custom' ? m : (buildMeal(m.slot, { kind: m.kind, id: m.refId }, slotKcal(prefs.meals, m.slot, (dayTargets?.[i] ?? target).target), byId) ?? m),
+      ),
+      dayTargets?.[i] ?? target,
       prefs.diet,
       excl,
       byId,

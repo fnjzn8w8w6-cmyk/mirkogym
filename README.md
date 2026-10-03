@@ -155,6 +155,16 @@ e, se l'AI non risponde, l'app continua a funzionare con le regole.
   L'anteprima mostra i pasti realmente cambiati prima di applicare.
 - **Chiedi al coach**: chat con il coach, che conosce profilo, obiettivi e ultimi allenamenti.
 
+## Il "cervello" dell'app (modelli che imparano dai tuoi dati)
+
+Tutto calcolato sul telefono, senza richieste AI in più. Le funzioni nuove hanno l'etichetta **NUOVO** (per 21 giorni) e ogni sezione ha un **?** che spiega come funziona (`src/lib/help.ts`).
+
+- **Corpo** (`src/lib/body-model.ts`): peso reale (media mobile esponenziale), pesate gonfiate da acqua/glicogeno spiegate sul grafico, metabolismo reale dal diario (giornate incomplete escluse) aggiornato ogni giorno con al massimo ±50 kcal, previsione a forchetta della data obiettivo.
+- **Allenamento** (`src/lib/training-model.ts`): RIR calibrato per esercizio, indice di fatica per gruppo con settimana leggera mirata (−30%), volume ideale per gruppo imparato dai progressi, carico equivalente quando sostituisci un esercizio.
+- **Abitudini** (`src/lib/habits.ts`): giorni di allenamento imparati → più carboidrati in quei giorni a parità di totale settimanale; ricette che mangi davvero preferite dal piano; proposte nel check-in (giorno saltato spesso, sgarro ricorrente pianificato, calorie che seguono la scheda, aggiornamento di fine mesociclo). Niente cambia senza conferma.
+- **Foto ↔ mappa**: il confronto delle foto settimanali indica le zone che cambiano (vista "Cambiamento" della mappa in Corpo).
+- Una sola sottoscrizione condivisa al diario per tutta l'app.
+
 ## Obiettivo a fasi e foto settimanali
 
 - **Obiettivo con scadenza** (`src/lib/goal-plan.ts`): in registrazione (o da Home/Coach/Profilo) descrivi l'obiettivo a parole, anche in più fasi (es. massa fino a 82-83 kg al 17%, poi cut fino a 78-79 kg al 10%). Il coach crea le fasi con le date; se una scadenza non è sicura la sposta e lo spiega. Tutto è modificabile.

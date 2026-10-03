@@ -37,6 +37,8 @@ export interface CheckInStats {
   /** fabbisogno reale stimato dal diario (se abbastanza completo) */
   diaryTdee?: number;
   diaryDays?: number;
+  /** metabolismo reale già applicato ogni giorno */
+  metabolism?: number;
   /** stato dell'obiettivo a fasi (testo pronto) */
   goalLine?: string;
 }
@@ -65,7 +67,7 @@ export function weekStats(
   bodyLogs: BodyLog[],
   profile: UserProfile,
   now = Date.now(),
-  extra: { expectedRate?: number | null; diary?: { tdee: number; days: number; desired: number; current: number } | null; goalLine?: string } = {},
+  extra: { expectedRate?: number | null; diary?: { tdee: number; days: number; desired: number; current: number } | null; goalLine?: string; metabolism?: number | null } = {},
 ): CheckInStats {
   const inRange = (from: number, to: number) => sessions.filter((s) => s.date >= from && s.date < to);
   const cur = inRange(now - WEEK, now + 1);
@@ -83,8 +85,10 @@ export function weekStats(
     prs: cur.reduce((a, s) => a + s.logs.reduce((b, l) => b + l.sets.filter((x) => x.isPersonalRecord).length, 0), 0),
     weightRate: adaptive ? Math.round(adaptive.actual * 100) / 100 : null,
     expectedRate: adaptive ? Math.round(adaptive.expected * 100) / 100 : null,
-    weightSuggestion: diaryFix != null ? (Math.abs(diaryFix) < 100 ? 0 : diaryFix) : (adaptive?.suggestion ?? 0),
+    // con il metabolismo reale le calorie si aggiornano già ogni giorno: nessuna correzione settimanale
+    weightSuggestion: extra.metabolism ? 0 : diaryFix != null ? (Math.abs(diaryFix) < 100 ? 0 : diaryFix) : (adaptive?.suggestion ?? 0),
     ...(d ? { diaryTdee: d.tdee, diaryDays: d.days } : {}),
+    ...(extra.metabolism ? { metabolism: extra.metabolism } : {}),
     ...(extra.goalLine ? { goalLine: extra.goalLine } : {}),
   };
 }
@@ -92,7 +96,8 @@ export function weekStats(
 export function evaluate(a: CheckInAnswers, s: CheckInStats, deloadAvailable: boolean): CheckInResult {
   const points: string[] = [];
   if (s.goalLine) points.push(s.goalLine);
-  if (s.diaryTdee) points.push(`🍽️ Dal tuo diario (${s.diaryDays} giornate) il tuo fabbisogno reale è circa ${s.diaryTdee} kcal: uso questo dato per correggere le calorie.`);
+  if (s.metabolism) points.push(`🔥 Il tuo metabolismo reale è ${s.metabolism} kcal: le calorie si aggiornano già ogni giorno, quindi nessuna correzione settimanale.`);
+  else if (s.diaryTdee) points.push(`🍽️ Dal tuo diario (${s.diaryDays} giornate) il tuo fabbisogno reale è circa ${s.diaryTdee} kcal: uso questo dato per correggere le calorie.`);
   // Fatica: energia e sonno bassi, stress e indolenzimento alti
   const fatigue = Math.round((((5 - a.energy) + (5 - a.sleep) + (a.stress - 1) + (a.soreness - 1)) / 16) * 100);
   const volDrop = s.prevTonnage > 0 ? (s.tonnage - s.prevTonnage) / s.prevTonnage : 0;
@@ -118,6 +123,8 @@ export function evaluate(a: CheckInAnswers, s: CheckInStats, deloadAvailable: bo
   let kcalChange = 0;
   if (a.adherence <= 2) {
     points.push('🍽️ Dieta seguita poco: prima di cambiare le calorie punta a rispettare il piano. Scegli dalla galleria ricette che ti ispirano davvero.');
+  } else if (s.metabolism) {
+    // già gestito dal metabolismo reale (riga sopra)
   } else if (s.weightRate != null) {
     kcalChange = s.weightSuggestion;
     // In definizione con fame alta non scendere oltre: meglio una correzione più morbida

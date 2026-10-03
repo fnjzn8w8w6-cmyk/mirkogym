@@ -84,12 +84,25 @@ export interface NutritionPrefs {
 }
 
 /** Obiettivi dell'utente: calorie con la correzione del check-in e stile dei macro scelto con il coach. */
-export const userNutrition = (p: UserProfile, s: { kcalAdjust?: number; nutritionPrefs?: NutritionPrefs; goalPlan?: GoalPlan | null }): Nutrition => {
+export const userNutrition = (
+  p: UserProfile,
+  s: { kcalAdjust?: number; nutritionPrefs?: NutritionPrefs; goalPlan?: GoalPlan | null; metabolism?: MetabolismState | null },
+): Nutrition => {
   // Obiettivo a fasi: la fase in corso decide tipo di obiettivo e ritmo (calorie)
   const phase = s.goalPlan?.phases[s.goalPlan.current];
   const prof = phase ? { ...p, goal: phase.type } : p;
-  return nutrition(prof, s.kcalAdjust ?? 0, s.nutritionPrefs?.style ?? 'standard', phase ? planRate(s.goalPlan, [], p.weightKg) : null);
+  // Con il metabolismo reale le correzioni dei check-in non servono più (lo misura già)
+  const real = s.metabolism?.tdee ?? null;
+  return nutrition(prof, real ? 0 : (s.kcalAdjust ?? 0), s.nutritionPrefs?.style ?? 'standard', phase ? planRate(s.goalPlan, [], p.weightKg) : null, real);
 };
+
+/** Metabolismo reale salvato (aggiornato una volta al giorno, ±50 kcal). */
+export interface MetabolismState {
+  tdee: number;
+  date: string;
+  days: number;
+  sd: number;
+}
 
 export const DEFAULT_NUTRITION: NutritionPrefs = { diet: 'onnivora', meals: 4, allergies: '', dislikes: '', likes: '', cooking: 'medio' };
 

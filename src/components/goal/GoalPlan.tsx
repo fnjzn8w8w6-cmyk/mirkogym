@@ -13,6 +13,10 @@ import { settle } from '@/lib/firestore';
 import { cn } from '@/lib/cn';
 import { userNutrition } from '@/lib/coach';
 import type { UserProfile } from '@/lib/metabolism';
+import { useRecentFoodLogs } from '@/hooks/use-athlete';
+import { useSessions } from '@/hooks/use-sessions';
+import { forecast, waterEvents } from '@/lib/body-model';
+import { HelpTip, NewBadge, SectionTitle } from '@/components/ui/Help';
 import {
   PHASE_EMOJI,
   STATE_LABEL,
@@ -26,6 +30,7 @@ import {
   type GoalPlan,
 } from '@/lib/goal-plan';
 
+const fmtShort = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
 const fmtDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' });
 const kg = (v: number) => v.toFixed(1).replace('.', ',').replace(',0', '');
 const range = (p: GoalPhase) => (p.weightMin === p.weightMax ? kg(p.weightMin) : `${kg(p.weightMin)}–${kg(p.weightMax)}`);
@@ -57,7 +62,7 @@ export function GoalPlanEditor({
     <div className="space-y-3">
       <div className="relative [&_textarea]:pr-14">
         <label htmlFor="goal-text" className="mb-1 block text-sm text-fg-2">
-          Descrivi il tuo obiettivo con parole tue
+          Descrivi il tuo obiettivo con parole tue <HelpTip id="goal-plan" className="ml-1" />
         </label>
         <textarea
           id="goal-text"
@@ -175,6 +180,15 @@ export function GoalCard({ compact }: { compact?: boolean }) {
   const p = settings.profile;
   const plan = settings.goalPlan;
   const st = useMemo(() => (plan && p ? planStatus(plan, bodyLogs, p.weightKg) : null), [plan, p, bodyLogs]);
+  const foodLogs = useRecentFoodLogs(14);
+  const { sessions, groupOf } = useSessions();
+  const fc = useMemo(() => (st && st.state !== 'reached' ? forecast(bodyLogs, targetWeight(st.phase)) : null), [st, bodyLogs]);
+  const lastScale = bodyLogs.find((b) => b.weight != null);
+  const water = useMemo(() => {
+    if (!p) return null;
+    const ev = waterEvents(bodyLogs, foodLogs, sessions, userNutrition(p, settings).target, groupOf).slice(-1)[0];
+    return ev && Date.now() - new Date(`${ev.date}T12:00:00`).getTime() <= 4 * 86400000 ? ev : null;
+  }, [p, bodyLogs, foodLogs, sessions, settings, groupOf]);
   if (!p) return null;
 
   if (!plan || !st) {
@@ -227,7 +241,9 @@ export function GoalCard({ compact }: { compact?: boolean }) {
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="text-xs font-bold uppercase tracking-wider text-fg-3">
-              Obiettivo · fase {plan.current + 1}/{plan.phases.length}
+              <SectionTitle help="home-goal">
+                Obiettivo · fase {plan.current + 1}/{plan.phases.length}
+              </SectionTitle>
             </div>
             <div className="font-display text-lg font-extrabold text-fg">
               {PHASE_EMOJI[ph.type]} {ph.label}
@@ -243,7 +259,11 @@ export function GoalCard({ compact }: { compact?: boolean }) {
         <div>
           <div className="mb-1 flex justify-between text-xs text-fg-3">
             <span>{kg(ph.startWeight)} kg</span>
-            <span className="font-semibold text-fg">ora {kg(st.current)} kg{st.bf ? ` · ${kg(st.bf)}%` : ''}</span>
+            <span className="text-center">
+              <span className="font-semibold text-fg">{kg(st.current)} kg reali</span>
+              {lastScale?.weight != null && Math.abs(lastScale.weight - st.current) >= 0.2 && <span> (bilancia {kg(lastScale.weight)})</span>}
+              {st.bf ? ` · ${kg(st.bf)}%` : ''}
+            </span>
             <span>{kg(targetWeight(ph))} kg</span>
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-surface-3">
@@ -255,6 +275,23 @@ export function GoalCard({ compact }: { compact?: boolean }) {
           {st.state === 'ahead' || st.state === 'behind' ? ` di ${Math.abs(st.weeksOff)} sett.` : ''}
           {st.state !== 'reached' && st.state !== 'expired' ? ` · ${Math.round(st.weeksLeft)} settimane rimaste` : ''}
         </div>
+        {fc && (
+          <div className="text-sm text-fg-2">
+            {fc.wrongWay ? (
+              <>📉 Al ritmo delle ultime settimane ({fc.rate >= 0 ? '+' : ''}{fc.rate.toFixed(2).replace('.', ',')} kg/sett) non ti stai avvicinando all'obiettivo.</>
+            ) : (
+              <>
+                🔮 Al ritmo attuale arrivi <strong className="text-fg">tra il {fmtShort(fc.early!)} e il {fmtShort(fc.late!)}</strong> <span className="text-fg-3">(80%)</span>
+              </>
+            )}
+            <NewBadge />
+          </div>
+        )}
+        {water && (
+          <p className="border-l-2 border-sky-400 pl-2 text-xs text-fg-2">
+            💧 +{kg(water.delta)} kg di acqua il {fmtShort(water.date)} ({water.reason}): rientra in 2–3 giorni. <NewBadge />
+          </p>
+        )}
         {!compact && (
           <div className="grid grid-cols-3 gap-2 text-center">
             {[

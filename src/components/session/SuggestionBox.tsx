@@ -1,6 +1,7 @@
 import { History, Sparkles, TrendingDown, TrendingUp, Equal, Info } from 'lucide-react';
 import type { Suggestion } from '@/types';
 import { formatKg } from '@/lib/analytics';
+import { HelpTip, NewBadge } from '@/components/ui/Help';
 import { cn } from '@/lib/cn';
 
 interface SuggestionBoxProps {
@@ -52,7 +53,9 @@ export function SuggestionBox({ suggestion, lastText }: SuggestionBoxProps) {
             </>
           )}
           <span className="text-fg-2">({suggestion.hint})</span>
+          {/RIR calibrato|Settimana leggera|Carico equivalente/.test(suggestion.hint) && <NewBadge />}
         </span>
+        <HelpTip id="session-suggestion" className="ml-auto mt-0.5" />
       </div>
     </div>
   );

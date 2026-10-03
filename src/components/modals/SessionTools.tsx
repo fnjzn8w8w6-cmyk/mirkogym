@@ -7,6 +7,7 @@ import { MUSCLE_GROUPS } from '@/lib/seed-data';
 import { cn } from '@/lib/cn';
 import { Modal } from '../ui/Modal';
 import { Input, Segmented, TextArea } from '../ui/Input';
+import { HelpTip, NewBadge } from '@/components/ui/Help';
 import { Button } from '../ui/Button';
 
 /* ---------- Calcolatore dischi ---------- */
@@ -206,6 +207,9 @@ export function SwapExerciseModal({
       <Button fullWidth variant="secondary" className="mb-3" icon={<Library className="h-5 w-5" />} onClick={onLibrary}>
         Cerca tra 876 esercizi con demo
       </Button>
+      <p className="-mt-1 mb-3 flex items-center gap-1.5 text-xs text-fg-3">
+        Il carico equivalente del nuovo esercizio viene calcolato in automatico <NewBadge /> <HelpTip id="session-swap" />
+      </p>
       <div className="relative">
         <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-fg-3" aria-hidden />
         <input
