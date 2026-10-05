@@ -558,6 +558,26 @@ function buildMeal(slot: SlotKey, choice: { kind: 'recipe' | 'simple'; id: strin
   return withMacros({ slot, kind: 'simple', refId: m.id, servings: 1, items: simpleFor(m, kcal), extras: [] }, byId);
 }
 
+/**
+ * Un pasto alternativo a caso per lo stesso momento, con le porzioni ricalcolate sulle stesse calorie.
+ * Prima le ricette che mangi spesso e le preferite (prefer), poi tutto il resto compatibile con dieta e allergie.
+ */
+export function alternativeMeal(data: RecipeData, prefs: PlanPrefs, slot: SlotKey, kcal: number, exclude: string[], rnd = Math.random): PlannedMeal | null {
+  const byId = new Map(data.recipes.map((r) => [r.id, r]));
+  const c = mealCandidates(data, prefs, slot);
+  const all = [...c.recipes.map((r) => ({ kind: 'recipe' as const, id: r.id })), ...c.simple.map((m) => ({ kind: 'simple' as const, id: m.id }))].filter((x) => !exclude.includes(x.id));
+  if (!all.length) return null;
+  const fav = all.filter((x) => prefs.favorites.includes(x.id));
+  // 1 volta su 2 (se ci sono) un piatto che ti piace, altrimenti uno qualsiasi
+  const pool = fav.length && rnd() < 0.5 ? fav : all;
+  for (let i = 0; i < 25; i++) {
+    const m = buildMeal(slot, pool[Math.floor(rnd() * pool.length)], kcal, byId);
+    // stesse calorie (±12%) e porzioni normali (non 2,5 porzioni di un piatto leggero)
+    if (m && Math.abs(m.macros.kcal - kcal) <= kcal * 0.12 && (m.kind !== 'recipe' || (m.servings >= 0.75 && m.servings <= 1.75))) return m;
+  }
+  return buildMeal(slot, pool[Math.floor(rnd() * pool.length)], kcal, byId);
+}
+
 /** Sostituisce un pasto del piano con una ricetta o un pasto semplice e ribilancia la giornata. */
 export function replaceMeal(
   plan: WeekPlan,

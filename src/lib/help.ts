@@ -153,7 +153,7 @@ export const HELP = {
     body: [
       'Il diario è quello che conta: calorie, metabolismo, check-in e coach si basano su quello che hai mangiato davvero, non sul piano.',
       'In ogni pasto: "Alimento" (ricerca, codice a barre), "Ricetta" (la libreria con le tue ricette e il ricettario), "Piano" (il pasto suggerito dal piano per quel giorno) e la fotocamera per la foto del piatto.',
-      'Se un pasto è vuoto e il piano ha un suggerimento, lo vedi nel riquadro tratteggiato: lo aggiungi con un tocco oppure scegli altro.',
+      'Se un pasto è vuoto e il piano ha un suggerimento, lo vedi nel riquadro tratteggiato: lo aggiungi con un tocco, oppure con le frecce 🔀 ne generi un altro a caso con le stesse calorie (compatibile con dieta e allergie).',
       'In alto vedi quanto ti resta rispetto all\'obiettivo di oggi.',
     ],
   },
@@ -214,10 +214,17 @@ export const HELP = {
   'diet-suggest': {
     title: 'Cosa mangio adesso?',
     body: [
-      'Quando ti mancano calorie per arrivare all\'obiettivo, l\'app ti propone 3 pasti con le quantità già calcolate per chiudere calorie e macro rimanenti (prima le proteine).',
-      'Le idee partono dal tuo storico: i pasti che hai già mangiato in quel momento della giornata, poi il piano di oggi, poi abbinamenti e ricette compatibili con dieta e allergie.',
-      '"Tutto in questo pasto" usa tutte le calorie che mancano per il pasto scelto (anche solo uno spuntino); "Dividi tra i pasti vuoti" lascia una parte per gli altri pasti della giornata.',
-      'Quello che aggiungi conta come "mi piace", quello che salti con "Altre idee" viene proposto meno: i suggerimenti imparano dai tuoi gusti.',
+      'Ti propone un pasto adatto a questo momento: l\'app capisce dall\'ora e dal diario se è colazione, pranzo, spuntino, cena o dopo cena (se sbaglia, lo cambi con un tocco).',
+      'Le calorie sono la quota normale di quel pasto sul tuo obiettivo (colazione circa 25%, pranzo e cena circa 35%, spuntino circa 10-12%) e non superano mai quello che ti manca alla giornata.',
+      'Le idee partono dal tuo storico, poi dal piano di oggi, poi da abbinamenti e ricette compatibili con dieta e allergie. Quello che aggiungi conta come "mi piace", quello che salti viene proposto meno.',
+    ],
+  },
+  'diet-fill': {
+    title: 'Ti mancano calorie?',
+    body: [
+      'Serve a chiudere la giornata: scegli uno o più pasti in cui recuperare le calorie che mancano.',
+      '"In proporzione" dà di più ai pasti grandi (la cena prende più della merenda), "In parti uguali" divide in modo uguale. Con un solo pasto, tutte le calorie vanno lì.',
+      'Per ogni pasto ricevi una proposta con le quantità già calcolate; con "Un\'altra idea" la cambi.',
     ],
   },
   'complete-day': { title: 'Giornata completa', body: ['Se nel diario manca qualche pasto, rispondi "No": quella giornata non verrà usata per calcolare il tuo metabolismo.'] },

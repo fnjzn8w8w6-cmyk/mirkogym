@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { addDays } from 'date-fns';
-import { BookOpen, CalendarDays, Camera, ChevronLeft, ChevronRight, ClipboardCopy, Plus, Trash2 } from 'lucide-react';
+import { BookOpen, CalendarDays, Camera, Shuffle, Undo2, ChevronLeft, ChevronRight, ClipboardCopy, Plus, Trash2 } from 'lucide-react';
 import { MealPhotoModal } from '@/components/imports/ImportModals';
 import { useSettings } from '@/hooks/use-settings';
 import { useFoodLog } from '@/hooks/use-food';
@@ -14,18 +14,20 @@ import { formatLongDate, fromISODate, toISODate, todayISO } from '@/lib/date-uti
 import { macrosFor, round1, sumMacros, type Macros } from '@/lib/foods';
 import type { UserProfile } from '@/lib/metabolism';
 import { userNutrition } from '@/lib/coach';
-import { mealInfo, type Recipe } from '@/lib/recipes';
+import { alternativeMeal, mealInfo, type PlannedMeal, type Recipe } from '@/lib/recipes';
+import { DEFAULT_NUTRITION } from '@/lib/coach';
+import { useLearnedFavorites } from '@/hooks/use-habits';
 import { planMealEntries, planMealsFor } from '@/lib/diary-plan';
 import { RecipeLibrary } from './RecipeLibrary';
 import type { DiaryEntry, DiaryMeal } from '@/types';
 import { FoodPicker } from './FoodPicker';
 import { DayRecapForm } from '@/components/coach/Recaps';
 import { useDayTarget } from '@/hooks/use-habits';
-import { WhyKcal } from './NutritionPlanner';
+import { WhyKcal, planPrefs } from './NutritionPlanner';
 import { HelpTip, NewBadge } from '@/components/ui/Help';
 import { fmtPieces, pieceGrams } from '@/lib/food-units';
 import { Segmented } from '@/components/ui/Input';
-import { MealSuggest } from './MealSuggest';
+import { FillGap, NowSuggest } from './MealSuggest';
 import { MacroBar, fmtNum, useRecipes } from './shared';
 
 const MEALS: { key: DiaryMeal; label: string; emoji: string }[] = [
@@ -65,6 +67,9 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
   const [adding, setAdding] = useState<DiaryMeal | null>(null);
   const [photoFor, setPhotoFor] = useState<DiaryMeal | null>(null);
   const [library, setLibrary] = useState<DiaryMeal | null>(null);
+  // piatto alternativo al suggerimento del piano (stesse calorie), per pasto; si azzera cambiando giorno
+  const [alt, setAlt] = useState<{ date: string; meals: Partial<Record<DiaryMeal, { meal: PlannedMeal; seen: string[] }>> }>({ date: '', meals: {} });
+  const learned = useLearnedFavorites();
   const [editing, setEditing] = useState<DiaryEntry | null>(null);
   const [editQty, setEditQty] = useState('');
   const [editMode, setEditMode] = useState<'pz' | 'g'>('g');
@@ -73,6 +78,10 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
   const target = useMemo(() => dayT?.day ?? userNutrition(profile, settings), [dayT, profile, settings]);
   const totals = useMemo(() => sumMacros(entries.map(entryMacros)), [entries]);
   const left = target.target - totals.kcal;
+  const remaining = useMemo(
+    () => ({ kcal: target.target - totals.kcal, protein: target.protein - totals.protein, carbs: target.carbs - totals.carbs, fat: target.fat - totals.fat }),
+    [target, totals],
+  );
 
   const plan = settings.weekPlan;
   const weekday = (fromISODate(date).getDay() + 6) % 7;
@@ -84,8 +93,31 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
     void add(planDay.flatMap((m) => planMealEntries(m, byId)));
     toast.success('Pasti del piano aggiunti al diario');
   };
+  const altFor = (meal: DiaryMeal) => (alt.date === date ? alt.meals[meal] : undefined);
+  /** Un altro piatto a caso al posto di quello del piano, con le stesse calorie. */
+  const shuffle = (meal: DiaryMeal) => {
+    const ms = planMealsFor(planDay, meal);
+    if (!data || !ms.length) return;
+    const cur = altFor(meal);
+    const seen = [...(cur?.seen ?? ms.map((m) => m.refId))];
+    const kcal = ms.reduce((a, m) => a + m.macros.kcal, 0);
+    const pp = planPrefs(settings.nutritionPrefs ?? DEFAULT_NUTRITION, [...(settings.favoriteRecipes ?? []), ...learned.map((l) => l.id)]);
+    let next = alternativeMeal(data, pp, ms[0].slot, kcal, seen);
+    // finite le idee si ricomincia (tranne il piatto attuale)
+    if (!next) next = alternativeMeal(data, pp, ms[0].slot, kcal, [cur?.meal.refId ?? ms[0].refId]);
+    if (!next) return;
+    setAlt((a) => ({ date, meals: { ...(a.date === date ? a.meals : {}), [meal]: { meal: next, seen: [...seen, next.refId] } } }));
+  };
+  const resetAlt = (meal: DiaryMeal) => setAlt((a) => ({ date, meals: { ...(a.date === date ? a.meals : {}), [meal]: undefined } }));
   /** Un solo pasto dal piano (il piano è un suggerimento: lo prendi solo se ti va). */
   const addFromPlan = (meal: DiaryMeal) => {
+    const a = altFor(meal);
+    if (a && data) {
+      void add(planMealEntries(a.meal, byId, meal));
+      toast.success(`Aggiunto: ${mealInfo(a.meal, byId).name}`);
+      resetAlt(meal);
+      return;
+    }
     const ms = planMealsFor(planDay, meal);
     if (!data || !ms.length) return;
     void add(ms.flatMap((m) => planMealEntries(m, byId, meal)));
@@ -146,16 +178,29 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
       </Card>
 
       {date === todayISO() && !loading && (
-        <MealSuggest
-          remaining={{ kcal: target.target - totals.kcal, protein: target.protein - totals.protein, carbs: target.carbs - totals.carbs, fat: target.fat - totals.fat }}
-          entries={entries}
-          date={date}
-          data={data ?? null}
-          onAdd={(items, label) => {
-            void add(items);
-            toast.success(`Aggiunto a ${label}`);
-          }}
-        />
+        <>
+          <NowSuggest
+            remaining={remaining}
+            dayTarget={target.target}
+            entries={entries}
+            date={date}
+            data={data ?? null}
+            onAdd={(items, label) => {
+              void add(items);
+              toast.success(`Aggiunto a ${label}`);
+            }}
+          />
+          <FillGap
+            remaining={remaining}
+            entries={entries}
+            date={date}
+            data={data ?? null}
+            onAdd={(items, label) => {
+              void add(items);
+              toast.success(`Aggiunto a ${label}`);
+            }}
+          />
+        </>
       )}
 
       {planDay.length > 0 && !loading && entries.length === 0 && (
@@ -206,20 +251,43 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
                 })}
               </ul>
             )}
-            {list.length === 0 && planned.length > 0 && data && (
-              <div className="mt-2 rounded-md border border-dashed border-violet-400/50 p-2.5 text-sm text-fg-2">
-                📅 Il piano suggerisce: <strong className="text-fg">{planned.map((m) => mealInfo(m, byId).name).join(' + ')}</strong> · {planned.reduce((a, m) => a + m.macros.kcal, 0)} kcal
-                <NewBadge />
-                <div className="mt-1.5 flex gap-4">
-                  <button type="button" onClick={() => addFromPlan(meal.key)} className="font-semibold text-violet-400">
-                    Aggiungi al diario ✓
-                  </button>
-                  <button type="button" onClick={() => setLibrary(meal.key)} className="font-semibold text-fg-3">
-                    Scegli altro
+            {list.length === 0 && planned.length > 0 && data && (() => {
+              const a = altFor(meal.key);
+              const shown = a ? [a.meal] : planned;
+              return (
+                <div className="mt-2 flex items-start gap-2 rounded-md border border-dashed border-violet-400/50 p-2.5 text-sm text-fg-2">
+                  <div className="min-w-0 flex-1">
+                    {a ? '🔀 In alternativa' : '📅 Il piano suggerisce'}: <strong className="text-fg">{shown.map((m) => mealInfo(m, byId).name).join(' + ')}</strong> ·{' '}
+                    {shown.reduce((x, m) => x + m.macros.kcal, 0)} kcal
+                    {a && a.meal.kind === 'recipe' ? ` · ${fmtNum(a.meal.servings)} ${a.meal.servings === 1 ? 'porzione' : 'porzioni'}` : ''}
+                    <div className="mt-1.5 flex items-center gap-4">
+                      <button type="button" onClick={() => addFromPlan(meal.key)} className="whitespace-nowrap font-semibold text-violet-400">
+                        Aggiungi al diario ✓
+                      </button>
+                      {a && (
+                        <button type="button" onClick={() => resetAlt(meal.key)} className="flex items-center gap-1 text-fg-3">
+                          <Undo2 className="h-3.5 w-3.5" /> Piano
+                        </button>
+                      )}
+                      {!a && (
+                        <span className="whitespace-nowrap text-xs text-fg-3">
+                          🔀 cambia
+                          <NewBadge />
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => shuffle(meal.key)}
+                    aria-label="Cambia piatto (stesse calorie)"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line bg-surface-2 text-fg-2"
+                  >
+                    <Shuffle className="h-4 w-4" />
                   </button>
                 </div>
-              </div>
-            )}
+              );
+            })()}
             <div className="mt-2 flex items-center gap-1.5">
               <button type="button" onClick={() => setAdding(meal.key)} className="flex h-9 items-center gap-1 rounded-md bg-accent-500 px-2.5 text-sm font-semibold text-onaccent">
                 <Plus className="h-4 w-4" /> Alimento
