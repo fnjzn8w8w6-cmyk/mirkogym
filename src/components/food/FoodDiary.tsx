@@ -221,7 +221,7 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
 
       <Card className="p-4">
         <div className="mb-3 text-base font-semibold text-fg">📝 Com'è andata {dayLabel(date).toLowerCase() === 'oggi' ? 'oggi' : 'questa giornata'}?</div>
-        <DayRecapForm key={date} initial={recap} onSend={(r) => saveRecap(r)} />
+        <DayRecapForm key={date} initial={recap} onSend={(r) => saveRecap(r)} score={{ kcal: totals.kcal, target: target.target, protein: totals.protein, proteinTarget: target.protein }} />
       </Card>
 
       <MealPhotoModal

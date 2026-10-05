@@ -99,8 +99,27 @@ export function WorkoutRecapForm({ initial, onSend }: { initial?: WorkoutRecap; 
 }
 
 /** Com'è andata la giornata alimentare (in fondo al diario). */
-export function DayRecapForm({ initial, onSend }: { initial?: DayRecap; onSend: (r: DayRecap) => Promise<void> | void }) {
-  const [adherence, setAdherence] = useState(initial?.adherence ?? 4);
+/** Quanto la giornata ha rispettato gli obiettivi, calcolato dal diario (1–5). */
+export function dayScore(s: { kcal: number; target: number; protein: number; proteinTarget: number }): number {
+  if (s.kcal <= 0 || s.target <= 0) return 3;
+  const dev = Math.abs(s.kcal - s.target) / s.target;
+  const prot = s.proteinTarget > 0 ? s.protein / s.proteinTarget : 1;
+  if (dev <= 0.1 && prot >= 0.9) return 5;
+  if (dev <= 0.15 && prot >= 0.8) return 4;
+  if (dev <= 0.25) return 3;
+  return dev <= 0.4 ? 2 : 1;
+}
+
+export function DayRecapForm({
+  initial,
+  onSend,
+  score,
+}: {
+  initial?: DayRecap;
+  onSend: (r: DayRecap) => Promise<void> | void;
+  /** numeri della giornata dal diario: l'aderenza agli obiettivi si calcola da qui */
+  score?: { kcal: number; target: number; protein: number; proteinTarget: number };
+}) {
   const [hunger, setHunger] = useState(initial?.hunger ?? 3);
   const [cheat, setCheat] = useState(initial?.cheat ?? '');
   const [note, setNote] = useState(initial?.note ?? '');
@@ -110,7 +129,6 @@ export function DayRecapForm({ initial, onSend }: { initial?: DayRecap; onSend: 
   useEffect(() => {
     setSent(Boolean(initial));
     setComplete(initial?.complete ?? true);
-    setAdherence(initial?.adherence ?? 4);
     setHunger(initial?.hunger ?? 3);
     setCheat(initial?.cheat ?? '');
     setNote(initial?.note ?? '');
@@ -145,7 +163,16 @@ export function DayRecapForm({ initial, onSend }: { initial?: DayRecap; onSend: 
           ))}
         </div>
       </div>
-      <Scale label="Quanto hai seguito il piano?" value={adherence} onChange={setAdherence} options={['😬', '😕', '😐', '🙂', '🎯']} />
+      {score && score.kcal > 0 && (
+        <div className="rounded-md bg-surface-2 p-3 text-sm">
+          <div className="font-semibold text-fg">
+            {dayScore(score) >= 4 ? '🎯 Obiettivo rispettato' : dayScore(score) === 3 ? '🙂 Quasi in obiettivo' : '⚠️ Lontano dall\'obiettivo'} <NewBadge />
+          </div>
+          <div className="text-xs text-fg-2">
+            {Math.round(score.kcal).toLocaleString('it-IT')}/{Math.round(score.target).toLocaleString('it-IT')} kcal · proteine {Math.round(score.protein)}/{Math.round(score.proteinTarget)} g — calcolato dal diario, non serve indicarlo.
+          </div>
+        </div>
+      )}
       <Scale label="Fame durante il giorno" value={hunger} onChange={setHunger} options={['🙂', '😊', '😐', '😋', '🤤']} />
       <div className="relative [&_textarea]:pr-14">
         <TextArea label="Sgarri? (es. pizza, dolce, alcol — facoltativo)" rows={1} value={cheat} onChange={(e) => setCheat(e.target.value)} />
@@ -158,7 +185,7 @@ export function DayRecapForm({ initial, onSend }: { initial?: DayRecap; onSend: 
         icon={<Send className="h-5 w-5" />}
         onClick={async () => {
           setBusy(true);
-          await onSend({ adherence, hunger, complete, cheat: cheat.trim() || undefined, note: note.trim() || undefined, at: Date.now() });
+          await onSend({ adherence: score ? dayScore(score) : (initial?.adherence ?? 3), hunger, complete, cheat: cheat.trim() || undefined, note: note.trim() || undefined, at: Date.now() });
           setBusy(false);
           setSent(true);
         }}

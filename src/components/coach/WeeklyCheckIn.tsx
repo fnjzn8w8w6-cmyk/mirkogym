@@ -7,7 +7,7 @@ import { usePhotos } from '@/hooks/use-photos';
 import { useLearnedFavorites, useProposals } from '@/hooks/use-habits';
 import { useSchedule } from '@/hooks/use-schedule';
 import { weekTargets } from '@/lib/habits';
-import { SectionTitle } from '@/components/ui/Help';
+import { NewBadge, SectionTitle } from '@/components/ui/Help';
 import { analyzeWeekPhoto, compressPhoto, thumbOf, type WeekPhotoResult } from '@/lib/progress-photos';
 import { toISODate } from '@/lib/date-utils';
 import { estimateTdee, planRate, planStatus } from '@/lib/goal-plan';
@@ -35,7 +35,7 @@ const QUESTIONS: { key: keyof Omit<CheckInAnswers, 'note'>; label: string; scale
   { key: 'stress', label: 'Stress (lavoro, studio, vita)', scale: ['😌', '🙂', '😐', '😟', '🤯'] },
   { key: 'soreness', label: 'Dolori muscolari / articolari', scale: ['💪', '🙂', '😐', '😣', '🤕'] },
   { key: 'hunger', label: 'Fame durante il giorno', scale: ['🙂', '😊', '😐', '😋', '🤤'] },
-  { key: 'adherence', label: 'Quanto hai seguito la dieta?', scale: ['0–20%', '40%', '60%', '80%', '100%'] },
+  { key: 'adherence', label: 'Quanto hai rispettato calorie e macro?', scale: ['0–20%', '40%', '60%', '80%', '100%'] },
 ];
 const DEFAULT_ANSWERS: CheckInAnswers = { energy: 3, sleep: 3, stress: 3, soreness: 2, hunger: 3, adherence: 4 };
 
@@ -124,10 +124,37 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
   const [side, setSide] = useState<string | null>(null);
   const [photoRes, setPhotoRes] = useState<WeekPhotoResult | null>(null);
 
+  // Giorni in obiettivo negli ultimi 7 giorni, dal diario (conta il rispetto di calorie e macro, non del piano)
+  const diaryAdherence = useMemo(() => {
+    const t = userNutrition(profile, settings);
+    const from = toISODate(new Date(Date.now() - 7 * 86400000));
+    const days = foodLogs.filter((l) => l.date >= from && l.entries.length && l.recap?.complete !== false);
+    if (days.length < 3) return null;
+    const ok = days.filter((l) => {
+      const m = l.entries.reduce(
+        (a, e) => {
+          const k = e.unit === 'g' ? e.qty / 100 : e.qty;
+          return { kcal: a.kcal + e.per.kcal * k, protein: a.protein + e.per.protein * k };
+        },
+        { kcal: 0, protein: 0 },
+      );
+      return Math.abs(m.kcal - t.target) <= t.target * 0.1 && m.protein >= t.protein * 0.85;
+    }).length;
+    const ratio = ok / days.length;
+    return { ok, days: days.length, value: ratio >= 0.85 ? 5 : ratio >= 0.65 ? 4 : ratio >= 0.45 ? 3 : ratio >= 0.25 ? 2 : 1 };
+  }, [foodLogs, profile, settings]);
+
+  // precompila anche quando il check-in si apre da un link o il diario arriva dopo l'apertura
+  const touched = useRef(false);
+  useEffect(() => {
+    if (open && step === 'ask' && diaryAdherence && !touched.current) setAnswers((a) => ({ ...a, adherence: diaryAdherence.value }));
+  }, [open, step, diaryAdherence]);
+
   const start = () => {
+    touched.current = false;
     setStep('ask');
     setSummary(null);
-    setAnswers(DEFAULT_ANSWERS);
+    setAnswers(diaryAdherence ? { ...DEFAULT_ANSWERS, adherence: diaryAdherence.value } : DEFAULT_ANSWERS);
     setFront(null);
     setSide(null);
     setPhotoRes(null);
@@ -284,7 +311,15 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
             {QUESTIONS.map((q) => (
               <div key={q.key}>
                 <div className="mb-1.5 text-base text-fg">{q.label}</div>
-                <Scale label={q.label} value={answers[q.key]} options={q.scale} onChange={(v) => setAnswers({ ...answers, [q.key]: v })} />
+                <Scale label={q.label} value={answers[q.key]} options={q.scale} onChange={(v) => {
+                    if (q.key === 'adherence') touched.current = true;
+                    setAnswers({ ...answers, [q.key]: v });
+                  }} />
+                {q.key === 'adherence' && diaryAdherence && (
+                  <p className="mt-1 text-xs text-fg-3">
+                    Precompilato dal diario: {diaryAdherence.ok} giorni su {diaryAdherence.days} in obiettivo (calorie ±10%, proteine). Puoi correggerlo. <NewBadge />
+                  </p>
+                )}
               </div>
             ))}
             <div className="relative [&_textarea]:pr-14">

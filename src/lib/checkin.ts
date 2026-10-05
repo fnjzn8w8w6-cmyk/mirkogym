@@ -122,7 +122,7 @@ export function evaluate(a: CheckInAnswers, s: CheckInStats, deloadAvailable: bo
   // Calorie: si corregge solo se la dieta è stata seguita (altrimenti i dati del peso non sono affidabili)
   let kcalChange = 0;
   if (a.adherence <= 2) {
-    points.push('🍽️ Dieta seguita poco: prima di cambiare le calorie punta a rispettare il piano. Scegli dalla galleria ricette che ti ispirano davvero.');
+    points.push('🍽️ Calorie e macro rispettati poco questa settimana: prima di cambiare l\'obiettivo proviamo a centrarlo. Usa "Cosa mangio adesso?" nel diario per chiudere le giornate.');
   } else if (s.metabolism) {
     // già gestito dal metabolismo reale (riga sopra)
   } else if (s.weightRate != null) {
@@ -159,7 +159,7 @@ REGOLE: consigli SPECIFICI per questa persona, mai generici. Se nello storico ci
 STORICO DELL'ATLETA:
 ${memory || 'nessun dato storico'}
 Obiettivo: ${goal}. Allenamenti ${s.sessions}/${s.planned}, volume ${s.tonnage} kg (settimana prima ${s.prevTonnage} kg), record ${s.prs}.
-Risposte (1-5): energia ${a.energy}, fame ${a.hunger}, qualità del sonno ${a.sleep}, stress ${a.stress}, dieta seguita ${a.adherence}, indolenzimento ${a.soreness}.${a.note ? `\nNota dell'utente: """${a.note.slice(0, 400)}"""` : ''}
+Risposte (1-5): energia ${a.energy}, fame ${a.hunger}, qualità del sonno ${a.sleep}, stress ${a.stress}, calorie e macro rispettati ${a.adherence} (l'utente può usare ricette sue: conta il rispetto dei numeri, non del piano), indolenzimento ${a.soreness}.${a.note ? `\nNota dell'utente: """${a.note.slice(0, 400)}"""` : ''}
 Decisioni già prese dall'app (non cambiarle, spiegale): ${r.points.join(' ')}
 Correzione calorie: ${r.kcalChange} kcal. Deload consigliato: ${r.deload ? 'sì' : 'no'}.
 Chiudi con UN obiettivo pratico per la prossima settimana.`;

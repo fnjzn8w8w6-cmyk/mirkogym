@@ -291,8 +291,8 @@ export function athleteText(r: AthleteReport): string {
   if (r.notes.length) lines.push(`Note dell'atleta: ${r.notes.map((n) => `[${fmtDate(n.date)}] ${n.text}`).join(' | ')}`);
   if (r.diet)
     lines.push(
-      `Dieta (ultimi giorni registrati: ${r.diet.daysLogged}): media ${r.diet.avgKcal} kcal, ${r.diet.inTarget} giorni in target, proteine medie ${r.diet.avgProtein} g` +
-        (r.diet.avgAdherence != null ? `, aderenza al piano ${r.diet.avgAdherence}/5, fame ${r.diet.avgHunger}/5` : '') +
+      `Dieta (calcolata dal diario, ${r.diet.daysLogged} giorni registrati): giorni in obiettivo calorico ${r.diet.inTarget}/${r.diet.daysLogged}, media ${r.diet.avgKcal} kcal, proteine medie ${r.diet.avgProtein} g (l'utente può usare ricette sue: conta il rispetto di calorie e macro, non del piano)` +
+        (r.diet.avgHunger != null ? `, fame media ${r.diet.avgHunger}/5` : '') +
         (r.diet.cheats.length ? `, sgarri: ${r.diet.cheats.map((c) => `${c.date} ${c.text}`).join('; ')}` : ', nessuno sgarro segnalato') +
         '.',
     );
