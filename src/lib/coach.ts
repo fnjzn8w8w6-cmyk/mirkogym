@@ -134,10 +134,20 @@ export interface MealEdit {
   fat?: number;
 }
 
+/** Pasto già mangiato da segnare nel diario (es. "oggi a pranzo ho mangiato 2 piadine col prosciutto"). */
+export interface EatenMeal {
+  /** 0 = oggi, 1 = ieri, … */
+  daysAgo: number;
+  slot: (typeof MEAL_SLOTS)[number];
+  /** alimenti con quantità e valori stimati per quella quantità */
+  items: { name: string; grams: number; pieces?: number; kcal: number; protein: number; carbs: number; fat: number }[];
+}
+
 export interface DietChange {
   /** meals = solo pasti puntuali; preferences = preferenze permanenti; both; rebuild = rifare il piano da zero */
   scope: 'meals' | 'preferences' | 'both' | 'rebuild';
   mealEdits: MealEdit[];
+  eaten: EatenMeal[];
   diet?: Diet;
   meals?: 3 | 4 | 5;
   cooking?: NutritionPrefs['cooking'];
@@ -162,13 +172,14 @@ export async function interpretDietRequest(
   planSummary: string,
   opts: AIOptions = {},
   memory = '',
+  diarySummary = '',
 ): Promise<DietChange> {
   const today = (new Date().getDay() + 6) % 7;
   const prompt = `Sei un dietologo sportivo. Un utente ti chiede una modifica alla sua alimentazione. Fai SOLO ciò che chiede.
 Oggi è ${WEEKDAYS_IT[today]} (domani è ${WEEKDAYS_IT[(today + 1) % 7]}).
 PIANO DELLA SETTIMANA:
 ${planSummary || '(nessun piano ancora)'}
-
+${diarySummary ? `DIARIO (quello che l'utente ha mangiato o ha già segnato: conta più del piano):\n${diarySummary}\n` : ''}
 Profilo: ${profile.sex === 'm' ? 'uomo' : 'donna'}, ${profile.age} anni, ${profile.weightKg} kg, obiettivo ${GOALS.find((g) => g.value === profile.goal)?.label}.
 Impostazioni attuali: dieta ${prefs.diet}, ${prefs.meals} pasti, tempo per cucinare ${prefs.cooking}, stile macro ${prefs.style ?? 'standard'}, allergie "${prefs.allergies}", non graditi "${prefs.dislikes}", preferiti "${prefs.likes}".
 Obiettivo attuale: ${target.target} kcal, proteine ${target.protein} g, carboidrati ${target.carbs} g, grassi ${target.fat} g (correzione già applicata ${kcalAdjust} kcal).
@@ -179,6 +190,8 @@ Distingui:
 - MODIFICA DI UN PASTO PRECISO (es. "domani a cena mangio una pizza", "sabato pranzo al ristorante", "giovedì a pranzo vorrei qualcosa col pollo"): usa mealEdits e NON cambiare le preferenze.
   · kind "free" se l'utente mangerà qualcosa fuori dal piano: stima realisticamente kcal/proteine/carboidrati/grassi del pasto intero (es. pizza margherita intera ≈ 800-900 kcal).
   · kind "recipe" se vuole un piatto diverso dal piano: metti in query 1-3 parole chiave (es. "pollo", "pesce", "risotto").
+  · Le modifiche ai pasti di oggi e dei prossimi giorni vengono scritte sia nel piano sia nel diario dell'utente.
+- PASTO GIÀ MANGIATO da segnare (es. "oggi a pranzo ho mangiato 2 piadine col prosciutto", "ieri sera ho preso un gelato"): usa eaten, NON mealEdits. Scomponi negli alimenti con grammi realistici (pieces = numero di pezzi se l'utente li conta) e stima kcal/proteine/carboidrati/grassi di ciascuno per quella quantità. daysAgo: 0 oggi, 1 ieri, 2 l'altro ieri.
 - PREFERENZE PERMANENTI (intolleranze, cibi che non ama, dieta, pasti al giorno, tempo, calorie, macro): usa i campi qui sotto.
 - scope: "meals", "preferences", "both" oppure "rebuild" SOLO se chiede esplicitamente un piano completamente nuovo.
 
@@ -191,7 +204,7 @@ Valori ammessi (usa null o liste vuote per ciò che l'utente NON chiede di cambi
 - kcalDelta: correzione calorica giornaliera tra -400 e 400 SOLO se l'utente chiede di mangiare di più/meno o di andare più veloce/lento; per dimagrire più in fretta al massimo -250, per aumentare di massa più in fretta al massimo +250.
 Regole di sicurezza: niente diete estreme; se l'utente parla di patologie (diabete, reni, disturbi alimentari, gravidanza) aggiungi un avviso in warnings e non ridurre le calorie.
 Rispondi SOLO con JSON:
-{"scope": "...", "mealEdits": [{"day": "lunedì…domenica", "slot": "colazione|spuntino|pranzo|merenda|cena", "kind": "free|recipe", "name": "nome del pasto in italiano", "query": "...", "kcal": n, "protein": n, "carbs": n, "fat": n}], "diet": ... o null, "meals": ... o null, "cooking": ... o null, "style": ... o null, "addAllergies": [], "addDislikes": [], "addLikes": [], "removeDislikes": [], "kcalDelta": numero, "warnings": ["..."], "summary": "1-2 frasi in italiano, seconda persona, su cosa cambierai"}`;
+{"scope": "...", "mealEdits": [{"day": "lunedì…domenica", "slot": "colazione|spuntino|pranzo|merenda|cena", "kind": "free|recipe", "name": "nome del pasto in italiano", "query": "...", "kcal": n, "protein": n, "carbs": n, "fat": n}], "eaten": [{"daysAgo": 0, "slot": "colazione|spuntino|pranzo|merenda|cena", "items": [{"name": "alimento", "grams": n, "pieces": n o null, "kcal": n, "protein": n, "carbs": n, "fat": n}]}], "diet": ... o null, "meals": ... o null, "cooking": ... o null, "style": ... o null, "addAllergies": [], "addDislikes": [], "addLikes": [], "removeDislikes": [], "kcalDelta": numero, "warnings": ["..."], "summary": "1-2 frasi in italiano, seconda persona, su cosa cambierai"}`;
 
   return callAIJson(
     prompt,
@@ -225,10 +238,28 @@ Rispondi SOLO con JSON:
         const c = num(o.carbs, 0, 500) ?? Math.max(0, Math.round((kcal - p * 4 - f * 9) / 4));
         mealEdits.push({ day, slot, kind: 'free', name, kcal: Math.round(kcal), protein: Math.round(p), carbs: Math.round(c), fat: Math.round(f) });
       }
-      const scope = oneOf(r.scope, ['meals', 'preferences', 'both', 'rebuild'] as const) ?? (mealEdits.length ? 'meals' : 'preferences');
+      const eaten: EatenMeal[] = [];
+      for (const e of Array.isArray(r.eaten) ? r.eaten : []) {
+        const o = (e ?? {}) as Record<string, unknown>;
+        const slot = oneOf(o.slot, MEAL_SLOTS);
+        if (!slot) continue;
+        const items: EatenMeal['items'] = [];
+        for (const it of Array.isArray(o.items) ? o.items.slice(0, 8) : []) {
+          const x = (it ?? {}) as Record<string, unknown>;
+          const name = str(x.name, 60);
+          const grams = num(x.grams, 1, 3000);
+          const kcal = num(x.kcal, 0, 3000);
+          if (!name || !grams || kcal == null) continue;
+          const pieces = num(x.pieces, 0.5, 50);
+          items.push({ name, grams: Math.round(grams), ...(pieces ? { pieces } : {}), kcal: Math.round(kcal), protein: num(x.protein, 0, 250) ?? 0, carbs: num(x.carbs, 0, 500) ?? 0, fat: num(x.fat, 0, 250) ?? 0 });
+        }
+        if (items.length) eaten.push({ daysAgo: Math.round(num(o.daysAgo, 0, 6) ?? 0), slot, items });
+      }
+      const scope = oneOf(r.scope, ['meals', 'preferences', 'both', 'rebuild'] as const) ?? (mealEdits.length || eaten.length ? 'meals' : 'preferences');
       return {
         scope,
         mealEdits,
+        eaten,
         diet: oneOf(r.diet, DIET_VALUES),
         meals: mealsN ? (Math.round(mealsN) as 3 | 4 | 5) : undefined,
         cooking: oneOf(r.cooking, COOKING),

@@ -378,7 +378,7 @@ function AmountStep({ food, onConfirm }: { food: Food; onConfirm: (grams: number
   );
 }
 
-function RecipeAmountStep({ recipe, onConfirm }: { recipe: Recipe; onConfirm: (servings: number) => void }) {
+export function RecipeAmountStep({ recipe, onConfirm }: { recipe: Recipe; onConfirm: (servings: number) => void }) {
   const [sv, setSv] = useState(1);
   const k = recipe.k ?? [0, 0, 0, 0];
   return (

@@ -5,10 +5,11 @@ import { Segmented } from '@/components/ui/Input';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FoodDiary } from '@/components/food/FoodDiary';
 import { NutritionPlanner, RecipesTab } from '@/components/food/NutritionPlanner';
+import { DietAnalysis } from '@/components/food/DietAnalysis';
 import { WeeklyCheckIn } from '@/components/coach/WeeklyCheckIn';
 import { useEffectiveProfile } from '@/hooks/use-effective-profile';
 
-type Tab = 'diary' | 'plan' | 'recipes';
+type Tab = 'diary' | 'plan' | 'recipes' | 'analysis';
 
 export default function Food() {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ export default function Food() {
 
   return (
     <div>
-      <TopBar title="Dieta" subtitle="Diario, piano settimanale e ricette" large />
+      <TopBar title="Dieta" subtitle="Diario, piano, ricette e analisi" large />
       <div className="page pt-3">
         <Segmented<Tab>
           label="Sezione dieta"
@@ -28,6 +29,7 @@ export default function Food() {
             { value: 'diary', label: 'Diario' },
             { value: 'plan', label: 'Piano' },
             { value: 'recipes', label: 'Ricette' },
+            { value: 'analysis', label: 'Analisi' },
           ]}
         />
         <div className="mt-4">
@@ -41,6 +43,8 @@ export default function Food() {
             <FoodDiary profile={profile} />
           ) : tab === 'plan' ? (
             <NutritionPlanner profile={profile} header={<WeeklyCheckIn profile={profile} autoOpen={params.get('checkin') === '1'} />} />
+          ) : tab === 'analysis' ? (
+            <DietAnalysis profile={profile} />
           ) : (
             <RecipesTab profile={profile} />
           )}

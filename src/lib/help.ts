@@ -150,7 +150,44 @@ export const HELP = {
   /* ---------- Dieta ---------- */
   'diet-diary': {
     title: 'Diario',
-    body: ['Registra cosa mangi (alimenti, ricette, codice a barre, foto del piatto). In alto vedi quanto ti resta rispetto all\'obiettivo di oggi.'],
+    body: [
+      'Il diario è quello che conta: calorie, metabolismo, check-in e coach si basano su quello che hai mangiato davvero, non sul piano.',
+      'In ogni pasto: "Alimento" (ricerca, codice a barre), "Ricetta" (la libreria con le tue ricette e il ricettario), "Piano" (il pasto suggerito dal piano per quel giorno) e la fotocamera per la foto del piatto.',
+      'Se un pasto è vuoto e il piano ha un suggerimento, lo vedi nel riquadro tratteggiato: lo aggiungi con un tocco oppure scegli altro.',
+      'In alto vedi quanto ti resta rispetto all\'obiettivo di oggi.',
+    ],
+  },
+  'diet-library': {
+    title: 'Libreria ricette',
+    body: [
+      'Come la libreria esercizi: scegli una ricetta e le porzioni, e finisce nel pasto del diario.',
+      '"Mangiate spesso" sono le ricette che hai già registrato, "Le mie" quelle che hai creato tu (puoi crearne una nuova da qui).',
+      'Le ricette in verde ci stanno con 1 porzione nelle calorie che ti mancano oggi.',
+    ],
+  },
+  'diet-analysis': {
+    title: 'Analisi della dieta',
+    body: [
+      'Tutto calcolato dal diario, non devi compilare niente. Contano solo le giornate passate registrate (non quelle segnate come incomplete).',
+      'Un giorno è "in obiettivo" quando le calorie sono entro ±10% dell\'obiettivo del giorno e le proteine almeno all\'85%.',
+    ],
+  },
+  'diet-analysis-chart': {
+    title: 'Calorie per giorno',
+    body: ['Ogni barra è un giorno (nei 90 giorni: la media di una settimana). Il tratteggio è l\'obiettivo di quel giorno, che cambia tra allenamento e riposo.'],
+  },
+  'diet-analysis-macros': {
+    title: 'Media vs obiettivo',
+    body: ['La media giornaliera di calorie e macro nel periodo, confrontata con la media degli obiettivi. In giallo quello che supera l\'obiettivo di oltre il 10%.'],
+  },
+  'diet-analysis-meals': {
+    title: 'Distribuzione delle calorie',
+    body: ['Quanto pesa ogni pasto sul totale della giornata, e in quali giorni della settimana tendi a sforare (+) o a stare sotto (−).'],
+  },
+  'diet-analysis-foods': { title: 'Cosa mangi di più', body: ['Gli alimenti e le ricette che compaiono più spesso nel diario del periodo.'] },
+  'diet-analysis-coach': {
+    title: 'Il commento del coach',
+    body: ['Consigli calcolati dai numeri del periodo (senza AI): obiettivo centrato, proteine, grassi e i giorni in cui sfori.'],
   },
   'diet-why-kcal': {
     title: 'Perché queste calorie?',

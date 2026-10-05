@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { addDays } from 'date-fns';
-import { Camera, ChevronLeft, ChevronRight, ClipboardCopy, Plus, Trash2 } from 'lucide-react';
+import { BookOpen, CalendarDays, Camera, ChevronLeft, ChevronRight, ClipboardCopy, Plus, Trash2 } from 'lucide-react';
 import { MealPhotoModal } from '@/components/imports/ImportModals';
 import { useSettings } from '@/hooks/use-settings';
 import { useFoodLog } from '@/hooks/use-food';
@@ -14,13 +14,15 @@ import { formatLongDate, fromISODate, toISODate, todayISO } from '@/lib/date-uti
 import { macrosFor, round1, sumMacros, type Macros } from '@/lib/foods';
 import type { UserProfile } from '@/lib/metabolism';
 import { userNutrition } from '@/lib/coach';
-import { mealInfo, simpleFoodPer100, type PlannedMeal, type Recipe } from '@/lib/recipes';
+import { mealInfo, type Recipe } from '@/lib/recipes';
+import { planMealEntries, planMealsFor } from '@/lib/diary-plan';
+import { RecipeLibrary } from './RecipeLibrary';
 import type { DiaryEntry, DiaryMeal } from '@/types';
 import { FoodPicker } from './FoodPicker';
 import { DayRecapForm } from '@/components/coach/Recaps';
 import { useDayTarget } from '@/hooks/use-habits';
 import { WhyKcal } from './NutritionPlanner';
-import { HelpTip } from '@/components/ui/Help';
+import { HelpTip, NewBadge } from '@/components/ui/Help';
 import { fmtPieces, pieceGrams } from '@/lib/food-units';
 import { Segmented } from '@/components/ui/Input';
 import { MealSuggest } from './MealSuggest';
@@ -32,7 +34,6 @@ const MEALS: { key: DiaryMeal; label: string; emoji: string }[] = [
   { key: 'cena', label: 'Cena', emoji: '🍽️' },
   { key: 'spuntini', label: 'Spuntini', emoji: '🍎' },
 ];
-const SLOT_TO_MEAL: Record<PlannedMeal['slot'], DiaryMeal> = { colazione: 'colazione', pranzo: 'pranzo', cena: 'cena', spuntino: 'spuntini', merenda: 'spuntini' };
 
 export const entryMacros = (e: DiaryEntry): Macros =>
   e.unit === 'g'
@@ -63,6 +64,7 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
   const { data } = useRecipes();
   const [adding, setAdding] = useState<DiaryMeal | null>(null);
   const [photoFor, setPhotoFor] = useState<DiaryMeal | null>(null);
+  const [library, setLibrary] = useState<DiaryMeal | null>(null);
   const [editing, setEditing] = useState<DiaryEntry | null>(null);
   const [editQty, setEditQty] = useState('');
   const [editMode, setEditMode] = useState<'pz' | 'g'>('g');
@@ -76,30 +78,26 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
   const weekday = (fromISODate(date).getDay() + 6) % 7;
   const planDay = plan?.days[weekday]?.meals ?? [];
 
+  const byId = useMemo(() => new Map((data?.recipes ?? []).map((r) => [r.id, r])), [data]);
   const copyFromPlan = () => {
     if (!data || !planDay.length) return;
-    const byId = new Map(data.recipes.map((r) => [r.id, r]));
-    const now = Date.now();
-    const out: DiaryEntry[] = [];
-    for (const m of planDay) {
-      const meal = SLOT_TO_MEAL[m.slot];
-      const info = mealInfo(m, byId);
-      if (m.kind === 'custom' && m.fixed) out.push({ id: uid(), meal, name: info.name, unit: 'porzione', qty: 1, per: m.fixed, createdAt: now });
-      if (m.kind === 'recipe' && info.recipe?.k) {
-        const k = info.recipe.k;
-        out.push({ id: uid(), meal, name: info.recipe.t, unit: 'porzione', qty: m.servings, per: { kcal: k[0], protein: k[1], carbs: k[2], fat: k[3] }, recipeId: info.recipe.id, createdAt: now });
-      }
-      for (const p of [...m.items, ...m.extras])
-        out.push({ id: uid(), meal, name: p.food, unit: 'g', qty: p.grams, per: simpleFoodPer100(p.food), createdAt: now });
-    }
-    void add(out);
+    void add(planDay.flatMap((m) => planMealEntries(m, byId)));
     toast.success('Pasti del piano aggiunti al diario');
+  };
+  /** Un solo pasto dal piano (il piano è un suggerimento: lo prendi solo se ti va). */
+  const addFromPlan = (meal: DiaryMeal) => {
+    const ms = planMealsFor(planDay, meal);
+    if (!data || !ms.length) return;
+    void add(ms.flatMap((m) => planMealEntries(m, byId, meal)));
+    toast.success(`Dal piano: ${ms.map((m) => mealInfo(m, byId).name).join(' + ')}`);
   };
 
   const pickRecipe = (r: Recipe, servings: number) => {
-    if (!adding || !r.k) return;
-    void add([{ id: uid(), meal: adding, name: r.t, unit: 'porzione', qty: servings, per: { kcal: r.k[0], protein: r.k[1], carbs: r.k[2], fat: r.k[3] }, recipeId: r.id, createdAt: Date.now() }]);
+    const meal = adding ?? library;
+    if (!meal || !r.k) return;
+    void add([{ id: uid(), meal, name: r.t, unit: 'porzione', qty: servings, per: { kcal: r.k[0], protein: r.k[1], carbs: r.k[2], fat: r.k[3] }, recipeId: r.id, createdAt: Date.now() }]);
     setAdding(null);
+    setLibrary(null);
     toast.success(`${r.t} aggiunta`);
   };
 
@@ -169,6 +167,7 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
       {MEALS.map((meal) => {
         const list = entries.filter((e) => e.meal === meal.key);
         const kcal = list.reduce((a, e) => a + entryMacros(e).kcal, 0);
+        const planned = planMealsFor(planDay, meal.key);
         return (
           <Card key={meal.key} className="p-4">
             <div className="flex items-center justify-between">
@@ -207,12 +206,34 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
                 })}
               </ul>
             )}
-            <div className="mt-2 flex items-center justify-between">
-              <button type="button" onClick={() => setAdding(meal.key)} className="flex items-center gap-1 text-sm font-semibold text-accent-400">
-                <Plus className="h-4 w-4" /> Aggiungi alimento
+            {list.length === 0 && planned.length > 0 && data && (
+              <div className="mt-2 rounded-md border border-dashed border-violet-400/50 p-2.5 text-sm text-fg-2">
+                📅 Il piano suggerisce: <strong className="text-fg">{planned.map((m) => mealInfo(m, byId).name).join(' + ')}</strong> · {planned.reduce((a, m) => a + m.macros.kcal, 0)} kcal
+                <NewBadge />
+                <div className="mt-1.5 flex gap-4">
+                  <button type="button" onClick={() => addFromPlan(meal.key)} className="font-semibold text-violet-400">
+                    Aggiungi al diario ✓
+                  </button>
+                  <button type="button" onClick={() => setLibrary(meal.key)} className="font-semibold text-fg-3">
+                    Scegli altro
+                  </button>
+                </div>
+              </div>
+            )}
+            <div className="mt-2 flex items-center gap-1.5">
+              <button type="button" onClick={() => setAdding(meal.key)} className="flex h-9 items-center gap-1 rounded-md bg-accent-500 px-2.5 text-sm font-semibold text-onaccent">
+                <Plus className="h-4 w-4" /> Alimento
               </button>
-              <button type="button" onClick={() => setPhotoFor(meal.key)} aria-label={`Foto del piatto: ${meal.label}`} className="flex items-center gap-1 text-sm font-semibold text-violet-400">
-                <Camera className="h-4 w-4" /> Foto piatto
+              <button type="button" onClick={() => setLibrary(meal.key)} className="flex h-9 items-center gap-1 rounded-md border border-line bg-surface-2 px-2.5 text-sm font-semibold text-fg">
+                <BookOpen className="h-4 w-4" /> Ricetta
+              </button>
+              {planned.length > 0 && list.length > 0 && (
+                <button type="button" disabled={!data} onClick={() => addFromPlan(meal.key)} className="flex h-9 items-center gap-1 rounded-md border border-violet-400/60 px-2.5 text-sm font-semibold text-violet-400">
+                  <CalendarDays className="h-4 w-4" /> Piano
+                </button>
+              )}
+              <button type="button" onClick={() => setPhotoFor(meal.key)} aria-label={`Foto del piatto: ${meal.label}`} className="ml-auto flex h-9 w-9 items-center justify-center rounded-md border border-line bg-surface-2 text-violet-400">
+                <Camera className="h-4 w-4" />
               </button>
             </div>
           </Card>
@@ -223,6 +244,17 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
         <div className="mb-3 text-base font-semibold text-fg">📝 Com'è andata {dayLabel(date).toLowerCase() === 'oggi' ? 'oggi' : 'questa giornata'}?</div>
         <DayRecapForm key={date} initial={recap} onSend={(r) => saveRecap(r)} score={{ kcal: totals.kcal, target: target.target, protein: totals.protein, proteinTarget: target.protein }} />
       </Card>
+
+      <RecipeLibrary
+        open={library != null}
+        onClose={() => setLibrary(null)}
+        title={`Ricetta per ${MEALS.find((m) => m.key === library)?.label.toLowerCase() ?? ''}`}
+        meal={library ?? 'pranzo'}
+        recipes={data?.recipes ?? []}
+        dayTarget={target.target}
+        remaining={{ kcal: target.target - totals.kcal, protein: target.protein - totals.protein, carbs: target.carbs - totals.carbs, fat: target.fat - totals.fat }}
+        onPick={pickRecipe}
+      />
 
       <MealPhotoModal
         open={photoFor != null}
