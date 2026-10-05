@@ -160,6 +160,11 @@ function TodayDiet({ onOpen }: { onOpen: () => void }) {
         <Ring value={t.carbs} target={target.carbs} color="#C084FC" label="Carbo" unit="g" />
         <Ring value={t.fat} target={target.fat} color="#EAB308" label="Grassi" unit="g" />
       </div>
+      {entries.length > 0 && target.target - t.kcal >= 150 && (
+        <p className="mt-3 text-center text-sm text-fg-2">
+          Ti mancano <strong className="text-accent-400">{Math.round(target.target - t.kcal)} kcal</strong>: vedi un pasto consigliato → <NewBadge />
+        </p>
+      )}
       {entries.length === 0 && (
         <p className="mt-3 text-center text-sm text-fg-2">{settings.weekPlan ? 'Segna i pasti nel diario →' : 'Crea il piano settimanale →'}</p>
       )}

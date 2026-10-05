@@ -9,6 +9,8 @@ import { cn } from '@/lib/cn';
 import { FOOD_CATEGORY, loadBaseFoods, lookupBarcode, macrosFor, round1, searchLocal, searchOff, type Food } from '@/lib/foods';
 import type { Recipe } from '@/lib/recipes';
 import { BarcodeScanner } from './BarcodeScanner';
+import { Segmented } from '@/components/ui/Input';
+import { fmtPieces, isCountable, pieceGrams, rememberMode, rememberedMode } from '@/lib/food-units';
 import { MacroLine, RecipeImage, fmtNum } from './shared';
 
 interface Props {
@@ -17,7 +19,8 @@ interface Props {
   title?: string;
   /** ricette selezionabili (diario); se assenti si scelgono solo alimenti */
   recipes?: Recipe[];
-  onPickFood: (food: Food, grams: number) => void;
+  /** pieces: quantità in pezzi, se scelta (es. 3 uova) */
+  onPickFood: (food: Food, grams: number, pieces?: { n: number; grams: number }) => void;
   onPickRecipe?: (recipe: Recipe, servings: number) => void;
 }
 
@@ -226,9 +229,9 @@ export function FoodPicker({ open, onClose, title = 'Aggiungi alimento', recipes
             {back}
             <AmountStep
               food={step.food}
-              onConfirm={(grams) => {
+              onConfirm={(grams, pieces) => {
                 void remember(step.food);
-                onPickFood(step.food, grams);
+                onPickFood(step.food, grams, pieces);
               }}
             />
           </>
@@ -260,12 +263,19 @@ export function FoodPicker({ open, onClose, title = 'Aggiungi alimento', recipes
 
 /* ---------- Quantità ---------- */
 
-function AmountStep({ food, onConfirm }: { food: Food; onConfirm: (grams: number) => void }) {
-  const [grams, setGrams] = useState(String(food.unitGrams ?? 100));
-  const g = Number(grams.replace(',', '.'));
+function AmountStep({ food, onConfirm }: { food: Food; onConfirm: (grams: number, pieces?: { n: number; grams: number }) => void }) {
+  const unit = pieceGrams(food.name, food.unitGrams);
+  const [mode, setMode] = useState<'pz' | 'g'>(() => (unit ? (rememberedMode(food.id) ?? (isCountable(food.name) ? 'pz' : 'g')) : 'g'));
+  const [grams, setGrams] = useState(String(unit ?? 100));
+  const [pieces, setPieces] = useState(1);
+  const g = mode === 'pz' && unit ? Math.round(pieces * unit * 10) / 10 : Number(grams.replace(',', '.'));
   const valid = Number.isFinite(g) && g > 0 && g <= 5000;
   const m = macrosFor(food.per100, valid ? g : 0);
-  const presets = [...new Set([food.unitGrams, 50, 100, 150, 200].filter((x): x is number => !!x))];
+  const presets = [...new Set([50, 100, 150, 200])];
+  const switchMode = (v: 'pz' | 'g') => {
+    setMode(v);
+    rememberMode(food.id, v);
+  };
   return (
     <div className="space-y-4">
       <div className="flex items-start gap-3">
@@ -278,19 +288,74 @@ function AmountStep({ food, onConfirm }: { food: Food; onConfirm: (grams: number
           </div>
         </div>
       </div>
-      <Input label="Quantità (grammi)" inputMode="decimal" value={grams} onChange={(e) => setGrams(e.target.value)} />
-      <div className="flex flex-wrap gap-2">
-        {presets.map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => setGrams(String(p))}
-            className={cn('h-9 rounded-full border px-3 text-sm', g === p ? 'border-accent-500 bg-accent-glow text-accent-400' : 'border-line bg-surface-2 text-fg-2')}
-          >
-            {p === food.unitGrams ? `${food.unitLabel ?? '1 pz / porzione'} · ${p} g` : `${p} g`}
-          </button>
-        ))}
-      </div>
+      {unit && (
+        <Segmented<'pz' | 'g'>
+          label="Unità"
+          value={mode}
+          onChange={switchMode}
+          options={[
+            { value: 'pz', label: `Pezzi (1 = ${fmtNum(unit)} g)` },
+            { value: 'g', label: 'Grammi' },
+          ]}
+        />
+      )}
+      {mode === 'pz' && unit ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-center gap-4">
+            <button
+              type="button"
+              aria-label="Un pezzo in meno"
+              disabled={pieces <= 0.5}
+              onClick={() => setPieces((n) => Math.max(0.5, n - (n > 1 ? 1 : 0.5)))}
+              className="flex h-14 w-14 items-center justify-center rounded-full border border-line bg-surface-2 text-2xl font-bold text-fg disabled:opacity-40"
+            >
+              −
+            </button>
+            <div className="min-w-[96px] text-center">
+              <div className="font-display text-4xl font-extrabold text-fg" aria-live="polite">
+                {fmtPieces(pieces)}
+              </div>
+              <div className="text-xs text-fg-3">{pieces === 1 ? 'pezzo' : 'pezzi'} · {fmtNum(g)} g</div>
+            </div>
+            <button
+              type="button"
+              aria-label="Un pezzo in più"
+              onClick={() => setPieces((n) => (n < 1 ? 1 : n + 1))}
+              className="flex h-14 w-14 items-center justify-center rounded-full border border-accent-500 bg-accent-glow text-2xl font-bold text-accent-400"
+            >
+              +
+            </button>
+          </div>
+          <div className="flex justify-center gap-2">
+            {[0.5, 1, 2, 3, 4].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setPieces(n)}
+                className={cn('h-9 min-w-[44px] rounded-full border px-3 text-sm', pieces === n ? 'border-accent-500 bg-accent-glow text-accent-400' : 'border-line bg-surface-2 text-fg-2')}
+              >
+                {fmtPieces(n)}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <>
+          <Input label="Quantità (grammi)" inputMode="decimal" value={grams} onChange={(e) => setGrams(e.target.value)} />
+          <div className="flex flex-wrap gap-2">
+            {presets.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setGrams(String(p))}
+                className={cn('h-9 rounded-full border px-3 text-sm', g === p ? 'border-accent-500 bg-accent-glow text-accent-400' : 'border-line bg-surface-2 text-fg-2')}
+              >
+                {p} g
+              </button>
+            ))}
+          </div>
+        </>
+      )}
       <div className="grid grid-cols-4 gap-2 text-center">
         {[
           ['Kcal', m.kcal],
@@ -304,7 +369,7 @@ function AmountStep({ food, onConfirm }: { food: Food; onConfirm: (grams: number
           </div>
         ))}
       </div>
-      <Button fullWidth size="lg" disabled={!valid} onClick={() => onConfirm(Math.round(g * 10) / 10)}>
+      <Button fullWidth size="lg" disabled={!valid} onClick={() => onConfirm(Math.round(g * 10) / 10, mode === 'pz' && unit ? { n: pieces, grams: unit } : undefined)}>
         Aggiungi
       </Button>
       {food.source === 'off' && <p className="text-xs text-fg-3">Valori dall'etichetta del prodotto (Open Food Facts).</p>}

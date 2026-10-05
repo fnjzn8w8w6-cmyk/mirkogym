@@ -174,6 +174,14 @@ export const HELP = {
     body: ['Le ricette che registri nel diario vengono proposte più spesso. Quelle del piano che non mangi mai vengono proposte meno.'],
   },
   'diet-recipes': { title: 'Ricette', body: ['Ricettario italiano con macro calcolati dagli ingredienti, più le tue ricette.'] },
+  'diet-suggest': {
+    title: 'Cosa mangio adesso?',
+    body: [
+      'Quando ti mancano calorie per arrivare all\'obiettivo, l\'app ti propone 3 pasti con le quantità già calcolate per chiudere calorie e macro rimanenti (prima le proteine).',
+      'Le idee partono dal tuo storico: i pasti che hai già mangiato in quel momento della giornata, poi il piano di oggi, poi abbinamenti e ricette compatibili con dieta e allergie.',
+      'Quello che aggiungi conta come "mi piace", quello che salti con "Altre idee" viene proposto meno: i suggerimenti imparano dai tuoi gusti.',
+    ],
+  },
   'complete-day': { title: 'Giornata completa', body: ['Se nel diario manca qualche pasto, rispondi "No": quella giornata non verrà usata per calcolare il tuo metabolismo.'] },
 
   /* ---------- Coach ---------- */

@@ -21,6 +21,9 @@ import { DayRecapForm } from '@/components/coach/Recaps';
 import { useDayTarget } from '@/hooks/use-habits';
 import { WhyKcal } from './NutritionPlanner';
 import { HelpTip } from '@/components/ui/Help';
+import { fmtPieces, pieceGrams } from '@/lib/food-units';
+import { Segmented } from '@/components/ui/Input';
+import { MealSuggest } from './MealSuggest';
 import { MacroBar, fmtNum, useRecipes } from './shared';
 
 const MEALS: { key: DiaryMeal; label: string; emoji: string }[] = [
@@ -37,7 +40,12 @@ export const entryMacros = (e: DiaryEntry): Macros =>
     : { kcal: Math.round(e.per.kcal * e.qty), protein: round1(e.per.protein * e.qty), carbs: round1(e.per.carbs * e.qty), fat: round1(e.per.fat * e.qty) };
 
 const uid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-const qtyText = (e: DiaryEntry) => (e.unit === 'g' ? `${fmtNum(e.qty)} g` : `${fmtNum(e.qty)} ${e.qty === 1 ? 'porzione' : 'porzioni'}`);
+const qtyText = (e: DiaryEntry) =>
+  e.unit === 'g'
+    ? e.pieces
+      ? `${fmtPieces(e.pieces)} ${e.pieces === 1 ? 'pz' : 'pz'} (${fmtNum(e.qty)} g)`
+      : `${fmtNum(e.qty)} g`
+    : `${fmtNum(e.qty)} ${e.qty === 1 ? 'porzione' : 'porzioni'}`;
 
 function dayLabel(date: string): string {
   const today = todayISO();
@@ -57,6 +65,8 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
   const [photoFor, setPhotoFor] = useState<DiaryMeal | null>(null);
   const [editing, setEditing] = useState<DiaryEntry | null>(null);
   const [editQty, setEditQty] = useState('');
+  const [editMode, setEditMode] = useState<'pz' | 'g'>('g');
+  const [editPieces, setEditPieces] = useState(1);
   const dayT = useDayTarget(profile, date);
   const target = useMemo(() => dayT?.day ?? userNutrition(profile, settings), [dayT, profile, settings]);
   const totals = useMemo(() => sumMacros(entries.map(entryMacros)), [entries]);
@@ -137,6 +147,19 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
         <WhyKcal base={dayT?.base ?? target} day={dayT?.day} />
       </Card>
 
+      {date === todayISO() && !loading && (
+        <MealSuggest
+          remaining={{ kcal: target.target - totals.kcal, protein: target.protein - totals.protein, carbs: target.carbs - totals.carbs, fat: target.fat - totals.fat }}
+          entries={entries}
+          date={date}
+          data={data ?? null}
+          onAdd={(items, label) => {
+            void add(items);
+            toast.success(`Aggiunto a ${label}`);
+          }}
+        />
+      )}
+
       {planDay.length > 0 && !loading && entries.length === 0 && (
         <Button variant="secondary" fullWidth icon={<ClipboardCopy className="h-5 w-5" />} disabled={!data} onClick={copyFromPlan}>
           Copia i pasti del piano di {dayLabel(date).toLowerCase() === 'oggi' ? 'oggi' : 'questo giorno'}
@@ -165,6 +188,8 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
                         onClick={() => {
                           setEditing(e);
                           setEditQty(String(e.qty));
+                          setEditMode(e.pieces ? 'pz' : 'g');
+                          setEditPieces(e.pieces ?? 1);
                         }}
                         className="flex w-full items-center gap-2 py-2 text-left"
                       >
@@ -216,9 +241,22 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
         onClose={() => setAdding(null)}
         title={`Aggiungi a ${MEALS.find((m) => m.key === adding)?.label.toLowerCase() ?? ''}`}
         recipes={data?.recipes}
-        onPickFood={(food, grams) => {
+        onPickFood={(food, grams, pieces) => {
           if (!adding) return;
-          void add([{ id: uid(), meal: adding, name: food.name, brand: food.brand, unit: 'g', qty: grams, per: food.per100, foodId: food.id, createdAt: Date.now() }]);
+          void add([
+            {
+              id: uid(),
+              meal: adding,
+              name: food.name,
+              brand: food.brand,
+              unit: 'g',
+              qty: grams,
+              per: food.per100,
+              foodId: food.id,
+              ...(pieces ? { pieces: pieces.n, pieceGrams: pieces.grams } : {}),
+              createdAt: Date.now(),
+            },
+          ]);
           setAdding(null);
           toast.success(`${food.name} aggiunto`);
         }}
@@ -228,19 +266,44 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
       <Modal open={Boolean(editing)} onClose={() => setEditing(null)} title={editing?.name}>
         {editing && (
           <div className="space-y-3">
-            <Input
-              label={editing.unit === 'g' ? 'Quantità (grammi)' : 'Porzioni'}
-              inputMode="decimal"
-              value={editQty}
-              onChange={(e) => setEditQty(e.target.value)}
-            />
             {(() => {
-              const q = Number(editQty.replace(',', '.'));
+              const pg = editing.unit === 'g' ? (editing.pieceGrams ?? pieceGrams(editing.name)) : undefined;
+              const pzMode = Boolean(pg) && editMode === 'pz';
+              const q = pzMode ? editPieces * pg! : Number(editQty.replace(',', '.'));
               const m = entryMacros({ ...editing, qty: Number.isFinite(q) ? q : 0 });
               return (
-                <p className="text-sm text-fg-2">
-                  {m.kcal} kcal · P {fmtNum(m.protein)} · C {fmtNum(m.carbs)} · G {fmtNum(m.fat)}
-                </p>
+                <>
+                  {pg && (
+                    <Segmented<'pz' | 'g'>
+                      label="Unità"
+                      value={editMode}
+                      onChange={setEditMode}
+                      options={[
+                        { value: 'pz', label: `Pezzi (1 = ${fmtNum(pg)} g)` },
+                        { value: 'g', label: 'Grammi' },
+                      ]}
+                    />
+                  )}
+                  {pzMode ? (
+                    <div className="flex items-center justify-center gap-4">
+                      <button type="button" aria-label="Un pezzo in meno" disabled={editPieces <= 0.5} onClick={() => setEditPieces((n) => Math.max(0.5, n - (n > 1 ? 1 : 0.5)))} className="flex h-12 w-12 items-center justify-center rounded-full border border-line bg-surface-2 text-2xl font-bold text-fg disabled:opacity-40">
+                        −
+                      </button>
+                      <div className="min-w-[80px] text-center">
+                        <div className="font-display text-3xl font-extrabold text-fg">{fmtPieces(editPieces)}</div>
+                        <div className="text-xs text-fg-3">{fmtNum(q)} g</div>
+                      </div>
+                      <button type="button" aria-label="Un pezzo in più" onClick={() => setEditPieces((n) => (n < 1 ? 1 : n + 1))} className="flex h-12 w-12 items-center justify-center rounded-full border border-accent-500 bg-accent-glow text-2xl font-bold text-accent-400">
+                        +
+                      </button>
+                    </div>
+                  ) : (
+                    <Input label={editing.unit === 'g' ? 'Quantità (grammi)' : 'Porzioni'} inputMode="decimal" value={editQty} onChange={(e) => setEditQty(e.target.value)} />
+                  )}
+                  <p className="text-sm text-fg-2">
+                    {m.kcal} kcal · P {fmtNum(m.protein)} · C {fmtNum(m.carbs)} · G {fmtNum(m.fat)}
+                  </p>
+                </>
               );
             })()}
             <div className="grid grid-cols-2 gap-2">
@@ -255,9 +318,11 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
                 Elimina
               </Button>
               <Button
-                disabled={!(Number(editQty.replace(',', '.')) > 0)}
+                disabled={editMode === 'g' && !(Number(editQty.replace(',', '.')) > 0)}
                 onClick={() => {
-                  void update({ ...editing, qty: Number(editQty.replace(',', '.')) });
+                  const pg = editing.unit === 'g' ? (editing.pieceGrams ?? pieceGrams(editing.name)) : undefined;
+                  if (pg && editMode === 'pz') void update({ ...editing, qty: Math.round(editPieces * pg * 10) / 10, pieces: editPieces, pieceGrams: pg });
+                  else void update({ ...editing, qty: Number(editQty.replace(',', '.')), pieces: undefined });
                   setEditing(null);
                 }}
               >

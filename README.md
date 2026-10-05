@@ -165,6 +165,11 @@ Tutto calcolato sul telefono, senza richieste AI in più. Le funzioni nuove hann
 - **Foto ↔ mappa**: il confronto delle foto settimanali indica le zone che cambiano (vista "Cambiamento" della mappa in Corpo).
 - Una sola sottoscrizione condivisa al diario per tutta l'app.
 
+## Diario: pezzi e "Cosa mangio adesso?"
+
+- **Quantità in pezzi** (`src/lib/food-units.ts`): per gli alimenti che si contano (uova, frutta, vasetti, fette…) scegli i pezzi con − / + (es. 3 uova = 165 g); il diario mostra "3 pz (165 g)" e si modifica allo stesso modo. L'ultima scelta (pezzi o grammi) viene ricordata per ogni alimento.
+- **Cosa mangio adesso?** (`src/lib/meal-suggest.ts`): quando mancano almeno 150 kcal, 3 pasti con quantità ottimizzate per chiudere calorie e macro rimanenti (priorità alle proteine). Le idee partono dallo **storico** (pasti già mangiati in quel momento della giornata), poi piano di oggi, abbinamenti e ricette compatibili con dieta e allergie. Ciò che manca si divide tra i pasti ancora vuoti. Aggiunte e "Altre idee" vengono salvate (`settings.mealFeedback`) e orientano i suggerimenti successivi.
+
 ## Obiettivo a fasi e foto settimanali
 
 - **Obiettivo con scadenza** (`src/lib/goal-plan.ts`): in registrazione (o da Home/Coach/Profilo) descrivi l'obiettivo a parole, anche in più fasi (es. massa fino a 82-83 kg al 17%, poi cut fino a 78-79 kg al 10%). Il coach crea le fasi con le date; se una scadenza non è sicura la sposta e lo spiega. Tutto è modificabile.

@@ -153,6 +153,8 @@ export interface Settings {
   checkIns?: CheckIn[];
   /** Zone segnate come "passate" dall'utente (zona → data): il coach smette di considerarle attive. */
   painResolved?: Record<string, number>;
+  /** Storico delle preferenze sui pasti suggeriti (aggiunti = piaciuti, "altre idee" = scartati). */
+  mealFeedback?: { liked: string[]; skipped: string[] };
   /** Giorni di allenamento (0 = lunedì) per distribuire le calorie: più carboidrati in quei giorni. */
   carbCycling?: number[] | null;
   /** Metabolismo reale stimato dal diario (null = si usa la formula). */
@@ -263,6 +265,9 @@ export interface DiaryEntry {
   per: Macros;
   foodId?: string;
   recipeId?: string;
+  /** quantità inserita a pezzi (es. 3 uova): qty resta in grammi */
+  pieces?: number;
+  pieceGrams?: number;
   createdAt: number;
 }
 
