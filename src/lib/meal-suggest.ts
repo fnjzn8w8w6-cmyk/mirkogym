@@ -99,7 +99,7 @@ function fit(items: SuggestItem[], rem: Macros): SuggestItem[] {
 
 const gItem = (name: string, grams: number, per: Macros, unitGrams?: number, foodId?: string): SuggestItem => {
   const pg = isCountable(name) ? pieceGrams(name, unitGrams) : undefined;
-  return { name, unit: 'g', qty: grams, per, min: Math.max(5, grams * 0.4), max: grams * 2.2, ...(pg ? { pieceGrams: pg } : {}), ...(foodId ? { foodId } : {}) };
+  return { name, unit: 'g', qty: grams, per, min: Math.max(5, grams * 0.4), max: grams * 3, ...(pg ? { pieceGrams: pg } : {}), ...(foodId ? { foodId } : {}) };
 };
 const keyOf = (items: { name: string }[]) =>
   items
@@ -171,7 +171,7 @@ export function suggestMeals(input: {
     const items = h.entries.map((e): SuggestItem =>
       e.unit === 'g'
         ? { ...gItem(e.name, e.qty, e.per, e.pieceGrams, e.foodId) }
-        : { name: e.name, unit: 'porzione', qty: e.qty, per: e.per, min: 0.5, max: 2, ...(e.recipeId ? { recipeId: e.recipeId } : {}) },
+        : { name: e.name, unit: 'porzione', qty: e.qty, per: e.per, min: 0.5, max: 3, ...(e.recipeId ? { recipeId: e.recipeId } : {}) },
     );
     push(h.entries.map((e) => e.name).join(' + '), '🕘', 'storico', h.times, items);
   }
@@ -181,7 +181,7 @@ export function suggestMeals(input: {
   if (pm && input.data) {
     if (pm.kind === 'recipe') {
       const r = input.data.recipes.find((x) => x.id === pm.refId);
-      if (r?.k) push(r.t, '📅', 'piano', 0, [{ name: r.t, unit: 'porzione', qty: pm.servings, per: { kcal: r.k[0], protein: r.k[1], carbs: r.k[2], fat: r.k[3] }, min: 0.5, max: 2, recipeId: r.id }]);
+      if (r?.k) push(r.t, '📅', 'piano', 0, [{ name: r.t, unit: 'porzione', qty: pm.servings, per: { kcal: r.k[0], protein: r.k[1], carbs: r.k[2], fat: r.k[3] }, min: 0.5, max: 3, recipeId: r.id }]);
     } else if (pm.kind === 'simple' && pm.items.length) {
       push(pm.items.map((i) => i.food).join(' + '), '📅', 'piano', 0, pm.items.map((i) => gItem(i.food, i.grams, simpleFoodPer100(i.food))));
     }
@@ -198,7 +198,7 @@ export function suggestMeals(input: {
       .filter((r) => r.k)
       .sort((a, b) => Math.abs(a.k![1] / a.k![0] - want) - Math.abs(b.k![1] / b.k![0] - want))
       .slice(0, 25);
-    for (const r of recs) push(r.t, '🍽️', 'ricetta', 0, [{ name: r.t, unit: 'porzione', qty: 1, per: { kcal: r.k![0], protein: r.k![1], carbs: r.k![2], fat: r.k![3] }, min: 0.5, max: 2, recipeId: r.id }]);
+    for (const r of recs) push(r.t, '🍽️', 'ricetta', 0, [{ name: r.t, unit: 'porzione', qty: 1, per: { kcal: r.k![0], protein: r.k![1], carbs: r.k![2], fat: r.k![3] }, min: 0.5, max: 3, recipeId: r.id }]);
   }
 
   const exclude = new Set(input.exclude ?? []);

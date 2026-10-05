@@ -179,6 +179,7 @@ export const HELP = {
     body: [
       'Quando ti mancano calorie per arrivare all\'obiettivo, l\'app ti propone 3 pasti con le quantità già calcolate per chiudere calorie e macro rimanenti (prima le proteine).',
       'Le idee partono dal tuo storico: i pasti che hai già mangiato in quel momento della giornata, poi il piano di oggi, poi abbinamenti e ricette compatibili con dieta e allergie.',
+      '"Tutto in questo pasto" usa tutte le calorie che mancano per il pasto scelto (anche solo uno spuntino); "Dividi tra i pasti vuoti" lascia una parte per gli altri pasti della giornata.',
       'Quello che aggiungi conta come "mi piace", quello che salti con "Altre idee" viene proposto meno: i suggerimenti imparano dai tuoi gusti.',
     ],
   },

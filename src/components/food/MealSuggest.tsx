@@ -43,6 +43,16 @@ export function MealSuggest({
   const [meal, setMeal] = useState<DiaryMeal>(empty[0] ?? 'spuntini');
   const [open, setOpen] = useState(false);
   const [exclude, setExclude] = useState<string[]>([]);
+  // "Tutto in questo pasto" (chiudi la giornata con un pasto solo) oppure "Dividi tra i pasti vuoti"
+  const [mode, setMode] = useState<'all' | 'split'>(() => {
+    try {
+      const v = localStorage.getItem('suggest-mode');
+      if (v === 'all' || v === 'split') return v;
+    } catch {
+      /* non disponibile */
+    }
+    return 'all';
+  });
   const feedback = settings.mealFeedback ?? { liked: [], skipped: [] };
 
   const prefs = useMemo(
@@ -55,13 +65,15 @@ export function MealSuggest({
     return day.find((m) => MEAL_SLOTS[meal].includes(m.slot)) ?? null;
   }, [settings.weekPlan, date, meal]);
   // Quota del pasto: ciò che manca si divide tra i pasti principali ancora vuoti (lo spuntino ha una quota piccola)
-  const share = useMemo(() => {
+  const splitShare = useMemo(() => {
     const W: Record<DiaryMeal, number> = { colazione: 0.25, pranzo: 0.35, cena: 0.35, spuntini: 0.12 };
     const open_ = new Set(empty.filter((m) => m !== 'spuntini'));
     if (meal !== 'spuntini') open_.add(meal);
     const pool = [...open_].reduce((a, m) => a + W[m], 0) + (meal === 'spuntini' ? W.spuntini : 0);
     return pool > 0 ? Math.min(1, W[meal] / pool) : 1;
   }, [empty, meal]);
+  const canSplit = splitShare < 0.999;
+  const share = mode === 'split' && canSplit ? splitShare : 1;
   const mealRem = useMemo(
     () => ({ kcal: remaining.kcal * share, protein: remaining.protein * share, carbs: remaining.carbs * share, fat: remaining.fat * share }),
     [remaining, share],
@@ -117,7 +129,7 @@ export function MealSuggest({
           </div>
           {share < 0.999 && (
             <div className="mt-1 text-xs text-fg-3">
-              Per {meal === 'spuntini' ? 'lo spuntino' : `${meal === 'colazione' ? 'la' : 'il'} ${LABEL[meal]}`}: circa <strong className="text-fg">{r(mealRem.kcal)} kcal</strong> (il resto per gli altri pasti)
+              Per {meal === 'spuntini' ? 'lo spuntino' : `${meal === 'colazione' ? 'la' : 'il'} ${LABEL[meal]}`}: circa <strong className="text-fg">{r(mealRem.kcal)} kcal</strong> (il resto per gli altri pasti vuoti)
             </div>
           )}
         </div>
@@ -139,6 +151,35 @@ export function MealSuggest({
           </button>
         ))}
       </div>
+      {canSplit && (
+        <div className="mt-2 flex rounded-full bg-surface-2 p-1 text-xs font-semibold" role="radiogroup" aria-label="Come usare le calorie mancanti">
+          {(
+            [
+              ['all', `Tutto in ${meal === 'spuntini' ? 'uno spuntino' : `questo pasto`}`],
+              ['split', 'Dividi tra i pasti vuoti'],
+            ] as const
+          ).map(([v, l]) => (
+            <button
+              key={v}
+              type="button"
+              role="radio"
+              aria-checked={mode === v}
+              onClick={() => {
+                setMode(v);
+                setExclude([]);
+                try {
+                  localStorage.setItem('suggest-mode', v);
+                } catch {
+                  /* non disponibile */
+                }
+              }}
+              className={cn('flex-1 rounded-full px-2 py-1.5', mode === v ? 'bg-accent-500 text-onaccent' : 'text-fg-2')}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+      )}
       {!open ? (
         <Button className="mt-3" fullWidth icon={<Sparkles className="h-5 w-5" />} onClick={() => setOpen(true)}>
           Suggeriscimi un pasto
@@ -181,6 +222,11 @@ export function MealSuggest({
               </Button>
             </div>
           ))}
+          {list.length > 0 && Math.max(...list.map((x) => x.macros.kcal)) < mealRem.kcal * 0.85 && (
+            <p className="text-xs text-fg-3">
+              ℹ️ Sono tante calorie per un solo {meal === 'spuntini' ? 'spuntino' : 'pasto'}: le proposte arrivano al massimo a porzioni ragionevoli. Il resto puoi coprirlo con un altro pasto.
+            </p>
+          )}
           {list.length > 0 && (
             <button
               type="button"
