@@ -1,3 +1,4 @@
+import { Medal } from '@/components/ui/Medal';
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Clock, Dumbbell, Flag, Play, Plus, Trophy, X } from 'lucide-react';
@@ -645,9 +646,7 @@ function SessionView({ initial }: { initial: ActiveSession }) {
                 </div>
                 {reward.unlocked.map((a) => (
                   <div key={a.id} className="mt-3 flex items-center gap-3">
-                    <span className="text-3xl" aria-hidden>
-                      {a.emoji}
-                    </span>
+                    <Medal emoji={a.emoji} tier={a.tier} size={52} />
                     <span>
                       <span className="block text-xs uppercase tracking-wide text-warning">Traguardo sbloccato</span>
                       <span className="block text-base font-semibold text-fg">{a.title}</span>

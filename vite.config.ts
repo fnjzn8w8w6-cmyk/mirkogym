@@ -11,7 +11,12 @@ export default defineConfig({
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
   },
   resolve: {
-    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // runtime JSX con emoji → icone (src/jsx)
+      'vl-jsx/jsx-runtime': fileURLToPath(new URL('./src/jsx/jsx-runtime.ts', import.meta.url)),
+      'vl-jsx/jsx-dev-runtime': fileURLToPath(new URL('./src/jsx/jsx-dev-runtime.ts', import.meta.url)),
+    },
   },
   build: {
     chunkSizeWarningLimit: 1200,
@@ -27,7 +32,7 @@ export default defineConfig({
     },
   },
   plugins: [
-    react(),
+    react({ jsxImportSource: 'vl-jsx' }),
     VitePWA({
       // registrazione manuale in src/lib/pwa-update.ts (controlla gli aggiornamenti anche quando l'app torna in primo piano)
       registerType: 'autoUpdate',

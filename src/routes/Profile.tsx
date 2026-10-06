@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { IconButton } from '@/components/ui/Button';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { RANKS, TIER_COLOR } from '@/lib/gamification';
+import { Medal } from '@/components/ui/Medal';
 import { formatKg, formatTonnage } from '@/lib/analytics';
 import { useSettings } from '@/hooks/use-settings';
 import { useBodyLogs } from '@/hooks/use-body-logs';
@@ -179,9 +180,9 @@ export default function Profile() {
                 style={ok ? { borderColor: `${TIER_COLOR[a.tier]}66` } : undefined}
                 title={a.description}
               >
-                <span className={cn('relative text-3xl', !ok && 'opacity-30 grayscale')} aria-hidden>
-                  {a.emoji}
-                  {!ok && <Lock className="absolute -bottom-1 -right-2 h-4 w-4 text-fg-3" />}
+                <span className="relative" aria-hidden>
+                  <Medal emoji={a.emoji} tier={a.tier} unlocked={ok} size={56} />
+                  {!ok && <Lock className="absolute -bottom-0.5 -right-1 h-4 w-4 text-fg-3" />}
                 </span>
                 <span className={cn('mt-1.5 text-sm font-semibold leading-tight', ok ? 'text-fg' : 'text-fg-3')}>{a.title}</span>
                 <span className="mt-0.5 text-xs leading-tight text-fg-3">{a.description}</span>
