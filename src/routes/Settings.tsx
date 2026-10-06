@@ -13,6 +13,7 @@ import { TopBar } from '@/components/layout/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Segmented, Toggle, Input } from '@/components/ui/Input';
+import { NewBadge } from '@/components/ui/Help';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
@@ -186,6 +187,30 @@ export default function Settings() {
             ))}
           </Card>
         </section>
+
+        <Section title="Allenamento">
+          <div className="py-2">
+            <div className="mb-2 flex items-center text-base text-fg">
+              Sforzo delle serie <NewBadge />
+            </div>
+            <Segmented
+              label="Sforzo delle serie"
+              value={settings.effortScale ?? 'rpe'}
+              onChange={(v) => set({ effortScale: v })}
+              options={[
+                { value: 'rpe', label: 'RPE (6-10)' },
+                { value: 'rir', label: 'RIR (in riserva)' },
+              ]}
+            />
+            <p className="mt-1.5 text-sm text-fg-3">RPE: quanto è stata dura la serie, 10 = al limite. RIR: quante ripetizioni ti restavano.</p>
+          </div>
+          <Toggle
+            label="Riscaldamento suggerito"
+            description="Serie W già pronte sul primo esercizio multiarticolare di ogni gruppo"
+            checked={settings.autoWarmup !== false}
+            onChange={(v) => set({ autoWarmup: v })}
+          />
+        </Section>
 
         <Section title="Timer riposo">
           <Toggle label="Abilita timer" checked={settings.restTimerEnabled} onChange={(v) => set({ restTimerEnabled: v })} />

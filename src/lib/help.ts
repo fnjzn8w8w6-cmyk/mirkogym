@@ -82,6 +82,28 @@ export const HELP = {
       'RIR calibrato: l\'app impara quanto sei preciso quando dici "me ne restavano 2". Se tendi a lasciarne di più, il carico suggerito sale un po\'.',
     ],
   },
+  'session-effort': {
+    title: 'Sforzo della serie (RPE)',
+    body: [
+      'RPE = quanto ti è costata la serie, da 6 a 10. 10 vuol dire che non ne avevi nemmeno una in più, 8 che te ne restavano 2.',
+      'Il coach ti dà un obiettivo (es. RPE 8-9): ti fermi quando senti che ne avresti ancora 1 o 2. Con questo dato l\'app capisce se alzare il carico la prossima volta.',
+      'Preferisci contare le ripetizioni in riserva (RIR)? Lo cambi in Impostazioni → Allenamento.',
+    ],
+  },
+  'session-warmup': {
+    title: 'Riscaldamento suggerito',
+    body: [
+      'Sul primo esercizio multiarticolare di ogni gruppo muscolare trovi già pronte le serie di riscaldamento (W), calcolate dal carico di lavoro: circa 40%, 60% e 80% con poche ripetizioni.',
+      'Non contano nel volume e non fanno record. Tocca "Togli" se non ti servono; puoi spegnerle in Impostazioni → Allenamento.',
+    ],
+  },
+  'session-edit': {
+    title: 'Modifica esercizio',
+    body: [
+      'Cambia serie, ripetizioni, sforzo e recupero mentre ti alleni.',
+      '"Solo oggi" vale per questa sessione; "Anche nella scheda" salva la modifica per le prossime volte.',
+    ],
+  },
   'session-previous': {
     title: 'Volta scorsa',
     body: ['Le serie dell\'ultima volta che hai fatto questo esercizio. Accanto a ogni serie: ▲ se stai facendo meglio, = uguale, ▼ peggio.'],

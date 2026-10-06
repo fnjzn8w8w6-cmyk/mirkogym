@@ -164,6 +164,42 @@ export function useSessionDraft(initial: ActiveSession) {
       ],
     }));
 
+  /** Toglie le serie di riscaldamento non ancora fatte e non le ripropone. */
+  const removeWarmups = (exIdx: number) =>
+    mapExercise(exIdx, (e) => ({ ...e, warmup: 'dismissed', sets: e.sets.filter((st) => st.type !== 'warmup' || st.done) }));
+
+  /** Riscaldamenti suggeriti all'avvio: una sola volta per sessione. */
+  const autoWarmups = (plan: { exIdx: number; sets: { weight: number; reps: number }[] }[]) =>
+    commit((d) => ({
+      ...d,
+      warmupsInit: true,
+      exercises: d.exercises.map((e, i) => {
+        const p = plan.find((x) => x.exIdx === i);
+        if (!p || e.warmup || e.sets.some((st) => st.type === 'warmup' || st.done)) return e;
+        return {
+          ...e,
+          warmup: 'auto',
+          sets: [...p.sets.map((w): DraftSet => ({ ...emptySet(), type: 'warmup', weight: String(w.weight).replace('.', ','), reps: String(w.reps) })), ...e.sets],
+        };
+      }),
+    }));
+
+  /** Modifica dell'esercizio durante la sessione: numero di serie allenanti e parametri di oggi. */
+  const editExercise = (exIdx: number, patch: { sets: number; override?: DraftExercise['override'] }) =>
+    mapExercise(exIdx, (e) => {
+      const working = e.sets.filter((st) => st.type !== 'warmup');
+      let sets = e.sets;
+      if (patch.sets > working.length) {
+        const last = working[working.length - 1];
+        sets = [...sets, ...Array.from({ length: patch.sets - working.length }, () => ({ ...emptySet(), weight: last?.weight ?? '' }))];
+      } else if (patch.sets < working.length) {
+        // toglie dal fondo solo serie allenanti non ancora fatte
+        let drop = working.length - patch.sets;
+        sets = [...sets].reverse().filter((st) => (drop > 0 && st.type !== 'warmup' && !st.done ? (drop--, false) : true)).reverse();
+      }
+      return { ...e, sets, override: patch.override === undefined ? e.override : patch.override };
+    });
+
   /** Sostituisce l'esercizio (es. macchina occupata) mantenendo le serie già impostate. */
   const replaceExercise = (
     exIdx: number,
@@ -232,6 +268,9 @@ export function useSessionDraft(initial: ActiveSession) {
     setNotes,
     setReadiness,
     insertWarmups,
+    removeWarmups,
+    autoWarmups,
+    editExercise,
     replaceExercise,
     finish,
     cancelSync,

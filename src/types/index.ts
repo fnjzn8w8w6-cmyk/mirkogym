@@ -171,6 +171,10 @@ export interface Settings {
   kcalAdjust?: number;
   restTimerEnabled: boolean;
   restTimerAutoStart: boolean;
+  /** Come si segna lo sforzo delle serie: RPE (6-10, default) o RIR (ripetizioni in riserva). Internamente si salva sempre il RIR. */
+  effortScale?: 'rpe' | 'rir';
+  /** Serie di riscaldamento già pronte sul primo esercizio multiarticolare di ogni gruppo (default sì). */
+  autoWarmup?: boolean;
   soundEnabled: boolean;
   vibrationEnabled: boolean;
   weightUnit: 'kg' | 'lb';
@@ -205,6 +209,10 @@ export interface DraftExercise {
   extra?: boolean;
   libraryId?: string;
   sets: DraftSet[];
+  /** Modifiche fatte durante la sessione che valgono solo oggi. */
+  override?: { repMin?: number; repMax?: number; rirTarget?: string; rest?: string };
+  /** Riscaldamento suggerito: aggiunto in automatico o tolto dall'utente (per non riproporlo). */
+  warmup?: 'auto' | 'dismissed';
 }
 
 export interface ActiveSession {
@@ -217,6 +225,8 @@ export interface ActiveSession {
   readiness?: 'low' | 'normal' | 'high';
   exercises: DraftExercise[];
   notes?: string;
+  /** Riscaldamenti suggeriti già proposti (una volta per sessione). */
+  warmupsInit?: boolean;
 }
 
 /* ---------- Progressione ---------- */

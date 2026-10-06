@@ -4,6 +4,8 @@ import { Trophy } from 'lucide-react';
 import type { DraftSet, SetType } from '@/types';
 import { cn } from '@/lib/cn';
 import { parseNum } from '@/hooks/use-active-session';
+import { effortValue, type EffortScale } from '@/lib/effort';
+import { EffortSheet } from './EffortSheet';
 
 /** Confronto di una serie con la stessa serie della volta scorsa (peso × ripetizioni, stima 1RM). */
 export function setTrend(set: DraftSet, prev?: { weight: string; reps: number }): 'up' | 'same' | 'down' | null {
@@ -35,6 +37,9 @@ interface SetRowProps {
   weightPlaceholder: string;
   repsPlaceholder: string;
   rirPlaceholder: string;
+  /** bersaglio della scheda in RIR, per evidenziarlo nella scelta */
+  rirTarget: string;
+  effortScale: EffortScale;
   onChange: (patch: Partial<DraftSet>) => void;
   /** Ritorna false se la serie non è valida (es. reps mancanti). */
   onToggleDone: () => boolean;
@@ -52,6 +57,8 @@ export function SetRow({
   weightPlaceholder,
   repsPlaceholder,
   rirPlaceholder,
+  rirTarget,
+  effortScale,
   onChange,
   onToggleDone,
   exerciseName,
@@ -59,6 +66,8 @@ export function SetRow({
   const trend = setTrend(set, prev);
   const repsRef = useRef<HTMLInputElement>(null);
   const [shake, setShake] = useState(0);
+  const [effortOpen, setEffortOpen] = useState(false);
+  const effort = effortValue(set.rir, effortScale);
 
   const toggle = () => {
     if (!onToggleDone()) {
@@ -146,18 +155,22 @@ export function SetRow({
         onFocus={(e) => e.target.select()}
         className={inputCls}
       />
-      <input
-        aria-label={`${label}: RIR`}
-        inputMode="numeric"
-        placeholder={rirPlaceholder}
-        value={set.rir}
-        onChange={(e) => {
-          const v = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
-          onChange({ rir: v === '' ? '' : String(Math.min(Number(v), 10)) });
-        }}
-        onFocus={(e) => e.target.select()}
-        className={cn(inputCls, 'text-base')}
-      />
+      {set.type === 'warmup' ? (
+        <span aria-hidden />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setEffortOpen(true)}
+          aria-label={`${label}: sforzo ${effortScale.toUpperCase()} ${effort || 'non segnato'}`}
+          className={cn(
+            inputCls,
+            'flex items-center justify-center text-base',
+            effort ? (set.done ? 'text-accent-400' : 'text-fg') : 'font-medium text-fg-disabled',
+          )}
+        >
+          {effort || rirPlaceholder || '–'}
+        </button>
+      )}
       <motion.button
         type="button"
         onClick={toggle}
@@ -181,6 +194,18 @@ export function SetRow({
           />
         </svg>
       </motion.button>
+      <EffortSheet
+        open={effortOpen}
+        onClose={() => setEffortOpen(false)}
+        scale={effortScale}
+        value={set.rir}
+        target={rirTarget}
+        subtitle={`Serie ${workingNumber}${set.weight || set.reps ? ` · ${set.weight || weightPlaceholder} kg × ${set.reps || repsPlaceholder}` : ''}`}
+        onPick={(rir) => {
+          onChange({ rir });
+          setEffortOpen(false);
+        }}
+      />
     </motion.div>
   );
 }

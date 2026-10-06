@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeftRight, Check, ChevronDown, Clock, Disc3, Flame, Minus, Plus, StickyNote, Target, Trash2 } from 'lucide-react';
+import { ArrowLeftRight, Check, ChevronDown, Clock, Disc3, Flame, Gauge, Minus, Plus, SlidersHorizontal, StickyNote, Trash2 } from 'lucide-react';
 import type { DraftExercise, DraftSet, Exercise, Suggestion } from '@/types';
 import { formatKg, groupColor } from '@/lib/analytics';
 import { isCompound, parseRirNumbers, warmupSets } from '@/lib/progression';
@@ -9,11 +9,12 @@ import { Chip } from '../ui/Chip';
 import { IconButton } from '../ui/Button';
 import { SET_GRID, SetRow } from './SetRow';
 import { ExerciseDemo } from '../library/ExerciseDemo';
-import { HelpTip } from '@/components/ui/Help';
+import { HelpTip, NewBadge } from '@/components/ui/Help';
+import { effortTarget, scaleLabel, type EffortScale } from '@/lib/effort';
 import { SuggestionBox } from './SuggestionBox';
 
 /** Confronto diretto con l'ultima volta che hai fatto l'esercizio. */
-function PrevCompare({ prevSets, lastDate, sets, lastText }: { prevSets: { weight: string; reps: number }[]; lastDate?: number; sets: DraftSet[]; lastText?: string }) {
+function PrevCompare({ prevSets, lastDate, sets, lastText, scale }: { prevSets: { weight: string; reps: number }[]; lastDate?: number; sets: DraftSet[]; lastText?: string; scale: EffortScale }) {
   if (!prevSets.length || !lastDate) return null;
   const working = sets.filter((s) => s.type !== 'warmup');
   const vol = (list: { w: number; r: number }[]) => list.reduce((a, x) => a + x.w * x.r, 0);
@@ -43,7 +44,11 @@ function PrevCompare({ prevSets, lastDate, sets, lastText }: { prevSets: { weigh
           </span>
         ))}
       </div>
-      {lastText?.includes('RIR') && <div className="mt-1 text-xs text-fg-3">{lastText.slice(lastText.indexOf('RIR'))}</div>}
+      {lastText?.includes('RIR') && (
+        <div className="mt-1 text-xs text-fg-3">
+          {scaleLabel(scale)} {effortTarget(lastText.slice(lastText.indexOf('RIR') + 3).trim(), scale)}
+        </div>
+      )}
     </div>
   );
 }
@@ -83,6 +88,10 @@ interface ExerciseCardProps {
   onSwap: () => void;
   libraryId?: string;
   onInfo: () => void;
+  effortScale: EffortScale;
+  /** apre la modifica di serie, reps, sforzo e recupero */
+  onEdit: () => void;
+  onRemoveWarmups: () => void;
 }
 
 export function ExerciseCard({
@@ -108,6 +117,9 @@ export function ExerciseCard({
   onSwap,
   libraryId,
   onInfo,
+  effortScale,
+  onEdit,
+  onRemoveWarmups,
 }: ExerciseCardProps) {
   const color = groupColor(draft.group);
   const doneCount = draft.sets.filter((s) => s.done).length;
@@ -187,7 +199,9 @@ export function ExerciseCard({
           <Chip>
             {exercise.sets}×{exercise.repMin}-{exercise.repMax}
           </Chip>
-          <Chip icon={<Target className="h-3 w-3" aria-hidden />}>RIR {exercise.rirTarget}</Chip>
+          <Chip icon={<Gauge className="h-3 w-3" aria-hidden />}>
+            {scaleLabel(effortScale)} {effortTarget(exercise.rirTarget, effortScale)}
+          </Chip>
           <Chip icon={<Clock className="h-3 w-3" aria-hidden />}>{exercise.rest}</Chip>
           {draft.extra && <Chip tone="info">Extra</Chip>}
         </div>
@@ -204,6 +218,9 @@ export function ExerciseCard({
         )}
 
         <div className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4">
+          <ToolBtn icon={<SlidersHorizontal className="h-4 w-4" />} onClick={onEdit}>
+            Modifica <NewBadge className="ml-0.5" />
+          </ToolBtn>
           {canWarmup && (
             <ToolBtn icon={<Flame className="h-4 w-4" />} onClick={() => workWeight != null && onAddWarmups(warmupSets(workWeight))}>
               Riscaldamento
@@ -220,17 +237,30 @@ export function ExerciseCard({
           </ToolBtn>
         </div>
 
+        {draft.warmup === 'auto' && draft.sets.some((st) => st.type === 'warmup' && !st.done) && (
+          <div className="mt-3 flex items-center gap-2 rounded-md border border-warning/25 bg-warning-bg px-3 py-2 text-sm text-fg-2">
+            <Flame className="h-4 w-4 shrink-0 text-warning" aria-hidden />
+            <span className="min-w-0 flex-1">
+              Riscaldamento suggerito: {draft.sets.filter((st) => st.type === 'warmup').length} serie W
+            </span>
+            <HelpTip id="session-warmup" />
+            <button type="button" onClick={onRemoveWarmups} className="h-8 px-1 text-sm font-semibold text-fg-3 hover:text-fg">
+              Togli
+            </button>
+          </div>
+        )}
+
         <div className="mt-3">
           <SuggestionBox suggestion={suggestion} />
         </div>
-        <PrevCompare prevSets={prevSets} lastDate={lastDate} sets={draft.sets} lastText={lastText} />
+        <PrevCompare prevSets={prevSets} lastDate={lastDate} sets={draft.sets} lastText={lastText} scale={effortScale} />
 
         <div className={cn(SET_GRID, 'mt-3 px-1 text-center text-xs uppercase tracking-wide text-fg-3')} aria-hidden>
           <span>Set</span>
           <span>Prec.</span>
           <span>Kg</span>
           <span>Reps</span>
-          <span>RIR</span>
+          <span>{scaleLabel(effortScale)}</span>
           <span />
         </div>
         <div className="mt-1 space-y-1">
@@ -260,7 +290,9 @@ export function ExerciseCard({
                       ? ''
                       : (repTargets[workingIdx[i]] ?? `${exercise.repMin}-${exercise.repMax}`)
                   }
-                  rirPlaceholder={s.type === 'warmup' ? '' : rirForSet(exercise.rirTarget, Math.max(0, workingIdx[i]), n)}
+                  rirPlaceholder={s.type === 'warmup' ? '' : effortTarget(rirForSet(exercise.rirTarget, Math.max(0, workingIdx[i]), n), effortScale)}
+                  rirTarget={s.type === 'warmup' ? '' : rirForSet(exercise.rirTarget, Math.max(0, workingIdx[i]), n)}
+                  effortScale={effortScale}
                   onChange={(patch) => onSetChange(i, patch)}
                   onToggleDone={() => onToggleDone(i)}
                 />

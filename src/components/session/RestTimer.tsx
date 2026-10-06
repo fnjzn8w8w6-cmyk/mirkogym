@@ -44,13 +44,13 @@ export function RestTimer({ inSession }: { inSession: boolean }) {
                   {t.label && <div className="mt-1 truncate text-sm text-fg-3">{t.label}</div>}
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <TimerBtn label="Meno 30 secondi" onClick={() => t.adjust(-30)}>
+                  <TimerBtn label="Meno 15 secondi" onClick={() => t.adjust(-15)}>
                     <Minus className="h-4 w-4" aria-hidden />
-                    30
+                    15
                   </TimerBtn>
-                  <TimerBtn label="Più 30 secondi" onClick={() => t.adjust(30)}>
+                  <TimerBtn label="Più 15 secondi" onClick={() => t.adjust(15)}>
                     <Plus className="h-4 w-4" aria-hidden />
-                    30
+                    15
                   </TimerBtn>
                   <TimerBtn label="Salta recupero" onClick={t.skip} accent>
                     <SkipForward className="h-5 w-5" aria-hidden />

@@ -21,7 +21,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { OfflineBadge } from '@/components/layout/TopBar';
 import { ExerciseCard } from '@/components/session/ExerciseCard';
 import { Confetti } from '@/components/celebration/Confetti';
-import { calculateSuggestion, describeLog, parseRestSeconds, previousLogsFor, repTargets } from '@/lib/progression';
+import { calculateSuggestion, describeLog, isCompound, parseRestSeconds, previousLogsFor, repTargets, warmupSets } from '@/lib/progression';
+import { ExerciseEditSheet, type ExerciseEdit } from '@/components/session/ExerciseEditSheet';
 import { useWakeLock } from '@/hooks/use-wake-lock';
 import { useLibrary } from '@/hooks/use-library';
 import { ExerciseBrowser } from '@/components/library/ExerciseBrowser';
@@ -123,6 +124,9 @@ function SessionView({ initial }: { initial: ActiveSession }) {
     setNotes,
     setReadiness,
     insertWarmups,
+    removeWarmups,
+    autoWarmups,
+    editExercise,
     replaceExercise,
     finish,
     cancelSync,
@@ -140,6 +144,8 @@ function SessionView({ initial }: { initial: ActiveSession }) {
   const [plates, setPlates] = useState<{ weight: number | null } | null>(null);
   const [noteFor, setNoteFor] = useState<number | null>(null);
   const [swapFor, setSwapFor] = useState<number | null>(null);
+  const [editFor, setEditFor] = useState<number | null>(null);
+  const effortScale = settings.effortScale ?? 'rpe';
   const [libPick, setLibPick] = useState<{ mode: 'extra' } | { mode: 'swap'; idx: number } | null>(null);
   const [info, setInfo] = useState<LibraryExercise | null>(null);
   const library = useLibrary();
@@ -176,14 +182,17 @@ function SessionView({ initial }: { initial: ActiveSession }) {
   const exercises = useMemo(
     () =>
       draft.exercises.map(
-        (d): Exercise =>
-          exerciseIndex.get(d.exerciseId) ?? {
+        (d): Exercise => {
+          const base = exerciseIndex.get(d.exerciseId) ?? {
             id: d.exerciseId,
             name: d.name,
             group: d.group,
             libraryId: d.libraryId,
             ...EXTRA_DEFAULTS,
-          },
+          };
+          // modifiche fatte durante la sessione "solo per oggi"
+          return d.override ? { ...base, ...d.override } : base;
+        },
       ),
     [draft.exercises, exerciseIndex],
   );
@@ -230,6 +239,40 @@ function SessionView({ initial }: { initial: ActiveSession }) {
       }),
     [exercises, sessions, draft.deload, draft.readiness, settings.deloadPercentage, conversions, model, library.byId],
   );
+
+  // Riscaldamento suggerito: serie W già pronte sul primo multiarticolare di ogni gruppo (una volta per sessione)
+  useEffect(() => {
+    if (draft.warmupsInit || settings.autoWarmup === false) return;
+    const seen = new Set<string>();
+    const plan: { exIdx: number; sets: { weight: number; reps: number }[] }[] = [];
+    draft.exercises.forEach((d, i) => {
+      const ex = exercises[i];
+      if (!ex || seen.has(d.group) || !isCompound(ex)) return;
+      seen.add(d.group);
+      const w = suggestions[i]?.suggestion.weight;
+      if (w != null && w >= 20) plan.push({ exIdx: i, sets: warmupSets(w) });
+    });
+    autoWarmups(plan);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.warmupsInit]);
+
+  /** Applica la modifica di un esercizio fatta durante la sessione. */
+  const applyEdit = (i: number, e: ExerciseEdit) => {
+    const d = draft.exercises[i];
+    const params = { repMin: e.repMin, repMax: e.repMax, rirTarget: e.rirTarget, rest: e.rest };
+    const inSchedule = Boolean(exerciseIndex.get(d.exerciseId));
+    if (e.scope === 'schedule' && inSchedule) {
+      void saveSchedule(days.map((day) => ({ ...day, exercises: day.exercises.map((x) => (x.id === d.exerciseId ? { ...x, ...params, sets: e.sets } : x)) })));
+      // la scheda ora ha i nuovi valori: niente più modifiche "solo oggi"
+      editExercise(i, { sets: e.sets, override: {} });
+    } else editExercise(i, { sets: e.sets, override: params });
+    const hasW = d.sets.some((st) => st.type === 'warmup' && !st.done);
+    const w = parseNum(d.sets.find((st) => st.type !== 'warmup' && st.weight)?.weight ?? '') ?? suggestions[i]?.suggestion.weight;
+    if (e.warmup && !hasW && w != null && w >= 20) insertWarmups(i, warmupSets(w));
+    if (!e.warmup && hasW) removeWarmups(i);
+    toast.success(e.scope === 'schedule' && inSchedule ? 'Modificato anche nella scheda' : 'Modificato per oggi');
+    setEditFor(null);
+  };
 
   // Storico set per nome esercizio (PR detection)
   const historyByKey = useMemo(() => {
@@ -439,6 +482,9 @@ function SessionView({ initial }: { initial: ActiveSession }) {
             onPlates={(w) => setPlates({ weight: w })}
             onNote={() => setNoteFor(i)}
             onSwap={() => setSwapFor(i)}
+            effortScale={effortScale}
+            onEdit={() => setEditFor(i)}
+            onRemoveWarmups={() => removeWarmups(i)}
             libraryId={ex.libraryId ?? libraryIdOf(exercises[i])}
             onInfo={() => {
               const id = ex.libraryId ?? libraryIdOf(exercises[i]);
@@ -596,6 +642,19 @@ function SessionView({ initial }: { initial: ActiveSession }) {
         />
       </Modal>
       <ExerciseInfoModal exercise={info} onClose={() => setInfo(null)} />
+      {editFor != null && exercises[editFor] && (
+        <ExerciseEditSheet
+          open
+          onClose={() => setEditFor(null)}
+          exercise={exercises[editFor]}
+          workingSets={draft.exercises[editFor].sets.filter((st) => st.type !== 'warmup').length}
+          warmupOn={draft.exercises[editFor].sets.some((st) => st.type === 'warmup' && !st.done)}
+          canWarmup={isCompound(exercises[editFor])}
+          canSaveToSchedule={Boolean(exerciseIndex.get(draft.exercises[editFor].exerciseId))}
+          effortScale={effortScale}
+          onApply={(e) => applyEdit(editFor, e)}
+        />
+      )}
 
       <ReadinessModal
         open={draft.readiness == null && doneSets === 0 && !result}
