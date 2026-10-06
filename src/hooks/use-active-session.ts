@@ -172,7 +172,6 @@ export function useSessionDraft(initial: ActiveSession) {
   const autoWarmups = (plan: { exIdx: number; sets: { weight: number; reps: number }[] }[]) =>
     commit((d) => ({
       ...d,
-      warmupsInit: true,
       exercises: d.exercises.map((e, i) => {
         const p = plan.find((x) => x.exIdx === i);
         if (!p || e.warmup || e.sets.some((st) => st.type === 'warmup' || st.done)) return e;

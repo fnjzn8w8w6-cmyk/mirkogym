@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy } from 'lucide-react';
+import { Gauge, Trophy } from 'lucide-react';
 import type { DraftSet, SetType } from '@/types';
 import { cn } from '@/lib/cn';
 import { parseNum } from '@/hooks/use-active-session';
@@ -35,10 +35,11 @@ interface SetRowProps {
   set: DraftSet;
   weightPlaceholder: string;
   repsPlaceholder: string;
-  rirPlaceholder: string;
   effortScale: EffortScale;
-  /** apre la scelta dello sforzo partendo da questa serie */
+  /** apre la scelta dello sforzo di questa serie */
   onEffort: () => void;
+  /** lo sforzo si segna solo sulla serie in corso o su quelle già fatte */
+  effortEnabled: boolean;
   onChange: (patch: Partial<DraftSet>) => void;
   /** Ritorna false se la serie non è valida (es. reps mancanti). */
   onToggleDone: () => boolean;
@@ -55,9 +56,9 @@ export function SetRow({
   set,
   weightPlaceholder,
   repsPlaceholder,
-  rirPlaceholder,
   effortScale,
   onEffort,
+  effortEnabled,
   onChange,
   onToggleDone,
   exerciseName,
@@ -159,14 +160,16 @@ export function SetRow({
         <button
           type="button"
           onClick={onEffort}
+          disabled={!effortEnabled && !effort}
           aria-label={`${label}: sforzo ${effortScale.toUpperCase()} ${effort || 'non segnato'}`}
           className={cn(
             inputCls,
             'flex items-center justify-center text-base',
             effort ? (set.done ? 'text-accent-400' : 'text-fg') : 'font-medium text-fg-disabled',
+            !effortEnabled && !effort && 'border-transparent bg-transparent',
           )}
         >
-          {effort || rirPlaceholder || '–'}
+          {effort || (effortEnabled ? <Gauge className="h-5 w-5" aria-hidden /> : '–')}
         </button>
       )}
       <motion.button

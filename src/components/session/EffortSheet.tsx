@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { HelpTip } from '../ui/Help';
@@ -21,32 +20,23 @@ export interface EffortSetInfo {
 }
 
 /**
- * Sforzo delle serie di un esercizio: in alto si sceglie la serie, sotto i valori con la spiegazione.
- * Toccando un valore si passa da soli alla serie successiva. Restituisce sempre il RIR (RPE 8 → "2").
+ * Sforzo della serie appena fatta (o in corso): i valori con la spiegazione, evidenziando l'obiettivo.
+ * Restituisce sempre il RIR (RPE 8 → "2").
  */
 export function EffortSheet({
   open,
   onClose,
   scale,
-  sets,
-  startAt,
+  set: cur,
   onPick,
 }: {
   open: boolean;
   onClose: () => void;
   scale: EffortScale;
-  sets: EffortSetInfo[];
-  /** serie da cui partire (indice nella bozza) */
-  startAt: number;
+  set: EffortSetInfo | null;
   onPick: (index: number, rir: string) => void;
 }) {
-  const [sel, setSel] = useState(startAt);
-  useEffect(() => {
-    if (open) setSel(startAt);
-  }, [open, startAt]);
-
   const label = scaleLabel(scale);
-  const cur = sets.find((s) => s.index === sel) ?? sets[0];
   if (!cur) return null;
   const current = effortValue(cur.rir, scale);
   const t = cur.target ? effortTarget(cur.target, scale) : '';
@@ -57,12 +47,7 @@ export function EffortSheet({
 
   const pick = (rir: string) => {
     onPick(cur.index, rir);
-    if (rir === '') return;
-    // passa alla serie successiva; dopo l'ultima si chiude
-    const pos = sets.findIndex((s) => s.index === cur.index);
-    const next = sets[pos + 1];
-    if (next) setSel(next.index);
-    else onClose();
+    onClose();
   };
 
   return (
@@ -73,36 +58,12 @@ export function EffortSheet({
       footer={
         cur.rir ? (
           <button type="button" className="h-11 w-full text-sm font-semibold text-fg-3" onClick={() => pick('')}>
-            Togli il valore della serie {cur.number}
+            Togli il valore
           </button>
         ) : undefined
       }
     >
-      {/* scelta della serie */}
-      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4" role="tablist" aria-label="Serie">
-        {sets.map((s) => {
-          const v = effortValue(s.rir, scale);
-          const on = s.index === cur.index;
-          return (
-            <button
-              key={s.index}
-              type="button"
-              role="tab"
-              aria-selected={on}
-              onClick={() => setSel(s.index)}
-              className={cn(
-                'flex h-14 min-w-[64px] shrink-0 flex-col items-center justify-center rounded-md border px-2 transition-colors',
-                on ? 'border-accent-500 bg-accent-glow' : 'border-line bg-surface-2',
-              )}
-            >
-              <span className="text-xs font-semibold uppercase tracking-wider text-fg-3">Serie {s.number}</span>
-              <span className={cn('font-display text-lg font-extrabold leading-tight', v ? 'text-accent-400' : 'text-fg-disabled')}>{v || '–'}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="mt-3 flex items-start justify-between gap-2">
+      <div className="flex items-start justify-between gap-2">
         <p className="text-sm text-fg-2">
           Serie {cur.number}
           {cur.detail && ` · ${cur.detail}`}

@@ -4,6 +4,7 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Clock, Dumbbell, Flag, Play, Plus, Trophy, X } from 'lucide-react';
 import type { ActiveSession, DraftSet, Exercise, Session as SessionT, SetLog } from '@/types';
 import { useSchedule } from '@/hooks/use-schedule';
+import { useData } from '@/hooks/data-context';
 import { useSessions } from '@/hooks/use-sessions';
 import { useSettings } from '@/hooks/use-settings';
 import { useMesocycle } from '@/hooks/use-mesocycle';
@@ -240,21 +241,31 @@ function SessionView({ initial }: { initial: ActiveSession }) {
     [exercises, sessions, draft.deload, draft.readiness, settings.deloadPercentage, conversions, model, library.byId],
   );
 
-  // Riscaldamento suggerito: serie W già pronte sul primo multiarticolare di ogni gruppo (una volta per sessione)
-  useEffect(() => {
-    if (draft.warmupsInit || settings.autoWarmup === false) return;
+  // Riscaldamento suggerito: serie W già pronte sul primo multiarticolare di ogni gruppo.
+  // Si aspetta che scheda e storico siano caricati (alla riapertura dell'app la sessione si monta prima),
+  // e ogni esercizio viene deciso una volta sola (flag sull'esercizio, così "Togli" resta tolto).
+  const { loaded } = useData();
+  const warmupPlan = useMemo(() => {
+    if (settings.autoWarmup === false || !loaded.sessions || !loaded.schedule) return [];
     const seen = new Set<string>();
     const plan: { exIdx: number; sets: { weight: number; reps: number }[] }[] = [];
     draft.exercises.forEach((d, i) => {
       const ex = exercises[i];
       if (!ex || seen.has(d.group) || !isCompound(ex)) return;
       seen.add(d.group);
+      if (d.warmup || d.sets.some((st) => st.type === 'warmup' || st.done)) return;
       const w = suggestions[i]?.suggestion.weight;
-      if (w != null && w >= 20) plan.push({ exIdx: i, sets: warmupSets(w) });
+      if (w != null && w >= 20) {
+        const sets = warmupSets(w);
+        if (sets.length) plan.push({ exIdx: i, sets });
+      }
     });
-    autoWarmups(plan);
+    return plan;
+  }, [settings.autoWarmup, loaded.sessions, loaded.schedule, draft.exercises, exercises, suggestions]);
+  useEffect(() => {
+    if (warmupPlan.length) autoWarmups(warmupPlan);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft.warmupsInit]);
+  }, [warmupPlan]);
 
   /** Applica la modifica di un esercizio fatta durante la sessione. */
   const applyEdit = (i: number, e: ExerciseEdit) => {

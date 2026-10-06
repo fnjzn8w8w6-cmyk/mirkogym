@@ -135,6 +135,8 @@ export function ExerciseCard({
   for (const st of draft.sets) workingIdx.push(st.type === 'warmup' ? -1 : n++);
   const workWeight = parseNum(draft.sets.find((st) => st.type !== 'warmup' && st.weight)?.weight ?? '') ?? suggestion.weight;
   const hasWarmups = draft.sets.some((st) => st.type === 'warmup');
+  // serie in corso: la prima allenante non ancora fatta (lo sforzo si segna solo su quella o su quelle già fatte)
+  const currentIdx = draft.sets.findIndex((st) => st.type !== 'warmup' && !st.done);
   // serie allenanti per la scelta dello sforzo (le W non hanno RPE)
   const effortSets: EffortSetInfo[] = draft.sets
     .map((st, i) => ({ st, i }))
@@ -269,19 +271,12 @@ export function ExerciseCard({
         </div>
         <PrevCompare prevSets={prevSets} lastDate={lastDate} sets={draft.sets} lastText={lastText} scale={effortScale} />
 
-        <div className={cn(SET_GRID, 'mt-3 px-1 text-center text-xs uppercase tracking-wide text-fg-3')}>
+        <div className={cn(SET_GRID, 'mt-3 px-1 text-center text-xs uppercase tracking-wide text-fg-3')} aria-hidden>
           <span>Set</span>
           <span>Prec.</span>
           <span>Kg</span>
           <span>Reps</span>
-          <button
-            type="button"
-            aria-label={`Segna lo sforzo (${scaleLabel(effortScale)}) delle serie`}
-            onClick={() => effortSets.length && setEffortAt(effortSets.find((x) => !x.rir)?.index ?? effortSets[0].index)}
-            className="font-semibold uppercase text-accent-400 underline decoration-dotted underline-offset-2"
-          >
-            {scaleLabel(effortScale)}
-          </button>
+          <span>{scaleLabel(effortScale)}</span>
           <span />
         </div>
         <div className="mt-1 space-y-1">
@@ -311,9 +306,9 @@ export function ExerciseCard({
                       ? ''
                       : (repTargets[workingIdx[i]] ?? `${exercise.repMin}-${exercise.repMax}`)
                   }
-                  rirPlaceholder={s.type === 'warmup' ? '' : effortTarget(rirForSet(exercise.rirTarget, Math.max(0, workingIdx[i]), n), effortScale)}
                   effortScale={effortScale}
                   onEffort={() => setEffortAt(i)}
+                  effortEnabled={s.done || i === currentIdx}
                   onChange={(patch) => onSetChange(i, patch)}
                   onToggleDone={() => onToggleDone(i)}
                 />
@@ -348,8 +343,7 @@ export function ExerciseCard({
         open={effortAt != null}
         onClose={() => setEffortAt(null)}
         scale={effortScale}
-        sets={effortSets}
-        startAt={effortAt ?? 0}
+        set={effortSets.find((x) => x.index === effortAt) ?? null}
         onPick={(idx, rir) => onSetChange(idx, { rir })}
       />
     </motion.section>
