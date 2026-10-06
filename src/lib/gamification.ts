@@ -368,40 +368,143 @@ export const LIFTS: LiftDef[] = [
   },
 ];
 
+/** Standard per tipo di esercizio (1RM / peso corporeo, uomo adulto) per chi non è un fondamentale. */
+interface Standard {
+  id: string;
+  ratios: number[];
+  /** a corpo libero: il carico è peso corporeo × quota + zavorra */
+  bodyShare?: number;
+  match: RegExp;
+  groups?: string[];
+}
+const STANDARDS: Standard[] = [
+  { id: 'pullup', ratios: [1, 1.15, 1.3, 1.45, 1.65, 1.9], bodyShare: 1, match: /trazion|pull-?up|chin-?up/i },
+  { id: 'dip', ratios: [1, 1.2, 1.4, 1.6, 1.85, 2.1], bodyShare: 1, match: /\bdip|parallele/i },
+  { id: 'pushup', ratios: [0.7, 0.8, 0.9, 1, 1.15, 1.3], bodyShare: 0.64, match: /flession|piegament|push-?up/i },
+  { id: 'legpress', ratios: [1.25, 1.75, 2.5, 3.25, 4, 4.75], match: /pressa|leg press/i },
+  { id: 'hipthrust', ratios: [0.75, 1, 1.5, 2, 2.5, 3], match: /hip thrust|ponte glutei|glute bridge/i },
+  { id: 'calf', ratios: [0.5, 0.75, 1, 1.4, 1.8, 2.2], match: /calf|polpacc/i },
+  { id: 'legiso', ratios: [0.3, 0.45, 0.6, 0.8, 1, 1.2], match: /leg extension|leg curl|estension|adduttor|abduttor/i },
+  { id: 'lateral', ratios: [0.07, 0.11, 0.16, 0.22, 0.3, 0.4], match: /alzat|lateral raise|front raise|reverse fly|aperture posteriori|face pull/i },
+  { id: 'fly', ratios: [0.15, 0.25, 0.35, 0.5, 0.65, 0.8], match: /croci|fly|pectoral|peck deck|butterfly|cavi incrociati/i },
+  { id: 'curl', ratios: [0.2, 0.35, 0.5, 0.65, 0.8, 1], match: /curl/i },
+  { id: 'triceps', ratios: [0.2, 0.35, 0.5, 0.65, 0.8, 1], match: /push-?down|french|tricip|estensioni|kickback|skull/i },
+  { id: 'machinepress', ratios: [0.5, 0.75, 1, 1.3, 1.6, 1.9], match: /chest press|pectoral machine|panca alla macchina|shoulder press machine/i },
+  { id: 'legs', ratios: [0.5, 0.75, 1, 1.25, 1.5, 1.8], match: /squat|affond|lunge|bulgar|hack|step|good morning|stacco/i },
+  // per gruppo, quando il nome non dice nulla
+  { id: 'chest', ratios: [0.4, 0.6, 0.8, 1, 1.2, 1.45], match: /$^/, groups: ['Petto'] },
+  { id: 'back', ratios: [0.5, 0.65, 0.8, 1, 1.25, 1.5], match: /$^/, groups: ['Dorso'] },
+  { id: 'shoulders', ratios: [0.35, 0.5, 0.65, 0.8, 1, 1.2], match: /$^/, groups: ['Spalle'] },
+  { id: 'arms', ratios: [0.2, 0.35, 0.5, 0.65, 0.8, 1], match: /$^/, groups: ['Bicipiti', 'Tricipiti'] },
+  { id: 'legs2', ratios: [0.5, 0.75, 1, 1.25, 1.5, 1.8], match: /$^/, groups: ['Gambe', 'Glutei', 'Polpacci'] },
+];
+const PER_HAND = /manubri|manubrio|dumbbell|kettlebell/i;
+const UPPER = new Set(['Petto', 'Dorso', 'Spalle', 'Bicipiti', 'Tricipiti']);
+
 export interface LiftRank {
-  lift: LiftDef;
+  lift: { id: string; name: string };
   best1RM: number;
   ratio: number;
   rank: number; // indice in RANKS
-  next: number | null; // kg di 1RM per il prossimo rango
+  /** cosa serve per il prossimo rango, es. "Oro a 103 kg" o "Oro con 12 ripetizioni" */
+  nextLabel: string | null;
   progress: number; // 0..1 verso il prossimo rango
+  /** sedute a settimana con questo esercizio (ultime 8 settimane) */
+  perWeek: number;
+  /** standard stimato per tipo di esercizio (non un fondamentale con tabelle note) */
+  estimated: boolean;
+  perHand: boolean;
+  bodyweightBased: boolean;
 }
 
-/** Miglior 1RM stimato per ogni fondamentale e rango rispetto al peso corporeo. */
-export function liftRanks(sessions: Session[], bodyweight: number, nameOf: (l: ExerciseLog) => string): LiftRank[] {
-  return LIFTS.map((lift) => {
+/** Obiettivo per il prossimo rango: a corpo libero in ripetizioni (o zavorra se servono più di 20), altrimenti in kg di 1RM. */
+function nextLabel(rank: string, target1RM: number, body: number, perHand: boolean): string {
+  if (body > 0) {
+    const reps = Math.ceil(30 * (target1RM / body - 1));
+    if (reps <= 20) return `${rank} con ${Math.max(1, reps)} ripetizioni`;
+    return `${rank} con ${Math.ceil(target1RM / (1 + 10 / 30) - body)} kg di zavorra × 10`;
+  }
+  return `${rank} a ${Math.ceil(target1RM)} kg${perHand ? ' per manubrio' : ''}`;
+}
+
+const norm = (n: string) => n.trim().toLowerCase().replace(/\s+/g, ' ');
+
+/** Rapporti 1RM/peso corporeo per un esercizio, adattati a manubri e sesso. null = nessuno standard sensato (es. addome). */
+export function standardFor(name: string, group: string, sex: 'm' | 'f' = 'm') {
+  const lib = libraryIdOf({ name, libraryId: undefined });
+  const known = LIFTS.find((l) => (lib && l.ids.includes(lib)) || l.match.test(name));
+  const std = known ? null : STANDARDS.find((x) => x.match.test(name)) ?? STANDARDS.find((x) => x.groups?.includes(group));
+  if (!known && !std) return null;
+  const bodyShare = std?.bodyShare;
+  const perHand = !bodyShare && PER_HAND.test(name) && std?.id !== 'lateral';
+  let ratios = (known ?? std)!.ratios;
+  if (perHand) ratios = ratios.map((r) => r * 0.42);
+  if (sex === 'f') ratios = ratios.map((r) => r * (bodyShare ? 0.85 : UPPER.has(group) ? 0.65 : 0.75));
+  return { id: known?.id ?? std!.id, ratios, estimated: !known, perHand, bodyShare };
+}
+
+/**
+ * Ranghi di forza sugli esercizi che fai davvero: i più frequenti delle ultime 8 settimane
+ * (almeno 2 sedute), con il miglior 1RM stimato degli ultimi 6 mesi rispetto al peso corporeo.
+ */
+export function liftRanks(
+  sessions: Session[],
+  bodyweight: number,
+  nameOf: (l: ExerciseLog) => string,
+  groupOf: (l: ExerciseLog) => string,
+  sex: 'm' | 'f' = 'm',
+  now = Date.now(),
+  max = 6,
+): LiftRank[] {
+  const since8w = now - 56 * 86400000;
+  const since6m = now - 183 * 86400000;
+  const seen = new Map<string, { name: string; group: string; count: number; logs: ExerciseLog[] }>();
+  for (const s of sessions) {
+    if (s.date < since6m) continue;
+    for (const l of s.logs) {
+      if (!workingSets(l.sets).length) continue;
+      const name = nameOf(l);
+      const key = norm(name);
+      const e = seen.get(key) ?? { name, group: groupOf(l), count: 0, logs: [] };
+      if (s.date >= since8w) e.count += 1;
+      e.logs.push(l);
+      seen.set(key, e);
+    }
+  }
+  const out: LiftRank[] = [];
+  for (const e of [...seen.values()].filter((x) => x.count >= 2).sort((a, b) => b.count - a.count)) {
+    if (out.length >= max) break;
+    const std = standardFor(e.name, e.group, sex);
+    if (!std) continue;
+    const share = std.bodyShare ?? 0;
     let best = 0;
-    for (const s of sessions)
-      for (const l of s.logs) {
-        const name = nameOf(l);
-        const lib = libraryIdOf({ name, libraryId: undefined });
-        if (!(lib && lift.ids.includes(lib)) && !lift.match.test(name)) continue;
-        for (const set of workingSets(l.sets)) if (set.reps > 0 && set.reps <= 12) best = Math.max(best, epley1RM(set.weight, set.reps));
+    for (const l of e.logs)
+      for (const set of workingSets(l.sets)) {
+        if (set.reps <= 0 || set.reps > (share ? 30 : 12)) continue;
+        // a corpo libero il carico è il corpo (o una sua quota) più l'eventuale zavorra
+        const load = share ? bodyweight * share + Math.max(0, set.weight) : set.weight;
+        if (load > 0) best = Math.max(best, epley1RM(load, set.reps));
       }
+    if (!best) continue;
     const ratio = bodyweight > 0 ? best / bodyweight : 0;
     let rank = 0;
-    lift.ratios.forEach((r, i) => {
+    std.ratios.forEach((r, i) => {
       if (ratio >= r) rank = i + 1;
     });
-    const nextRatio = lift.ratios[rank] ?? null;
-    const prevRatio = rank > 0 ? lift.ratios[rank - 1] : 0;
-    return {
-      lift,
-      best1RM: best,
+    const nextRatio = std.ratios[rank] ?? null;
+    const prevRatio = rank > 0 ? std.ratios[rank - 1] : 0;
+    out.push({
+      lift: { id: norm(e.name), name: e.name },
+      best1RM: Math.round(best),
       ratio,
       rank,
-      next: nextRatio != null ? Math.ceil(nextRatio * bodyweight) : null,
+      nextLabel: nextRatio != null && bodyweight > 0 ? nextLabel(RANKS[rank + 1].name, nextRatio * bodyweight, bodyweight * share, std.perHand) : null,
       progress: nextRatio != null ? Math.min(1, Math.max(0, (ratio - prevRatio) / (nextRatio - prevRatio))) : 1,
-    };
-  });
+      perWeek: Math.round((e.count / 8) * 10) / 10,
+      estimated: std.estimated,
+      perHand: std.perHand,
+      bodyweightBased: Boolean(share),
+    });
+  }
+  return out;
 }

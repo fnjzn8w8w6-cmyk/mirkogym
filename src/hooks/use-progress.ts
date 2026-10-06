@@ -38,7 +38,7 @@ export function useProgress() {
     const unlocked = achievements.filter((x) => x.unlocked).length;
     const level = levelOf(xpOf(stats, unlocked));
     const bodyweight = bodyLogs.find((b) => b.weight != null)?.weight ?? 0;
-    const ranks = liftRanks(sessions, bodyweight, nameOf);
+    const ranks = liftRanks(sessions, bodyweight, nameOf, groupOf, settings.profile?.sex ?? 'm');
     const key = weekKey();
     const from = new Date(`${key}T00:00:00`).getTime();
     const quests = weeklyQuests(
@@ -54,5 +54,5 @@ export function useProgress() {
       key,
     ).map((q) => ({ ...q, claimed: settings.questsDone?.includes(q.id) ?? false }));
     return { stats, achievements, unlocked, level, bodyweight, ranks, quests, streak: weekStreak(sessions) };
-  }, [sessions, bodyLogs, nameOf, groupOf, extra, days, settings.profile?.daysPerWeek, settings.questsDone]);
+  }, [sessions, bodyLogs, nameOf, groupOf, extra, days, settings.profile?.daysPerWeek, settings.profile?.sex, settings.questsDone]);
 }

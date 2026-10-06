@@ -188,7 +188,7 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
       if (pr) {
         setPhotoRes(pr);
         const todayLog = bodyLogs.find((b) => b.date === today);
-        await settle(saveBody(todayLog ? { ...todayLog, bodyFat: pr.bodyFat } : { date: today, bodyFat: pr.bodyFat, notes: 'Massa grassa: stima AI dalla foto del check-in' }));
+        await settle(saveBody(todayLog ? { ...todayLog, bodyFat: pr.bodyFat, bodyFatSource: 'photo' } : { date: today, bodyFat: pr.bodyFat, bodyFatSource: 'photo', notes: 'Massa grassa: stima AI dalla foto del check-in' }));
         photoNote = `\nFOTO DI QUESTA SETTIMANA: massa grassa stimata ${pr.bodyFat}% (forbice ${pr.low}-${pr.high}%). Osservazioni: ${pr.comment}`;
       }
     }

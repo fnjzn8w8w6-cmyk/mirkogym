@@ -60,7 +60,7 @@ export default function HistorySession() {
               onClick={async () => {
                 try {
                   const blob = await renderShareCard(s, day?.name ?? 'Allenamento', day?.subtitle ?? '', nameOf);
-                  const how = await shareImage(blob, `mirkogym-${new Date(s.date).toISOString().slice(0, 10)}.png`);
+                  const how = await shareImage(blob, `vulcanlift-${new Date(s.date).toISOString().slice(0, 10)}.png`);
                   if (how === 'downloaded') toast.success('Immagine salvata');
                 } catch (e) {
                   if (!(e instanceof DOMException && e.name === 'AbortError')) toast.error('Condivisione non riuscita');

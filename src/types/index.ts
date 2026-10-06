@@ -102,6 +102,8 @@ export interface BodyLog {
   date: string;
   weight?: number;
   bodyFat?: number;
+  /** strumento della misura: le bilance impedenziometriche si leggono in media su 7 giorni */
+  bodyFatSource?: 'photo' | 'calipers' | 'scale' | 'dexa' | 'manual';
   sleepHours?: number;
   energy?: number;
   notes?: string;

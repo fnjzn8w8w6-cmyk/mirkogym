@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { bodyFatNow } from '@/lib/bodyfat-estimate';
 import { useNavigate } from 'react-router-dom';
 import { Target } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
@@ -142,7 +143,7 @@ export function GoalPlanModal({ open, onClose }: { open: boolean; onClose: () =>
   const [draft, setDraft] = useState<GoalPlan | null>(settings.goalPlan ?? null);
   if (!p) return null;
   const weight = trendWeight(bodyLogs, p.weightKg);
-  const bf = bodyLogs.find((b) => b.bodyFat != null)?.bodyFat ?? p.bodyFatPct;
+  const bf = bodyFatNow(bodyLogs)?.value ?? p.bodyFatPct;
   const save = async () => {
     if (!draft) return;
     await settle(update({ goalPlan: draft, profile: { ...p, goal: draft.phases[draft.current].type } }));

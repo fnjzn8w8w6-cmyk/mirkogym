@@ -25,7 +25,7 @@ export function AuthScreen() {
     >
       <div className="flex flex-1 flex-col items-center justify-center text-center">
         <Logo size={88} />
-        <h1 className="mt-6 font-display text-3xl font-extrabold text-fg">How<span className="text-accent-500">To</span>Gym</h1>
+        <h1 className="mt-6 font-display text-3xl font-extrabold text-fg">Vulcan <span className="text-accent-500">Lift</span></h1>
         <p className="mt-2 text-lg font-medium text-fg-2">Il tuo coach di palestra personale.</p>
         <ul className="mt-8 w-full space-y-3 text-left">
           {FEATURES.map(({ icon: Icon, text }) => (

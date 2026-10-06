@@ -9,6 +9,9 @@ import { Modal } from '../ui/Modal';
 import { Input, TextArea } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { useToast } from '../ui/Toast';
+import { NewBadge } from '../ui/Help';
+import { BF_SOURCE_IT, bodyFatNow, type BodyFatSource } from '@/lib/bodyfat-estimate';
+import { formatKg } from '@/lib/analytics';
 
 export const ENERGY = ['😴', '😐', '🙂', '😀', '🔥'];
 const ENERGY_LABELS = ['Esausto', 'Scarico', 'Ok', 'Carico', 'Al massimo'];
@@ -22,11 +25,13 @@ interface Props {
 const str = (n?: number) => (n == null ? '' : String(n));
 
 export function BodyLogModal({ open, onClose, editing }: Props) {
-  const { save } = useBodyLogs();
+  const { save, bodyLogs } = useBodyLogs();
   const toast = useToast();
   const [date, setDate] = useState(todayISO());
   const [weight, setWeight] = useState('');
   const [bodyFat, setBodyFat] = useState('');
+  const [bfSource, setBfSource] = useState<BodyFatSource>('calipers');
+  const [showBf, setShowBf] = useState(false);
   const [sleep, setSleep] = useState('');
   const [energy, setEnergy] = useState<number | undefined>();
   const [notes, setNotes] = useState('');
@@ -43,6 +48,8 @@ export function BodyLogModal({ open, onClose, editing }: Props) {
     setDate(editing?.date ?? todayISO());
     setWeight(str(editing?.weight));
     setBodyFat(str(editing?.bodyFat));
+    setBfSource(editing?.bodyFatSource && editing.bodyFatSource !== 'photo' ? editing.bodyFatSource : 'calipers');
+    setShowBf(editing?.bodyFat != null);
     setSleep(str(editing?.sleepHours));
     setEnergy(editing?.energy);
     setNotes(editing?.notes ?? '');
@@ -55,6 +62,7 @@ export function BodyLogModal({ open, onClose, editing }: Props) {
     setBusy(false);
   }, [open, editing]);
 
+  const bfNow = bodyFatNow(bodyLogs);
   const num = (v: string) => parseNum(v) ?? undefined;
   const w = num(weight);
   const bf = num(bodyFat);
@@ -72,7 +80,8 @@ export function BodyLogModal({ open, onClose, editing }: Props) {
         createdAt: editing?.createdAt,
         date,
         weight: w,
-        bodyFat: bf,
+        bodyFat: showBf ? bf : editing?.bodyFat,
+        bodyFatSource: showBf && bf != null ? (editing?.bodyFatSource === 'photo' && bf === editing.bodyFat ? 'photo' : bfSource) : editing?.bodyFatSource,
         sleepHours: num(sleep),
         energy,
         notes: notes.trim() || undefined,
@@ -97,10 +106,45 @@ export function BodyLogModal({ open, onClose, editing }: Props) {
     >
       <div className="space-y-3">
         <Input label="Data" type="date" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value || todayISO())} />
-        <div className="grid grid-cols-2 gap-3">
-          <Input label="Peso" kind="decimal" suffix="kg" value={weight} onChange={(e) => setWeight(e.target.value)} />
-          <Input label="Body fat" kind="decimal" suffix="%" value={bodyFat} onChange={(e) => setBodyFat(e.target.value)} />
-        </div>
+        <Input label="Peso" kind="decimal" suffix="kg" value={weight} onChange={(e) => setWeight(e.target.value)} />
+        {/* massa grassa: niente numeri a occhio ogni giorno, solo misure vere */}
+        {!showBf ? (
+          <div className="rounded-md border border-line-subtle bg-surface-2 p-3">
+            <p className="text-sm text-fg-2">
+              {bfNow
+                ? `Massa grassa ${bfNow.estimated ? 'stimata' : 'misurata'}: ${formatKg(bfNow.value)}%. `
+                : ''}
+              La aggiorniamo noi dal trend del peso; la misura vera arriva dal check-in settimanale con foto.
+            </p>
+            <button type="button" onClick={() => setShowBf(true)} className="mt-1 flex h-10 items-center gap-2 text-sm font-semibold text-accent-400">
+              + Ho una misura affidabile della massa grassa <NewBadge />
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2 rounded-md border border-line-subtle bg-surface-2 p-3">
+            <Input label="Massa grassa" kind="decimal" suffix="%" value={bodyFat} onChange={(e) => setBodyFat(e.target.value)} />
+            <div className="text-xs font-semibold uppercase tracking-wider text-fg-3">Con cosa l'hai misurata?</div>
+            <div className="flex flex-wrap gap-2">
+              {(['calipers', 'scale', 'dexa'] as const).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  aria-pressed={bfSource === k}
+                  onClick={() => setBfSource(k)}
+                  className={cn('h-9 rounded-full border px-3 text-sm', bfSource === k ? 'border-accent-500 bg-accent-glow font-semibold text-accent-400' : 'border-line bg-surface text-fg-2')}
+                >
+                  {BF_SOURCE_IT[k].charAt(0).toUpperCase() + BF_SOURCE_IT[k].slice(1)}
+                </button>
+              ))}
+            </div>
+            {bfSource === 'scale' && <p className="text-xs text-fg-3">La bilancia oscilla molto: usiamo la media delle misure degli ultimi 7 giorni.</p>}
+            {!editing?.bodyFat && (
+              <button type="button" onClick={() => { setShowBf(false); setBodyFat(''); }} className="h-9 text-sm text-fg-3">
+                Annulla, non ho una misura
+              </button>
+            )}
+          </div>
+        )}
         {invalid && <p className="text-sm text-danger">Controlla i valori: peso 20–400 kg, BF 2–70%.</p>}
         <Input label="Ore di sonno medie" kind="decimal" suffix="h" value={sleep} onChange={(e) => setSleep(e.target.value)} />
 

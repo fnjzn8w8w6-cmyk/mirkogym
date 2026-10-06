@@ -352,7 +352,7 @@ function SessionView({ initial }: { initial: ActiveSession }) {
     setSharing(true);
     try {
       const blob = await renderShareCard(result, day?.name ?? 'Allenamento', day?.subtitle ?? '', nameOf);
-      const how = await shareImage(blob, `mirkogym-${new Date(result.date).toISOString().slice(0, 10)}.png`);
+      const how = await shareImage(blob, `vulcanlift-${new Date(result.date).toISOString().slice(0, 10)}.png`);
       if (how === 'downloaded') toast.success('Immagine salvata');
     } catch (e) {
       if (!(e instanceof DOMException && e.name === 'AbortError')) toast.error('Condivisione non riuscita');

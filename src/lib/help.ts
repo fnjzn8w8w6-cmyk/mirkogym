@@ -101,7 +101,7 @@ export const HELP = {
   /* ---------- Corpo ---------- */
   'body-composition': {
     title: 'Composizione corporea',
-    body: ['Peso, massa grassa, massa magra e FFMI (quanto muscolo hai rispetto all\'altezza). La massa grassa viene dalla misura più recente (inserita, formula o stima da foto).'],
+    body: ['Peso, massa grassa, massa magra e FFMI (quanto muscolo hai rispetto all\'altezza). La massa grassa parte dall\'ultima misura affidabile (foto del check-in, plicometro, bilancia, DEXA) e tra una misura e l\'altra viene aggiornata dal trend del peso: chi dimagrisce perde circa 75% grasso, chi ingrassa ne prende circa 60%.', 'Le misure della bilancia impedenziometrica si leggono come media di 7 giorni, perché oscillano molto. Senza misure negli ultimi 4 mesi si usa la stima dal questionario.'],
   },
   'body-status': {
     title: 'Sei nell\'obiettivo?',
@@ -255,7 +255,15 @@ export const HELP = {
   /* ---------- Profilo ---------- */
   'profile-level': { title: 'Livello', body: ['Guadagni XP allenandoti, battendo record, compilando i resoconti, registrando la dieta e completando sfide e traguardi.'] },
   'profile-achievements': { title: 'Traguardi', body: ['Oltre 80 traguardi su forza, costanza, dieta e recupero. Bronzo, argento, oro e leggenda.'] },
-  'profile-ranks': { title: 'Ranghi di forza', body: ['Il tuo massimale stimato sui fondamentali rispetto al peso corporeo, confrontato con standard indicativi.'] },
+  'profile-ranks': {
+    title: 'Ranghi di forza',
+    body: [
+      'Il rango si calcola sui tuoi esercizi più frequenti delle ultime 8 settimane (almeno 2 sedute): massimale stimato degli ultimi 6 mesi diviso il peso corporeo.',
+      'Sette ranghi, ognuno col suo stemma: Ferro, Bronzo, Argento, Oro, Platino, Diamante, Campione.',
+      'Per panca, squat, stacco, lento, rematore e lat machine ci sono tabelle note; per gli altri esercizi lo standard è stimato in base al tipo (scritto "standard stimato").',
+      'Con i manubri conta il peso di un manubrio; trazioni, dip e flessioni contano il corpo più l\'eventuale zavorra. Per le donne gli standard sono più bassi.',
+    ],
+  },
 } satisfies Record<string, { title: string; body: string[] }>;
 
 export type HelpId = keyof typeof HELP;

@@ -82,7 +82,7 @@ export default function Settings() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `mirkogym-backup-${toISODate(new Date())}.json`;
+      a.download = `vulcanlift-backup-${toISODate(new Date())}.json`;
       document.body.appendChild(a);
       a.click();
       a.remove();

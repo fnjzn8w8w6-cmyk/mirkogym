@@ -9,6 +9,7 @@ import { IconButton } from '@/components/ui/Button';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { RANKS, TIER_COLOR } from '@/lib/gamification';
 import { Medal } from '@/components/ui/Medal';
+import { RankBadge } from '@/components/ui/RankBadge';
 import { formatKg, formatTonnage } from '@/lib/analytics';
 import { useSettings } from '@/hooks/use-settings';
 import { useBodyLogs } from '@/hooks/use-body-logs';
@@ -19,6 +20,7 @@ import { settle } from '@/lib/firestore';
 import { GoalCard } from '@/components/goal/GoalPlan';
 import { SectionTitle } from '@/components/ui/Help';
 import { cn } from '@/lib/cn';
+import { bodyFatNow } from '@/lib/bodyfat-estimate';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -30,7 +32,7 @@ export default function Profile() {
   const analysis = useMemo(() => {
     if (!profile) return null;
     // Usa il peso più recente registrato in "Corpo"
-    const lastBf = bodyLogs.find((b) => b.bodyFat != null)?.bodyFat;
+    const lastBf = bodyFatNow(bodyLogs)?.value;
     const p = { ...profile, weightKg: bodyweight || profile.weightKg, bodyFatPct: lastBf ?? profile.bodyFatPct };
     return { n: userNutrition(p, settings), c: composition(p), p };
   }, [profile, bodyweight, bodyLogs, settings]);
@@ -120,7 +122,9 @@ export default function Profile() {
         {/* Ranghi di forza */}
         <section>
           <h2 className="section-title">
-            <SectionTitle help="profile-ranks">Ranghi di forza</SectionTitle>
+            <SectionTitle help="profile-ranks" isNew>
+              Ranghi di forza
+            </SectionTitle>
           </h2>
           <Card className="divide-y divide-line-subtle">
             {!bodyweight && (
@@ -129,35 +133,37 @@ export default function Profile() {
                 <ChevronRight className="ml-auto h-4 w-4" aria-hidden />
               </button>
             )}
+            {bodyweight > 0 && ranks.length === 0 && (
+              <div className="flex items-center gap-3 p-4">
+                <RankBadge rank={0} locked />
+                <p className="text-sm text-fg-2">Fai almeno 2 sedute con lo stesso esercizio nelle ultime 8 settimane: qui comparirà il tuo rango.</p>
+              </div>
+            )}
             {ranks.map((r) => {
               const rank = RANKS[r.rank];
+              const unit = r.perHand ? ' per manubrio' : '';
               return (
                 <div key={r.lift.id} className="flex items-center gap-3 p-4">
-                  <span
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-2 text-xs font-extrabold"
-                    style={{ borderColor: rank.color, color: rank.color, backgroundColor: `${rank.color}1a` }}
-                    aria-hidden
-                  >
-                    {rank.name.slice(0, 2).toUpperCase()}
-                  </span>
+                  <RankBadge rank={r.rank} size={44} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="truncate text-base font-semibold text-fg">{r.lift.name}</span>
-                      <span className="text-sm font-bold" style={{ color: rank.color }}>
+                      <span className="font-display text-lg font-extrabold uppercase" style={{ color: rank.color }}>
                         {rank.name}
                       </span>
                     </div>
                     <ProgressBar className="mt-1.5 h-1.5" value={r.progress} color={RANKS[Math.min(r.rank + 1, RANKS.length - 1)].color} label={`${r.lift.name}: avanzamento rango`} />
                     <div className="mt-1 text-xs text-fg-3">
-                      {r.best1RM ? `1RM ~${r.best1RM} kg (${formatKg(r.ratio, 2)}× peso corporeo)` : 'Nessun dato'}
-                      {r.next != null && r.best1RM > 0 && ` · ${RANKS[r.rank + 1].name} a ${r.next} kg`}
+                      {formatKg(r.perWeek, 1)}×/sett · {r.bodyweightBased ? `carico ~${r.best1RM} kg col corpo` : `1RM ~${r.best1RM} kg${unit}`} ({formatKg(r.ratio, 2)}× peso)
+                      {r.nextLabel && ` · ${r.nextLabel}`}
+                      {r.estimated && <span className="text-fg-2"> · standard stimato</span>}
                     </div>
                   </div>
                 </div>
               );
             })}
           </Card>
-          <p className="mt-2 text-xs text-fg-3">Standard indicativi basati sul rapporto 1RM stimato / peso corporeo.</p>
+          <p className="mt-2 text-xs text-fg-3">I tuoi esercizi più frequenti delle ultime 8 settimane. Standard indicativi basati sul rapporto 1RM stimato / peso corporeo.</p>
         </section>
 
         <GoalCard compact />

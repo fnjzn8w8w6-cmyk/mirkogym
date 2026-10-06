@@ -113,6 +113,7 @@ export default function Body() {
             date: todayISO(),
             weight: latestWeight,
             bodyFat: bf,
+            bodyFatSource: 'photo',
             notes: `Stima AI da foto (${r.low}–${r.high}%, affidabilità ${r.confidence})`,
           });
           setPhotoOpen(false);
@@ -124,7 +125,7 @@ export default function Body() {
           <EmptyState
             illustration="scale"
             title="Nessun log corporeo"
-            description="Registra peso, body fat, sonno ed energia per seguire la tua composizione corporea."
+            description="Registra peso, sonno ed energia: la massa grassa la seguiamo noi dal peso e dal check-in con foto."
             action={
               <Button icon={<Plus className="h-5 w-5" />} onClick={openNew}>
                 Aggiungi il primo log

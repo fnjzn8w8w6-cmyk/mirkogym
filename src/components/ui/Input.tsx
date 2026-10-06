@@ -1,4 +1,5 @@
-import { forwardRef, useId, type InputHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { forwardRef, useId, useState, type InputHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
@@ -14,6 +15,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 ) {
   const autoId = useId();
   const inputId = id ?? autoId;
+  // password: icona dell'occhio per mostrarla/nasconderla
+  const isPassword = rest.type === 'password';
+  const [shown, setShown] = useState(false);
   const kbd =
     kind === 'decimal'
       ? { inputMode: 'decimal' as const, type: 'text', pattern: '[0-9]*[.,]?[0-9]*' }
@@ -28,8 +32,20 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         placeholder=" "
         {...kbd}
         {...rest}
-        className="peer h-14 w-full rounded-md border border-line bg-surface-2 px-4 pb-1.5 pt-5 text-base text-fg outline-none transition-colors focus:border-accent-500 focus:bg-surface-3"
+        type={isPassword && shown ? 'text' : (rest.type ?? kbd.type)}
+        className={cn('peer h-14 w-full rounded-md border border-line bg-surface-2 px-4 pb-1.5 pt-5 text-base text-fg outline-none transition-colors focus:border-accent-500 focus:bg-surface-3', isPassword && 'pr-14')}
       />
+      {isPassword && (
+        <button
+          type="button"
+          onClick={() => setShown((v) => !v)}
+          aria-label={shown ? 'Nascondi password' : 'Mostra password'}
+          aria-pressed={shown}
+          className="absolute right-1 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center text-fg-3"
+        >
+          {shown ? <EyeOff className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
+        </button>
+      )}
       <label
         htmlFor={inputId}
         className="pointer-events-none absolute left-4 top-1.5 text-xs text-fg-3 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:font-medium peer-focus:top-1.5 peer-focus:text-xs peer-focus:font-semibold peer-focus:text-accent-400"

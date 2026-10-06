@@ -15,17 +15,19 @@ import { cn } from '@/lib/cn';
 import { planRate } from '@/lib/goal-plan';
 import { SectionTitle } from '@/components/ui/Help';
 import type { BodyLog } from '@/types';
+import { BF_SOURCE_IT, bodyFatNow, type BodyFatNow } from '@/lib/bodyfat-estimate';
 
 /** Profilo con l'ultimo peso e l'ultima massa grassa registrati. */
-function useCurrentProfile(): { p: UserProfile | null; bfDate: string | null } {
+function useCurrentProfile(): { p: UserProfile | null; bf: BodyFatNow | null } {
   const { settings } = useSettings();
   const { bodyLogs } = useBodyLogs();
   return useMemo(() => {
     const prof = settings.profile;
-    if (!prof) return { p: null, bfDate: null };
+    if (!prof) return { p: null, bf: null };
     const w = bodyLogs.find((b) => b.weight != null);
-    const bf = bodyLogs.find((b) => b.bodyFat != null);
-    return { p: { ...prof, weightKg: w?.weight ?? prof.weightKg, bodyFatPct: bf?.bodyFat ?? prof.bodyFatPct }, bfDate: bf?.date ?? null };
+    // ultima misura affidabile, aggiornata col trend del peso
+    const bf = bodyFatNow(bodyLogs);
+    return { p: { ...prof, weightKg: w?.weight ?? prof.weightKg, bodyFatPct: bf?.value ?? prof.bodyFatPct }, bf };
   }, [settings.profile, bodyLogs]);
 }
 
@@ -40,7 +42,7 @@ function Ring({ value, max }: { value: number; max: number }) {
       <defs>
         <linearGradient id="bf-ring" x1="0" x2="1" y1="0" y2="1">
           <stop offset="0" stopColor="var(--accent-500)" />
-          <stop offset="1" stopColor="#8B5CF6" />
+          <stop offset="1" stopColor="var(--accent-600)" />
         </linearGradient>
       </defs>
       <circle cx={size / 2} cy={size / 2} r={r} stroke="var(--bg-surface-3)" strokeWidth={w} fill="none" />
@@ -61,7 +63,7 @@ function Ring({ value, max }: { value: number; max: number }) {
 
 /** Composizione corporea in cima alla sezione Corpo. */
 export function CompositionCard() {
-  const { p, bfDate } = useCurrentProfile();
+  const { p, bf: bfNow } = useCurrentProfile();
   if (!p) return null;
   const c = composition(p);
   const bf = c.bf.value;
@@ -96,7 +98,11 @@ export function CompositionCard() {
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Chip tone="accent">{bfCategory(bf, p.sex)}</Chip>
         <span className="text-xs text-fg-3">
-          BMI {formatKg(c.bmi)} · {bfDate ? `massa grassa misurata ${formatRelativeDay(fromISODate(bfDate)).toLowerCase()}` : 'massa grassa stimata dal questionario'}
+          BMI {formatKg(c.bmi)} · {bfNow
+            ? bfNow.estimated
+              ? `massa grassa stimata dal peso · ultima misura (${BF_SOURCE_IT[bfNow.source]}) ${formatRelativeDay(fromISODate(bfNow.anchorDate)).toLowerCase()}`
+              : `massa grassa misurata ${formatRelativeDay(fromISODate(bfNow.anchorDate)).toLowerCase()} (${BF_SOURCE_IT[bfNow.source]})`
+            : 'massa grassa stimata dal questionario: fai il check-in con foto per una misura'}
         </span>
       </div>
     </Card>

@@ -3,8 +3,14 @@ import { formatKg, formatTonnage, sessionSetCount, sessionTonnage, topSet, worki
 import { formatDuration, formatLongDate } from './date-utils';
 
 const W = 1080;
-const H = 1350;
+const H = 1920;
 const FONT = '"Inter Variable", Inter, system-ui, sans-serif';
+const DISPLAY = '"Saira Condensed", "Inter Variable", sans-serif';
+const ACCENT = '#3DDC84';
+const GOLD = '#E8C25A';
+// coppa (Phosphor "trophy" piena, viewBox 256)
+const TROPHY =
+  'M232 64h-24V48a8 8 0 0 0-8-8H56a8 8 0 0 0-8 8v16H24A16 16 0 0 0 8 80v16a40 40 0 0 0 40 40h3.65A80.13 80.13 0 0 0 120 191.61V216H96a8 8 0 0 0 0 16h64a8 8 0 0 0 0-16h-24v-24.42c31.94-3.23 58.44-25.64 68.08-55.58H208a40 40 0 0 0 40-40V80a16 16 0 0 0-16-16M48 120a24 24 0 0 1-24-24V80h24v32q0 4 .39 8Zm184-24a24 24 0 0 1-24 24h-.5a82 82 0 0 0 .5-8.9V80h24Z';
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
@@ -16,96 +22,184 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath();
 }
 
-/** Disegna l'immagine riepilogativa dell'allenamento (1080×1350, formato post Instagram). */
+function trophy(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(size / 256, size / 256);
+  ctx.fillStyle = color;
+  ctx.fill(new Path2D(TROPHY));
+  ctx.restore();
+}
+
+function loadImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+/** Taglia il testo con "…" finché sta nella larghezza. */
+function fit(ctx: CanvasRenderingContext2D, text: string, max: number) {
+  if (ctx.measureText(text).width <= max) return text;
+  let t = text;
+  while (t.length > 3 && ctx.measureText(`${t}…`).width > max) t = t.slice(0, -1);
+  return `${t.trimEnd()}…`;
+}
+
+/** Testo del titolo: rimpicciolisce il font finché ci sta in una riga. */
+function fitFont(ctx: CanvasRenderingContext2D, text: string, max: number, size: number, min: number) {
+  let sz = size;
+  for (; sz > min; sz -= 4) {
+    ctx.font = `800 ${sz}px ${DISPLAY}`;
+    if (ctx.measureText(text).width <= max) break;
+  }
+  return sz;
+}
+
+/** Disegna l'immagine riepilogativa dell'allenamento (1080×1920, formato storia Instagram). */
 export async function renderShareCard(
   s: Session,
   title: string,
-  subtitle: string,
+  _subtitle: string,
   nameOf: (l: ExerciseLog) => string,
 ): Promise<Blob> {
+  await Promise.all([document.fonts?.load(`800 100px ${DISPLAY}`), document.fonts?.load(`700 40px ${FONT}`)].map((p) => p?.catch(() => undefined)));
   await document.fonts?.ready;
+  const logo = await loadImage(`${import.meta.env.BASE_URL}icons/icon-512.png`);
   const c = document.createElement('canvas');
   c.width = W;
   c.height = H;
   const ctx = c.getContext('2d');
   if (!ctx) throw new Error('Canvas non disponibile');
+  const pad = 72;
 
-  // Sfondo con bagliore arancione
-  ctx.fillStyle = '#000000';
+  // sfondo nero con bagliore verde dietro al logo
+  ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
-  const g = ctx.createRadialGradient(W * 0.85, 120, 20, W * 0.85, 120, 700);
-  g.addColorStop(0, 'rgba(61,220,132,0.35)');
+  const g = ctx.createRadialGradient(W / 2, 560, 40, W / 2, 560, 900);
+  g.addColorStop(0, 'rgba(61,220,132,0.30)');
   g.addColorStop(1, 'rgba(61,220,132,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 
-  const pad = 80;
-  ctx.fillStyle = '#3DDC84';
-  ctx.font = `800 40px ${FONT}`;
-  ctx.fillText('VULCAN LIFT', pad, 130);
+  ctx.textAlign = 'center';
   ctx.fillStyle = '#A7B0AB';
-  ctx.font = `500 34px ${FONT}`;
-  ctx.fillText(formatLongDate(s.date), pad, 185);
+  ctx.font = `600 30px ${FONT}`;
+  ctx.letterSpacing = '6px';
+  ctx.fillText(formatLongDate(s.date).toUpperCase(), W / 2, 120);
+  ctx.letterSpacing = '0px';
 
-  ctx.fillStyle = '#FAFAFA';
-  ctx.font = `800 96px ${FONT}`;
-  ctx.fillText(title, pad, 320);
-  ctx.fillStyle = '#A7B0AB';
-  ctx.font = `700 48px ${FONT}`;
-  ctx.fillText(subtitle.slice(0, 32), pad, 390);
-
-  // Statistiche
-  const prs = s.logs.reduce((a, l) => a + l.sets.filter((x) => x.isPersonalRecord).length, 0);
-  const tiles: [string, string][] = [
-    ['DURATA', formatDuration(s.duration)],
-    ['VOLUME', formatTonnage(sessionTonnage(s))],
-    ['SERIE', String(sessionSetCount(s))],
-    ['PR', String(prs)],
-  ];
-  const tw = (W - pad * 2 - 3 * 24) / 4;
-  tiles.forEach(([label, value], i) => {
-    const x = pad + i * (tw + 24);
-    roundRect(ctx, x, 450, tw, 170, 28);
-    ctx.fillStyle = label === 'PR' && prs > 0 ? 'rgba(234,179,8,0.15)' : '#1D1530';
-    ctx.fill();
-    ctx.fillStyle = '#7D8781';
-    ctx.font = `700 26px ${FONT}`;
-    ctx.fillText(label, x + 28, 505);
-    ctx.fillStyle = label === 'PR' && prs > 0 ? '#EAB308' : '#FAFAFA';
-    ctx.font = `800 54px ${FONT}`;
-    ctx.fillText(value, x + 28, 585);
-  });
-
-  // Esercizi con il miglior set
-  ctx.fillStyle = '#7D8781';
-  ctx.font = `700 28px ${FONT}`;
-  ctx.fillText('ESERCIZI', pad, 700);
-  const logs = s.logs.filter((l) => workingSets(l.sets).length).slice(0, 7);
-  logs.forEach((l, i) => {
-    const y = 770 + i * 72;
-    const best = topSet(l.sets);
-    const pr = l.sets.some((x) => x.isPersonalRecord);
-    ctx.fillStyle = '#FAFAFA';
-    ctx.font = `600 38px ${FONT}`;
-    let name = nameOf(l);
-    while (ctx.measureText(name).width > 620 && name.length > 4) name = name.slice(0, -2);
-    if (name !== nameOf(l)) name += '…';
-    ctx.fillText(name, pad, y);
-    ctx.textAlign = 'right';
-    ctx.fillStyle = pr ? '#EAB308' : '#A7B0AB';
-    ctx.font = `700 38px ${FONT}`;
-    ctx.fillText(`${pr ? '🏆 ' : ''}${workingSets(l.sets).length}× ${best ? `${formatKg(best.weight, 2)}kg×${best.reps}` : ''}`, W - pad, y);
-    ctx.textAlign = 'left';
-  });
-  if (s.logs.length > logs.length) {
-    ctx.fillStyle = '#7D8781';
-    ctx.font = `600 30px ${FONT}`;
-    ctx.fillText(`+ altri ${s.logs.length - logs.length} esercizi`, pad, 770 + logs.length * 72);
+  // logo grande con alone
+  if (logo) {
+    const L = 500;
+    ctx.save();
+    ctx.shadowColor = 'rgba(61,220,132,0.55)';
+    ctx.shadowBlur = 90;
+    roundRect(ctx, (W - L) / 2, 200, L, L, L * 0.22);
+    ctx.clip();
+    ctx.drawImage(logo, (W - L) / 2, 200, L, L);
+    ctx.restore();
   }
 
-  ctx.fillStyle = '#5B5070';
-  ctx.font = `600 28px ${FONT}`;
-  ctx.fillText('Allenamento registrato con Vulcan Lift', pad, H - 70);
+  // titolo + "allenamento completato"
+  const t = title.toUpperCase();
+  const tsz = fitFont(ctx, t, W - pad * 2, 150, 80);
+  ctx.fillStyle = '#FAFAFA';
+  ctx.font = `800 ${tsz}px ${DISPLAY}`;
+  ctx.fillText(t, W / 2, 900);
+  ctx.fillStyle = ACCENT;
+  ctx.font = `700 30px ${FONT}`;
+  ctx.letterSpacing = '6px';
+  ctx.fillText('ALLENAMENTO COMPLETATO', W / 2, 970);
+  ctx.letterSpacing = '0px';
+
+  // tre riquadri: volume, durata, serie
+  const tiles: [string, string][] = [
+    [formatTonnage(sessionTonnage(s)).toUpperCase(), 'VOLUME'],
+    [formatDuration(s.duration), 'DURATA'],
+    [String(sessionSetCount(s)), 'SERIE'],
+  ];
+  const gap = 20;
+  const tw = (W - pad * 2 - gap * 2) / 3;
+  tiles.forEach(([v, l], i) => {
+    const x = pad + i * (tw + gap);
+    roundRect(ctx, x, 1040, tw, 200, 32);
+    ctx.fillStyle = '#0D0F0E';
+    ctx.fill();
+    ctx.strokeStyle = '#222724';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#FAFAFA';
+    fitFont(ctx, v, tw - 30, 84, 44);
+    ctx.fillText(v, x + tw / 2, 1150);
+    ctx.fillStyle = '#7D8781';
+    ctx.font = `700 24px ${FONT}`;
+    ctx.letterSpacing = '4px';
+    ctx.fillText(l, x + tw / 2, 1200);
+    ctx.letterSpacing = '0px';
+  });
+
+  // riquadro inferiore: nuovi record, altrimenti migliori serie
+  ctx.textAlign = 'left';
+  const logs = s.logs.filter((l) => workingSets(l.sets).length);
+  const prLogs = logs.filter((l) => l.sets.some((x) => x.isPersonalRecord));
+  const isPR = prLogs.length > 0;
+  const rows = (isPR ? prLogs : logs).slice(0, 4);
+  const boxY = 1300;
+  const boxH = 120 + rows.length * 66;
+  roundRect(ctx, pad, boxY, W - pad * 2, boxH, 36);
+  if (isPR) {
+    const bg = ctx.createLinearGradient(pad, 0, W - pad, 0);
+    bg.addColorStop(0, 'rgba(232,194,90,0.18)');
+    bg.addColorStop(1, 'rgba(232,194,90,0.04)');
+    ctx.fillStyle = bg;
+  } else ctx.fillStyle = '#0D0F0E';
+  ctx.fill();
+  ctx.strokeStyle = isPR ? 'rgba(232,194,90,0.5)' : '#222724';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  const head = isPR ? (prLogs.length === 1 ? 'NUOVO RECORD' : 'NUOVI RECORD') : 'MIGLIORI SERIE';
+  if (isPR) trophy(ctx, pad + 40, boxY + 40, 40, GOLD);
+  ctx.fillStyle = isPR ? GOLD : '#7D8781';
+  ctx.font = `800 26px ${FONT}`;
+  ctx.letterSpacing = '5px';
+  ctx.fillText(head, pad + (isPR ? 96 : 40), boxY + 70);
+  ctx.letterSpacing = '0px';
+  rows.forEach((l, i) => {
+    const y = boxY + 140 + i * 66;
+    const best = topSet(l.sets);
+    const right = best ? `${formatKg(best.weight, 2)} kg × ${best.reps}` : '';
+    ctx.font = `700 36px ${FONT}`;
+    const rw = ctx.measureText(right).width;
+    ctx.textAlign = 'right';
+    ctx.fillStyle = isPR ? GOLD : '#FAFAFA';
+    ctx.fillText(right, W - pad - 40, y);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#FAFAFA';
+    ctx.font = `600 36px ${FONT}`;
+    ctx.fillText(fit(ctx, nameOf(l), W - pad * 2 - 100 - rw), pad + 40, y);
+  });
+
+  // firma in basso
+  const by = H - 110;
+  ctx.font = `800 52px ${DISPLAY}`;
+  const w1 = ctx.measureText('VULCAN ').width;
+  const w2 = ctx.measureText('LIFT').width;
+  const total = 64 + 18 + w1 + w2;
+  const bx = (W - total) / 2;
+  if (logo) {
+    ctx.save();
+    roundRect(ctx, bx, by - 50, 64, 64, 14);
+    ctx.clip();
+    ctx.drawImage(logo, bx, by - 50, 64, 64);
+    ctx.restore();
+  }
+  ctx.fillStyle = '#FAFAFA';
+  ctx.fillText('VULCAN ', bx + 82, by);
+  ctx.fillStyle = ACCENT;
+  ctx.fillText('LIFT', bx + 82 + w1, by);
 
   return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('Immagine non generata'))), 'image/png'));
 }
