@@ -12,6 +12,8 @@ import { ExerciseDemo } from '../library/ExerciseDemo';
 import { HelpTip, NewBadge } from '@/components/ui/Help';
 import { effortTarget, scaleLabel, type EffortScale } from '@/lib/effort';
 import { SuggestionBox } from './SuggestionBox';
+import { EffortSheet, type EffortSetInfo } from './EffortSheet';
+import { useState } from 'react';
 
 /** Confronto diretto con l'ultima volta che hai fatto l'esercizio. */
 function PrevCompare({ prevSets, lastDate, sets, lastText, scale }: { prevSets: { weight: string; reps: number }[]; lastDate?: number; sets: DraftSet[]; lastText?: string; scale: EffortScale }) {
@@ -121,6 +123,7 @@ export function ExerciseCard({
   onEdit,
   onRemoveWarmups,
 }: ExerciseCardProps) {
+  const [effortAt, setEffortAt] = useState<number | null>(null);
   const color = groupColor(draft.group);
   const doneCount = draft.sets.filter((s) => s.done).length;
   const allDone = draft.sets.length > 0 && doneCount === draft.sets.length;
@@ -132,6 +135,17 @@ export function ExerciseCard({
   for (const st of draft.sets) workingIdx.push(st.type === 'warmup' ? -1 : n++);
   const workWeight = parseNum(draft.sets.find((st) => st.type !== 'warmup' && st.weight)?.weight ?? '') ?? suggestion.weight;
   const hasWarmups = draft.sets.some((st) => st.type === 'warmup');
+  // serie allenanti per la scelta dello sforzo (le W non hanno RPE)
+  const effortSets: EffortSetInfo[] = draft.sets
+    .map((st, i) => ({ st, i }))
+    .filter(({ st }) => st.type !== 'warmup')
+    .map(({ st, i }) => ({
+      index: i,
+      number: workingIdx[i] + 1,
+      rir: st.rir,
+      target: rirForSet(exercise.rirTarget, workingIdx[i], n),
+      detail: st.weight || st.reps ? `${st.weight || weightPh} kg × ${st.reps || (repTargets[workingIdx[i]] ?? exercise.repMax)}` : '',
+    }));
   const canWarmup = !hasWarmups && isCompound(exercise) && workWeight != null && workWeight >= 20;
 
   // Riepilogo compatto quando tutte le serie sono completate
@@ -255,12 +269,19 @@ export function ExerciseCard({
         </div>
         <PrevCompare prevSets={prevSets} lastDate={lastDate} sets={draft.sets} lastText={lastText} scale={effortScale} />
 
-        <div className={cn(SET_GRID, 'mt-3 px-1 text-center text-xs uppercase tracking-wide text-fg-3')} aria-hidden>
+        <div className={cn(SET_GRID, 'mt-3 px-1 text-center text-xs uppercase tracking-wide text-fg-3')}>
           <span>Set</span>
           <span>Prec.</span>
           <span>Kg</span>
           <span>Reps</span>
-          <span>{scaleLabel(effortScale)}</span>
+          <button
+            type="button"
+            aria-label={`Segna lo sforzo (${scaleLabel(effortScale)}) delle serie`}
+            onClick={() => effortSets.length && setEffortAt(effortSets.find((x) => !x.rir)?.index ?? effortSets[0].index)}
+            className="font-semibold uppercase text-accent-400 underline decoration-dotted underline-offset-2"
+          >
+            {scaleLabel(effortScale)}
+          </button>
           <span />
         </div>
         <div className="mt-1 space-y-1">
@@ -291,8 +312,8 @@ export function ExerciseCard({
                       : (repTargets[workingIdx[i]] ?? `${exercise.repMin}-${exercise.repMax}`)
                   }
                   rirPlaceholder={s.type === 'warmup' ? '' : effortTarget(rirForSet(exercise.rirTarget, Math.max(0, workingIdx[i]), n), effortScale)}
-                  rirTarget={s.type === 'warmup' ? '' : rirForSet(exercise.rirTarget, Math.max(0, workingIdx[i]), n)}
                   effortScale={effortScale}
+                  onEffort={() => setEffortAt(i)}
                   onChange={(patch) => onSetChange(i, patch)}
                   onToggleDone={() => onToggleDone(i)}
                 />
@@ -323,6 +344,14 @@ export function ExerciseCard({
           )}
         </div>
       </div>
+      <EffortSheet
+        open={effortAt != null}
+        onClose={() => setEffortAt(null)}
+        scale={effortScale}
+        sets={effortSets}
+        startAt={effortAt ?? 0}
+        onPick={(idx, rir) => onSetChange(idx, { rir })}
+      />
     </motion.section>
   );
 }

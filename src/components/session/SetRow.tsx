@@ -5,7 +5,6 @@ import type { DraftSet, SetType } from '@/types';
 import { cn } from '@/lib/cn';
 import { parseNum } from '@/hooks/use-active-session';
 import { effortValue, type EffortScale } from '@/lib/effort';
-import { EffortSheet } from './EffortSheet';
 
 /** Confronto di una serie con la stessa serie della volta scorsa (peso × ripetizioni, stima 1RM). */
 export function setTrend(set: DraftSet, prev?: { weight: string; reps: number }): 'up' | 'same' | 'down' | null {
@@ -37,9 +36,9 @@ interface SetRowProps {
   weightPlaceholder: string;
   repsPlaceholder: string;
   rirPlaceholder: string;
-  /** bersaglio della scheda in RIR, per evidenziarlo nella scelta */
-  rirTarget: string;
   effortScale: EffortScale;
+  /** apre la scelta dello sforzo partendo da questa serie */
+  onEffort: () => void;
   onChange: (patch: Partial<DraftSet>) => void;
   /** Ritorna false se la serie non è valida (es. reps mancanti). */
   onToggleDone: () => boolean;
@@ -57,8 +56,8 @@ export function SetRow({
   weightPlaceholder,
   repsPlaceholder,
   rirPlaceholder,
-  rirTarget,
   effortScale,
+  onEffort,
   onChange,
   onToggleDone,
   exerciseName,
@@ -66,7 +65,6 @@ export function SetRow({
   const trend = setTrend(set, prev);
   const repsRef = useRef<HTMLInputElement>(null);
   const [shake, setShake] = useState(0);
-  const [effortOpen, setEffortOpen] = useState(false);
   const effort = effortValue(set.rir, effortScale);
 
   const toggle = () => {
@@ -160,7 +158,7 @@ export function SetRow({
       ) : (
         <button
           type="button"
-          onClick={() => setEffortOpen(true)}
+          onClick={onEffort}
           aria-label={`${label}: sforzo ${effortScale.toUpperCase()} ${effort || 'non segnato'}`}
           className={cn(
             inputCls,
@@ -194,18 +192,6 @@ export function SetRow({
           />
         </svg>
       </motion.button>
-      <EffortSheet
-        open={effortOpen}
-        onClose={() => setEffortOpen(false)}
-        scale={effortScale}
-        value={set.rir}
-        target={rirTarget}
-        subtitle={`Serie ${workingNumber}${set.weight || set.reps ? ` · ${set.weight || weightPlaceholder} kg × ${set.reps || repsPlaceholder}` : ''}`}
-        onPick={(rir) => {
-          onChange({ rir });
-          setEffortOpen(false);
-        }}
-      />
     </motion.div>
   );
 }
