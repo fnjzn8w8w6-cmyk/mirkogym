@@ -149,7 +149,7 @@ export function AccountModal({ open, mode, onClose, onModeChange }: Props) {
         )}
         {mode !== 'reset' && (
           <label className="flex items-center gap-3 text-base text-fg">
-            <input type="checkbox" className="h-5 w-5 accent-[#39FF88]" checked={remember} onChange={(e) => setRememberState(e.target.checked)} />
+            <input type="checkbox" className="h-5 w-5 accent-[#3DDC84]" checked={remember} onChange={(e) => setRememberState(e.target.checked)} />
             Rimani connesso
           </label>
         )}

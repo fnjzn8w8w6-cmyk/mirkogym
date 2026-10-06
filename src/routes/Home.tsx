@@ -156,8 +156,8 @@ function TodayDiet({ onOpen }: { onOpen: () => void }) {
         </div>
       )}
       <div className="mt-3 grid grid-cols-3">
-        <Ring value={t.protein} target={target.protein} color="#39FF88" label="Proteine" unit="g" />
-        <Ring value={t.carbs} target={target.carbs} color="#C084FC" label="Carbo" unit="g" />
+        <Ring value={t.protein} target={target.protein} color="#3DDC84" label="Proteine" unit="g" />
+        <Ring value={t.carbs} target={target.carbs} color="#A7B0AB" label="Carbo" unit="g" />
         <Ring value={t.fat} target={target.fat} color="#EAB308" label="Grassi" unit="g" />
       </div>
       {entries.length > 0 && target.target - t.kcal >= 150 && (
@@ -252,7 +252,7 @@ export default function Home() {
         <header className="flex items-center gap-3">
           <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" className="h-11 w-11 rounded-xl shadow-glow" />
           <div className="min-w-0 flex-1">
-            <h1 className="font-display text-xl font-extrabold text-fg">How<span className="text-accent-500">To</span>Gym</h1>
+            <h1 className="font-display text-xl font-extrabold text-fg">Vulcan <span className="text-accent-500">Lift</span></h1>
             <p className="text-sm text-fg-3">{formatLongDate(new Date())}</p>
           </div>
           <OfflineBadge />
@@ -278,7 +278,7 @@ export default function Home() {
         {next && (
           <section
             className="relative overflow-hidden rounded-2xl border border-accent-500/30 p-5 shadow-glow"
-            style={{ background: 'radial-gradient(120% 90% at 100% 0%, rgba(139,92,246,0.45), transparent 60%), radial-gradient(90% 80% at 0% 100%, rgba(57,255,136,0.18), transparent 60%), linear-gradient(#150F22,#150F22)' }}
+            style={{ background: 'radial-gradient(120% 90% at 100% 0%, rgba(255,255,255,0.10), transparent 60%), radial-gradient(90% 80% at 0% 100%, rgba(61,220,132,0.18), transparent 60%), linear-gradient(#0D0F0E,#0D0F0E)' }}
           >
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-bold uppercase tracking-[0.2em] text-accent-400">
@@ -437,7 +437,7 @@ export default function Home() {
         )}
 
         {/* Coach con microfono */}
-        <Card className="flex items-center gap-3 border-violet-500/40 p-4" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.25), rgba(21,15,34,0.95))' }}>
+        <Card className="flex items-center gap-3 border-violet-500/40 p-4" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(13,15,14,0.95))' }}>
           <button type="button" onClick={() => navigate('/coach?tab=chat')} className="min-w-0 flex-1 text-left">
             <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-violet-400">
               <Sparkles className="h-4 w-4" aria-hidden /> <SectionTitle help="home-coach">Coach</SectionTitle>

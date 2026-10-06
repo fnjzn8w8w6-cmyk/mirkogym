@@ -120,7 +120,7 @@ function CompareModal({ pair, load, onClose }: { pair: [ProgressPhoto, ProgressP
             <span className="absolute left-2 top-2 rounded bg-black/60 px-1.5 text-xs text-white">{fmt(a.date)}</span>
             <span className="absolute right-2 top-2 rounded bg-black/60 px-1.5 text-xs text-white">{fmt(b.date)}</span>
           </div>
-          <input type="range" min={0} max={100} value={pos} onChange={(e) => setPos(Number(e.target.value))} aria-label="Cursore prima/dopo" className="mt-3 w-full accent-[#39FF88]" />
+          <input type="range" min={0} max={100} value={pos} onChange={(e) => setPos(Number(e.target.value))} aria-label="Cursore prima/dopo" className="mt-3 w-full accent-[#3DDC84]" />
           <div className="mt-2 grid grid-cols-2 gap-2 text-center">
             <div className="rounded-md bg-surface-2 py-2">
               <div className="font-display text-lg font-extrabold text-fg">{d(a.weight, b.weight)} kg</div>

@@ -2,13 +2,13 @@ import type { ReactNode } from 'react';
 
 /** Token condivisi dai grafici: griglia/assi recessivi, testo in inchiostro neutro. */
 export const chart = {
-  grid: 'rgba(192,132,252,0.10)',
-  axis: '#8D82A6',
-  surface: '#150F22',
-  accent: '#39FF88',
-  accentSoft: 'rgba(57,255,136,0.35)',
-  secondary: '#B3A9C9',
-  tick: { fill: '#8D82A6', fontSize: 11, fontWeight: 600 },
+  grid: 'rgba(255,255,255,0.06)',
+  axis: '#7D8781',
+  surface: '#0D0F0E',
+  accent: '#3DDC84',
+  accentSoft: 'rgba(61,220,132,0.35)',
+  secondary: '#A7B0AB',
+  tick: { fill: '#7D8781', fontSize: 11, fontWeight: 600 },
 };
 
 /**

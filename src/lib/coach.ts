@@ -397,7 +397,7 @@ export async function askCoach(question: string, history: ChatMessage[], context
     .slice(-8)
     .map((m) => `${m.role === 'user' ? 'Utente' : 'Coach'}: ${m.text}`)
     .join('\n');
-  const prompt = `Sei il coach di HowToGym: personal trainer e nutrizionista sportivo. Rispondi in italiano, in modo pratico e motivante, massimo 150 parole, con elenchi brevi se utile. Basati sulle evidenze scientifiche. Usa la MEMORIA DEL COACH: rispondi in base allo storico di questa persona (dolori segnalati, stalli, giorni saltati, note, dieta) e citalo quando è pertinente. Se la domanda riguarda dolori, patologie, farmaci o disturbi alimentari, dai indicazioni generali e consiglia di rivolgersi a un medico o professionista. Non proporre diete sotto 1200 kcal né pratiche pericolose.
+  const prompt = `Sei il coach di Vulcan Lift: personal trainer e nutrizionista sportivo. Rispondi in italiano, in modo pratico e motivante, massimo 150 parole, con elenchi brevi se utile. Basati sulle evidenze scientifiche. Usa la MEMORIA DEL COACH: rispondi in base allo storico di questa persona (dolori segnalati, stalli, giorni saltati, note, dieta) e citalo quando è pertinente. Se la domanda riguarda dolori, patologie, farmaci o disturbi alimentari, dai indicazioni generali e consiglia di rivolgersi a un medico o professionista. Non proporre diete sotto 1200 kcal né pratiche pericolose.
 CONTESTO UTENTE:
 ${context}
 ${convo ? `CONVERSAZIONE:\n${convo}\n` : ''}Utente: ${question.slice(0, 1000)}

@@ -305,7 +305,7 @@ export const TIER_COLOR: Record<Tier, string> = {
   bronze: '#CD7F32',
   silver: '#C0C7D0',
   gold: '#EAB308',
-  legend: '#39FF88',
+  legend: '#3DDC84',
 };
 
 /* ---------- Ranghi di forza (stile Liftoff) ---------- */
@@ -317,7 +317,7 @@ export const RANKS = [
   { name: 'Oro', color: '#EAB308' },
   { name: 'Platino', color: '#5EEAD4' },
   { name: 'Diamante', color: '#60A5FA' },
-  { name: 'Campione', color: '#39FF88' },
+  { name: 'Campione', color: '#3DDC84' },
 ];
 
 interface LiftDef {

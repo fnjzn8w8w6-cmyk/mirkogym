@@ -170,7 +170,7 @@ export function NowSuggest({
   const icon = moment === 'dopocena' ? '🌙' : moment === 'colazione' ? '☀️' : '🕐';
 
   return (
-    <Card className="border-accent-500/40 p-4" style={{ background: 'linear-gradient(135deg, rgba(57,255,136,0.08), rgba(21,15,34,0.95))' }}>
+    <Card className="border-accent-500/40 p-4" style={{ background: 'linear-gradient(135deg, rgba(61,220,132,0.08), rgba(13,15,14,0.95))' }}>
       <div className="text-xs font-bold uppercase tracking-wider text-fg-3">
         <SectionTitle help="diet-suggest" isNew>
           Cosa mangio adesso?

@@ -31,26 +31,26 @@ export async function renderShareCard(
   if (!ctx) throw new Error('Canvas non disponibile');
 
   // Sfondo con bagliore arancione
-  ctx.fillStyle = '#0B0714';
+  ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, W, H);
   const g = ctx.createRadialGradient(W * 0.85, 120, 20, W * 0.85, 120, 700);
-  g.addColorStop(0, 'rgba(57,255,136,0.35)');
-  g.addColorStop(1, 'rgba(57,255,136,0)');
+  g.addColorStop(0, 'rgba(61,220,132,0.35)');
+  g.addColorStop(1, 'rgba(61,220,132,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 
   const pad = 80;
-  ctx.fillStyle = '#39FF88';
+  ctx.fillStyle = '#3DDC84';
   ctx.font = `800 40px ${FONT}`;
-  ctx.fillText('HOWTOGYM', pad, 130);
-  ctx.fillStyle = '#B3A9C9';
+  ctx.fillText('VULCAN LIFT', pad, 130);
+  ctx.fillStyle = '#A7B0AB';
   ctx.font = `500 34px ${FONT}`;
   ctx.fillText(formatLongDate(s.date), pad, 185);
 
   ctx.fillStyle = '#FAFAFA';
   ctx.font = `800 96px ${FONT}`;
   ctx.fillText(title, pad, 320);
-  ctx.fillStyle = '#B3A9C9';
+  ctx.fillStyle = '#A7B0AB';
   ctx.font = `700 48px ${FONT}`;
   ctx.fillText(subtitle.slice(0, 32), pad, 390);
 
@@ -68,7 +68,7 @@ export async function renderShareCard(
     roundRect(ctx, x, 450, tw, 170, 28);
     ctx.fillStyle = label === 'PR' && prs > 0 ? 'rgba(234,179,8,0.15)' : '#1D1530';
     ctx.fill();
-    ctx.fillStyle = '#8D82A6';
+    ctx.fillStyle = '#7D8781';
     ctx.font = `700 26px ${FONT}`;
     ctx.fillText(label, x + 28, 505);
     ctx.fillStyle = label === 'PR' && prs > 0 ? '#EAB308' : '#FAFAFA';
@@ -77,7 +77,7 @@ export async function renderShareCard(
   });
 
   // Esercizi con il miglior set
-  ctx.fillStyle = '#8D82A6';
+  ctx.fillStyle = '#7D8781';
   ctx.font = `700 28px ${FONT}`;
   ctx.fillText('ESERCIZI', pad, 700);
   const logs = s.logs.filter((l) => workingSets(l.sets).length).slice(0, 7);
@@ -92,20 +92,20 @@ export async function renderShareCard(
     if (name !== nameOf(l)) name += '…';
     ctx.fillText(name, pad, y);
     ctx.textAlign = 'right';
-    ctx.fillStyle = pr ? '#EAB308' : '#B3A9C9';
+    ctx.fillStyle = pr ? '#EAB308' : '#A7B0AB';
     ctx.font = `700 38px ${FONT}`;
     ctx.fillText(`${pr ? '🏆 ' : ''}${workingSets(l.sets).length}× ${best ? `${formatKg(best.weight, 2)}kg×${best.reps}` : ''}`, W - pad, y);
     ctx.textAlign = 'left';
   });
   if (s.logs.length > logs.length) {
-    ctx.fillStyle = '#8D82A6';
+    ctx.fillStyle = '#7D8781';
     ctx.font = `600 30px ${FONT}`;
     ctx.fillText(`+ altri ${s.logs.length - logs.length} esercizi`, pad, 770 + logs.length * 72);
   }
 
   ctx.fillStyle = '#5B5070';
   ctx.font = `600 28px ${FONT}`;
-  ctx.fillText('Allenamento registrato con HowToGym', pad, H - 70);
+  ctx.fillText('Allenamento registrato con Vulcan Lift', pad, H - 70);
 
   return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('Immagine non generata'))), 'image/png'));
 }

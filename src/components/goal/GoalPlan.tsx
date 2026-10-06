@@ -237,7 +237,7 @@ export function GoalCard({ compact }: { compact?: boolean }) {
 
   return (
     <>
-      <Card className="space-y-3 border-accent-500/30 p-4" style={{ background: 'linear-gradient(135deg, rgba(57,255,136,0.10), rgba(21,15,34,0.95))' }}>
+      <Card className="space-y-3 border-accent-500/30 p-4" style={{ background: 'linear-gradient(135deg, rgba(61,220,132,0.10), rgba(13,15,14,0.95))' }}>
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="text-xs font-bold uppercase tracking-wider text-fg-3">

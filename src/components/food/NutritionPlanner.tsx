@@ -533,9 +533,9 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
             </span>
           )}
         </div>
-        <MacroBar label="Calorie" value={totals.kcal} target={(week?.[day] ?? target).target} unit="kcal" color="#39FF88" />
-        <MacroBar label="Proteine" value={totals.protein} target={(week?.[day] ?? target).protein} unit="g" color="#39FF88" />
-        <MacroBar label="Carboidrati" value={totals.carbs} target={(week?.[day] ?? target).carbs} unit="g" color="#C084FC" />
+        <MacroBar label="Calorie" value={totals.kcal} target={(week?.[day] ?? target).target} unit="kcal" color="#3DDC84" />
+        <MacroBar label="Proteine" value={totals.protein} target={(week?.[day] ?? target).protein} unit="g" color="#3DDC84" />
+        <MacroBar label="Carboidrati" value={totals.carbs} target={(week?.[day] ?? target).carbs} unit="g" color="#A7B0AB" />
         <MacroBar label="Grassi" value={totals.fat} target={(week?.[day] ?? target).fat} unit="g" color="#EAB308" />
         <WhyKcal base={target} day={week?.[day]} />
       </Card>

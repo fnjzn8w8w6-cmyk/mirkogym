@@ -368,7 +368,7 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
               <div className="h-2 overflow-hidden rounded-full bg-surface-3">
                 <div
                   className="h-full rounded-full"
-                  style={{ width: `${result.fatigue}%`, backgroundColor: result.fatigue >= 70 ? '#EF4444' : result.fatigue >= 55 ? '#EAB308' : '#39FF88' }}
+                  style={{ width: `${result.fatigue}%`, backgroundColor: result.fatigue >= 70 ? '#EF4444' : result.fatigue >= 55 ? '#EAB308' : '#3DDC84' }}
                 />
               </div>
             </div>
@@ -426,14 +426,14 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
                 <div className="section-title !mb-1">Modifiche consigliate</div>
                 {result.kcalChange !== 0 && (
                   <label className="flex items-center gap-3 text-base text-fg">
-                    <input type="checkbox" className="h-5 w-5 accent-[#39FF88]" checked={applyKcal} onChange={(e) => setApplyKcal(e.target.checked)} />
+                    <input type="checkbox" className="h-5 w-5 accent-[#3DDC84]" checked={applyKcal} onChange={(e) => setApplyKcal(e.target.checked)} />
                     Calorie {result.kcalChange > 0 ? '+' : ''}
                     {result.kcalChange} kcal/giorno{settings.weekPlan ? ' (porzioni del piano ricalcolate)' : ''}
                   </label>
                 )}
                 {result.deload && (
                   <label className="flex items-center gap-3 text-base text-fg">
-                    <input type="checkbox" className="h-5 w-5 accent-[#39FF88]" checked={applyDeload} onChange={(e) => setApplyDeload(e.target.checked)} />
+                    <input type="checkbox" className="h-5 w-5 accent-[#3DDC84]" checked={applyDeload} onChange={(e) => setApplyDeload(e.target.checked)} />
                     Settimana di scarico (carichi −{settings.deloadPercentage}%)
                   </label>
                 )}
@@ -448,7 +448,7 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
                 </div>
                 {proposals.map((pr) => (
                   <label key={pr.id} className={cn('flex cursor-pointer gap-3 rounded-lg border p-3', picked[pr.id] ? 'border-accent-500 bg-accent-glow' : 'border-line-subtle bg-surface-2')}>
-                    <input type="checkbox" className="mt-1 h-5 w-5 shrink-0 accent-[#39FF88]" checked={Boolean(picked[pr.id])} onChange={(e) => setPicked((x) => ({ ...x, [pr.id]: e.target.checked }))} />
+                    <input type="checkbox" className="mt-1 h-5 w-5 shrink-0 accent-[#3DDC84]" checked={Boolean(picked[pr.id])} onChange={(e) => setPicked((x) => ({ ...x, [pr.id]: e.target.checked }))} />
                     <span className="min-w-0">
                       <span className="block text-sm font-semibold text-fg">
                         {pr.emoji} {pr.title}

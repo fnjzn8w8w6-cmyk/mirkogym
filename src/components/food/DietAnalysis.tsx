@@ -19,8 +19,8 @@ type Period = 7 | 30 | 90;
 const WD = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
 const WD_LONG = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
 const MEALS: { key: DiaryMeal; label: string; color: string }[] = [
-  { key: 'colazione', label: 'Colazione', color: '#39FF88' },
-  { key: 'pranzo', label: 'Pranzo', color: '#C084FC' },
+  { key: 'colazione', label: 'Colazione', color: '#3DDC84' },
+  { key: 'pranzo', label: 'Pranzo', color: '#A7B0AB' },
   { key: 'cena', label: 'Cena', color: '#3B82F6' },
   { key: 'spuntini', label: 'Spuntini', color: '#EAB308' },
 ];
@@ -174,8 +174,8 @@ export function DietAnalysis({ profile }: { profile: UserProfile }) {
               <SectionTitle help="diet-analysis-macros">Media giornaliera vs obiettivo</SectionTitle>
             </div>
             <MacroBar label="Calorie" value={mean.kcal} target={Math.round(tMean.kcal)} unit="kcal" color="#FAFAFA" />
-            <MacroBar label="Proteine" value={mean.protein} target={Math.round(tMean.protein)} unit="g" color="#39FF88" />
-            <MacroBar label="Carboidrati" value={mean.carbs} target={Math.round(tMean.carbs)} unit="g" color="#C084FC" />
+            <MacroBar label="Proteine" value={mean.protein} target={Math.round(tMean.protein)} unit="g" color="#3DDC84" />
+            <MacroBar label="Carboidrati" value={mean.carbs} target={Math.round(tMean.carbs)} unit="g" color="#A7B0AB" />
             <MacroBar label="Grassi" value={mean.fat} target={Math.round(tMean.fat)} unit="g" color="#EAB308" />
           </Card>
 

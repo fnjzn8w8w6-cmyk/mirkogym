@@ -23,7 +23,7 @@ export function WeightChart({ data, unit, label, plan }: { data: WeightPoint[]; 
           { label, color: chart.accentSoft },
           { label: unit.trim() === 'kg' ? 'Peso reale' : 'Media 7 giorni', color: chart.accent },
           ...(data.some((d) => d.water) ? [{ label: 'Acqua', color: '#38BDF8' }] : []),
-          ...(plan?.length ? [{ label: 'Percorso obiettivo', color: '#C084FC' }] : []),
+          ...(plan?.length ? [{ label: 'Percorso obiettivo', color: '#A7B0AB' }] : []),
         ]}
       />
       <div className="mt-2 h-48">
@@ -59,7 +59,7 @@ export function WeightChart({ data, unit, label, plan }: { data: WeightPoint[]; 
                     rows={[
                       ...(p.value != null ? [{ label, value: `${formatKg(p.value)}${unit}`, color: chart.accentSoft }] : []),
                       ...(p.trend != null ? [{ label: unit.trim() === 'kg' ? 'Peso reale' : 'Media 7gg', value: `${formatKg(p.trend)}${unit}`, color: chart.accent }] : []),
-                      ...(p.plan != null ? [{ label: 'Obiettivo', value: `${formatKg(p.plan)}${unit}`, color: '#C084FC' }] : []),
+                      ...(p.plan != null ? [{ label: 'Obiettivo', value: `${formatKg(p.plan)}${unit}`, color: '#A7B0AB' }] : []),
                     ]}
                   />
                 );
@@ -89,7 +89,7 @@ export function WeightChart({ data, unit, label, plan }: { data: WeightPoint[]; 
             />
             <Line type="monotone" dataKey="trend" stroke={chart.accent} strokeWidth={2} dot={false} connectNulls isAnimationActive={false} />
             {plan?.length ? (
-              <Line type="linear" dataKey="plan" stroke="#C084FC" strokeWidth={2} strokeDasharray="6 4" dot={{ r: 3, fill: '#C084FC', strokeWidth: 0 }} connectNulls isAnimationActive={false} />
+              <Line type="linear" dataKey="plan" stroke="#A7B0AB" strokeWidth={2} strokeDasharray="6 4" dot={{ r: 3, fill: '#A7B0AB', strokeWidth: 0 }} connectNulls isAnimationActive={false} />
             ) : null}
           </ComposedChart>
         </ResponsiveContainer>

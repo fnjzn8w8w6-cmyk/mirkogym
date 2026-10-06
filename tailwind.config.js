@@ -4,12 +4,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        base: '#0B0714',
-        surface: '#150F22',
-        'surface-2': '#1D1530',
-        'surface-3': '#2A1F3D',
-        onaccent: '#0B0714',
-        violet: { 400: '#C084FC', 500: '#8B5CF6', 600: '#6D28D9' },
+        base: '#000000',
+        surface: '#0D0F0E',
+        'surface-2': '#151816',
+        'surface-3': '#222724',
+        onaccent: '#03140A',
+        violet: { 400: '#C9D1CC', 500: '#7D8A83', 600: '#4B5550' },
         line: {
           subtle: 'var(--border-subtle)',
           DEFAULT: 'var(--border-default)',
@@ -22,12 +22,12 @@ export default {
           disabled: 'var(--text-disabled)',
         },
         accent: {
-          400: '#6BFFA8',
-          500: '#39FF88',
-          600: '#1FD86A',
+          400: '#5FE89C',
+          500: '#3DDC84',
+          600: '#2BB56B',
           glow: 'var(--accent-glow)',
         },
-        success: { DEFAULT: '#39FF88', bg: 'var(--success-bg)' },
+        success: { DEFAULT: '#3DDC84', bg: 'var(--success-bg)' },
         warning: { DEFAULT: '#EAB308', bg: 'var(--warning-bg)' },
         danger: { DEFAULT: '#EF4444', bg: 'var(--danger-bg)' },
         info: { DEFAULT: '#3B82F6', bg: 'var(--info-bg)' },
@@ -58,7 +58,7 @@ export default {
       },
       fontFamily: {
         sans: ['"Inter Variable"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Unbounded', '"Inter Variable"', 'sans-serif'],
+        display: ['"Saira Condensed"', '"Inter Variable"', 'sans-serif'],
       },
       fontSize: {
         xs: ['11px', { lineHeight: '14px', fontWeight: '600' }],

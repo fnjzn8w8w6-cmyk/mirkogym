@@ -27,7 +27,7 @@ export function CoachAnalysis() {
 
   return (
     <div className="space-y-4">
-      <Card className="border-violet-500/40 p-4" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.22), rgba(21,15,34,0.95))' }}>
+      <Card className="border-violet-500/40 p-4" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(13,15,14,0.95))' }}>
         <div className="flex items-center justify-between gap-2">
           <h2 className="font-display text-lg font-extrabold text-fg">
             <SectionTitle help="train-analysis">Analisi del coach</SectionTitle>

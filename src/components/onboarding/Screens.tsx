@@ -19,7 +19,7 @@ export function Splash() {
       <motion.div animate={{ scale: [1, 1.06, 1] }} transition={{ repeat: Infinity, duration: 1.4, ease: 'easeInOut' }}>
         <Logo />
       </motion.div>
-      <div className="text-lg text-fg">HowToGym</div>
+      <div className="font-display text-2xl font-extrabold uppercase text-fg">Vulcan <span className="text-accent-500">Lift</span></div>
       <div className="h-1 w-24 overflow-hidden rounded-full bg-surface-3">
         <motion.div
           className="h-full w-1/2 rounded-full bg-accent-500"

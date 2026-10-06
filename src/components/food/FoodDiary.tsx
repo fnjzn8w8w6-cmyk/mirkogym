@@ -165,8 +165,8 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
             <div className="text-xs uppercase text-fg-3">{left < 0 ? 'Oltre' : 'Restano'}</div>
           </div>
         </div>
-        <MacroBar label="Proteine" value={totals.protein} target={target.protein} unit="g" color="#39FF88" />
-        <MacroBar label="Carboidrati" value={totals.carbs} target={target.carbs} unit="g" color="#C084FC" />
+        <MacroBar label="Proteine" value={totals.protein} target={target.protein} unit="g" color="#3DDC84" />
+        <MacroBar label="Carboidrati" value={totals.carbs} target={target.carbs} unit="g" color="#A7B0AB" />
         <MacroBar label="Grassi" value={totals.fat} target={target.fat} unit="g" color="#EAB308" />
         {dayT && dayT.day.delta !== 0 && (
           <p className="text-xs text-fg-2">
