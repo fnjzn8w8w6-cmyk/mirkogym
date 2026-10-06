@@ -14,11 +14,11 @@ export interface EffortOption {
 export const EFFORT_OPTIONS: EffortOption[] = [
   { rpe: 10, title: 'Massimo', desc: 'Non ne avevi nemmeno una in più' },
   { rpe: 9.5, title: 'Al limite', desc: 'Forse una in più, ma non con più peso' },
-  { rpe: 9, title: 'Molto dura', desc: 'Ne avevi ancora 1' },
-  { rpe: 8.5, title: 'Dura', desc: 'Ne avevi ancora 1 o 2' },
+  { rpe: 9, title: 'Durissima', desc: 'Ne avevi ancora 1' },
+  { rpe: 8.5, title: 'Molto dura', desc: 'Ne avevi ancora 1 o 2' },
   { rpe: 8, title: 'Dura', desc: 'Ne avevi ancora 2' },
   { rpe: 7.5, title: 'Impegnativa', desc: 'Ne avevi ancora 2 o 3' },
-  { rpe: 7, title: 'Impegnativa', desc: 'Ne avevi ancora 3' },
+  { rpe: 7, title: 'Sostenuta', desc: 'Ne avevi ancora 3' },
   { rpe: 6, title: 'Moderata', desc: 'Ne avevi ancora 4 o più, il peso saliva veloce' },
 ];
 
