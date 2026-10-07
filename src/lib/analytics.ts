@@ -235,16 +235,17 @@ export function trendDelta(logs: BodyLog[], field: 'weight' | 'bodyFat' | 'lean'
 
 /* ---------- Colori gruppi muscolari ---------- */
 
+// Un colore ben distinto per gruppo, senza verde (= ok) né rosso (= avviso)
 const GROUP_COLORS: Record<string, string> = {
-  dorso: '#8B5CF6',
-  petto: '#EC4899',
-  gambe: '#14B8A6',
-  spalle: '#F59E0B',
-  bicipiti: '#06B6D4',
-  tricipiti: '#6366F1',
-  braccia: '#06B6D4',
-  core: '#84CC16',
-  addome: '#84CC16',
+  dorso: '#3B82F6',
+  petto: '#D946EF',
+  gambe: '#F97316',
+  spalle: '#FACC15',
+  bicipiti: '#22D3EE',
+  tricipiti: '#8B5CF6',
+  braccia: '#22D3EE',
+  core: '#D6C3A1',
+  addome: '#D6C3A1',
 };
 
 export const groupColor = (group: string): string => GROUP_COLORS[group.trim().toLowerCase()] ?? '#A8A8AD';
