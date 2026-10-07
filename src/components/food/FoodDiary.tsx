@@ -42,6 +42,34 @@ export const entryMacros = (e: DiaryEntry): Macros =>
     ? macrosFor(e.per, e.qty)
     : { kcal: Math.round(e.per.kcal * e.qty), protein: round1(e.per.protein * e.qty), carbs: round1(e.per.carbs * e.qty), fat: round1(e.per.fat * e.qty) };
 
+/** Macro del pasto: grammi di proteine, carboidrati e grassi e quanto pesano sulle calorie del pasto. */
+function MealMacros({ m }: { m: Macros }) {
+  const parts = [
+    { k: 'P', label: 'proteine', short: 'Proteine', g: m.protein, kcal: m.protein * 4, color: '#3DDC84' },
+    { k: 'C', label: 'carboidrati', short: 'Carbo', g: m.carbs, kcal: m.carbs * 4, color: '#A7B0AB' },
+    { k: 'G', label: 'grassi', short: 'Grassi', g: m.fat, kcal: m.fat * 9, color: '#EAB308' },
+  ];
+  const tot = parts.reduce((a, p) => a + p.kcal, 0) || 1;
+  return (
+    <div className="mt-2">
+      <div className="flex h-1.5 overflow-hidden rounded-full bg-surface-3" aria-hidden>
+        {parts.map((p) => (
+          <span key={p.k} style={{ width: `${(p.kcal / tot) * 100}%`, backgroundColor: p.color }} />
+        ))}
+      </div>
+      <div className="mt-1.5 grid grid-cols-3 gap-2 text-sm">
+        {parts.map((p) => (
+          <span key={p.k} className="flex items-center gap-1.5 whitespace-nowrap" aria-label={`${p.label}: ${Math.round(p.g)} grammi`}>
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: p.color }} aria-hidden />
+            <span className="text-fg-3">{p.short}</span>
+            <span className="font-semibold text-fg">{Math.round(p.g)} g</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const uid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 const qtyText = (e: DiaryEntry) =>
   e.unit === 'g'
@@ -211,7 +239,8 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
 
       {MEALS.map((meal) => {
         const list = entries.filter((e) => e.meal === meal.key);
-        const kcal = list.reduce((a, e) => a + entryMacros(e).kcal, 0);
+        const mt = sumMacros(list.map(entryMacros));
+        const kcal = mt.kcal;
         const planned = planMealsFor(planDay, meal.key);
         return (
           <Card key={meal.key} className="p-4">
@@ -221,6 +250,7 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
               </div>
               <span className="text-sm text-fg-3">{kcal} kcal</span>
             </div>
+            {list.length > 0 && <MealMacros m={mt} />}
             {list.length > 0 && (
               <ul className="mt-1 divide-y divide-line-subtle">
                 {list.map((e) => {
