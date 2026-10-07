@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { HUNGER_WORDS, LevelScale } from '@/components/ui/LevelScale';
 import { ClipboardCheck, Sparkles } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { useSessions } from '@/hooks/use-sessions';
@@ -311,10 +312,14 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
             {QUESTIONS.map((q) => (
               <div key={q.key}>
                 <div className="mb-1.5 text-base text-fg">{q.label}</div>
-                <Scale label={q.label} value={answers[q.key]} options={q.scale} onChange={(v) => {
+                {q.key === 'hunger' ? (
+                  <LevelScale label={q.label} value={answers.hunger} words={HUNGER_WORDS} onChange={(v) => setAnswers({ ...answers, hunger: v })} />
+                ) : (
+                  <Scale label={q.label} value={answers[q.key]} options={q.scale} onChange={(v) => {
                     if (q.key === 'adherence') touched.current = true;
                     setAnswers({ ...answers, [q.key]: v });
                   }} />
+                )}
                 {q.key === 'adherence' && diaryAdherence && (
                   <p className="mt-1 text-xs text-fg-3">
                     Precompilato dal diario: {diaryAdherence.ok} giorni su {diaryAdherence.days} in obiettivo (calorie ±10%, proteine). Puoi correggerlo. <NewBadge />

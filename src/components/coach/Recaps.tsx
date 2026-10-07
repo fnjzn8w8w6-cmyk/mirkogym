@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { HUNGER_WORDS, LevelScale } from '@/components/ui/LevelScale';
 import { CheckCircle2, Send } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { TextArea } from '@/components/ui/Input';
@@ -173,7 +174,10 @@ export function DayRecapForm({
           </div>
         </div>
       )}
-      <Scale label="Fame durante il giorno" value={hunger} onChange={setHunger} options={['🙂', '😊', '😐', '😋', '🤤']} />
+      <div>
+        <div className="mb-1.5 text-sm font-semibold text-fg-2">Fame durante il giorno</div>
+        <LevelScale label="Fame durante il giorno" value={hunger} onChange={setHunger} words={HUNGER_WORDS} />
+      </div>
       <div className="relative [&_textarea]:pr-14">
         <TextArea label="Sgarri? (es. pizza, dolce, alcol — facoltativo)" rows={1} value={cheat} onChange={(e) => setCheat(e.target.value)} />
         <MicButton size="sm" className="absolute right-2 top-2" onText={(t) => setCheat(appendText(cheat, t))} />
