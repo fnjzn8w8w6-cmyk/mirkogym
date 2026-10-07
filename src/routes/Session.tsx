@@ -34,7 +34,7 @@ import { ACHIEVEMENTS, computeStats, isUnlocked, levelOf, xpOf } from '@/lib/gam
 import { renderShareCard, shareImage } from '@/lib/share-card';
 import { useBodyLogs } from '@/hooks/use-body-logs';
 import { Share2 } from 'lucide-react';
-import { ExerciseNoteModal, PlateCalculatorModal, SwapExerciseModal } from '@/components/modals/SessionTools';
+import { ExerciseNoteModal, SwapExerciseModal } from '@/components/modals/SessionTools';
 import type { SetType } from '@/types';
 import { detectPR, exerciseKey, formatKg, formatTonnage, isAnyPR, sessionTonnage } from '@/lib/analytics';
 import { formatClock, formatDuration } from '@/lib/date-utils';
@@ -142,7 +142,6 @@ function SessionView({ initial }: { initial: ActiveSession }) {
   const [confirmFinish, setConfirmFinish] = useState<string | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [result, setResult] = useState<SessionT | null>(null);
-  const [plates, setPlates] = useState<{ weight: number | null } | null>(null);
   const [noteFor, setNoteFor] = useState<number | null>(null);
   const [swapFor, setSwapFor] = useState<number | null>(null);
   const [editFor, setEditFor] = useState<number | null>(null);
@@ -490,7 +489,6 @@ function SessionView({ initial }: { initial: ActiveSession }) {
               insertWarmups(i, w);
               toast.info(`${w.length} serie di riscaldamento aggiunte`);
             }}
-            onPlates={(w) => setPlates({ weight: w })}
             onNote={() => setNoteFor(i)}
             onSwap={() => setSwapFor(i)}
             effortScale={effortScale}
@@ -595,8 +593,6 @@ function SessionView({ initial }: { initial: ActiveSession }) {
           window.setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 150);
         }}
       />
-
-      <PlateCalculatorModal open={Boolean(plates)} initial={plates?.weight ?? null} onClose={() => setPlates(null)} />
       <ExerciseNoteModal
         open={noteFor != null}
         name={noteFor != null ? draft.exercises[noteFor]?.name ?? '' : ''}

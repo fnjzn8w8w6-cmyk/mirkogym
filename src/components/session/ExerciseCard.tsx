@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeftRight, Check, ChevronDown, Clock, Disc3, Flame, Gauge, Minus, Plus, SlidersHorizontal, StickyNote, Trash2 } from 'lucide-react';
+import { ArrowLeftRight, Check, ChevronDown, Clock, Flame, Gauge, Minus, Plus, SlidersHorizontal, StickyNote, Trash2 } from 'lucide-react';
 import type { DraftExercise, DraftSet, Exercise, Suggestion } from '@/types';
 import { formatKg, groupColor } from '@/lib/analytics';
 import { isCompound, parseRirNumbers, warmupSets } from '@/lib/progression';
@@ -85,7 +85,6 @@ interface ExerciseCardProps {
   repTargets: string[];
   onCycleType: (setIdx: number) => void;
   onAddWarmups: (sets: { weight: number; reps: number }[]) => void;
-  onPlates: (weight: number | null) => void;
   onNote: () => void;
   onSwap: () => void;
   libraryId?: string;
@@ -114,7 +113,6 @@ export function ExerciseCard({
   repTargets,
   onCycleType,
   onAddWarmups,
-  onPlates,
   onNote,
   onSwap,
   libraryId,
@@ -242,9 +240,6 @@ export function ExerciseCard({
               Riscaldamento
             </ToolBtn>
           )}
-          <ToolBtn icon={<Disc3 className="h-4 w-4" />} onClick={() => onPlates(workWeight)}>
-            Dischi
-          </ToolBtn>
           <ToolBtn icon={<StickyNote className="h-4 w-4" />} onClick={onNote}>
             {exercise.notes ? 'Nota' : 'Aggiungi nota'}
           </ToolBtn>
