@@ -9,12 +9,12 @@ import { Modal } from '../ui/Modal';
 import { Input, TextArea } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { useToast } from '../ui/Toast';
+import { LevelScale } from '../ui/LevelScale';
 import { NewBadge } from '../ui/Help';
 import { BF_SOURCE_IT, bodyFatNow, type BodyFatSource } from '@/lib/bodyfat-estimate';
 import { formatKg } from '@/lib/analytics';
 
-export const ENERGY = ['😴', '😐', '🙂', '😀', '🔥'];
-const ENERGY_LABELS = ['Esausto', 'Scarico', 'Ok', 'Carico', 'Al massimo'];
+export const ENERGY_LABELS = ['Esausto', 'Scarico', 'Normale', 'Carico', 'Al top'];
 
 interface Props {
   open: boolean;
@@ -150,23 +150,7 @@ export function BodyLogModal({ open, onClose, editing }: Props) {
 
         <fieldset>
           <legend className="section-title">Energia</legend>
-          <div className="grid grid-cols-5 gap-2">
-            {ENERGY.map((e, i) => (
-              <button
-                key={e}
-                type="button"
-                aria-pressed={energy === i + 1}
-                aria-label={`Energia ${i + 1}: ${ENERGY_LABELS[i]}`}
-                onClick={() => setEnergy(energy === i + 1 ? undefined : i + 1)}
-                className={cn(
-                  'flex h-14 flex-col items-center justify-center rounded-md border text-2xl transition-colors',
-                  energy === i + 1 ? 'border-accent-500 bg-accent-glow' : 'border-line bg-surface-2',
-                )}
-              >
-                {e}
-              </button>
-            ))}
-          </div>
+          <LevelScale label="Energia" value={energy ?? 0} words={ENERGY_LABELS} onChange={(v) => setEnergy(energy === v ? undefined : v)} />
         </fieldset>
 
         <TextArea label="Note recupero" value={notes} onChange={(e) => setNotes(e.target.value)} />

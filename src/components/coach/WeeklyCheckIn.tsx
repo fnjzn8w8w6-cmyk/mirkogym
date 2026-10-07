@@ -31,11 +31,11 @@ import { loadRecipes, rescalePlan, setCustomMeal, type WeekPlan } from '@/lib/re
 import { DEFAULT_NUTRITION, planPrefs } from '@/components/food/NutritionPlanner';
 
 const QUESTIONS: { key: keyof Omit<CheckInAnswers, 'note'>; label: string; scale: string[] }[] = [
-  { key: 'energy', label: 'Energia durante la settimana', scale: ['😫', '😕', '😐', '🙂', '⚡'] },
-  { key: 'sleep', label: 'Qualità del sonno', scale: ['😵', '🥱', '😐', '😌', '😴'] },
-  { key: 'stress', label: 'Stress (lavoro, studio, vita)', scale: ['😌', '🙂', '😐', '😟', '🤯'] },
-  { key: 'soreness', label: 'Dolori muscolari / articolari', scale: ['💪', '🙂', '😐', '😣', '🤕'] },
-  { key: 'hunger', label: 'Fame durante il giorno', scale: ['🙂', '😊', '😐', '😋', '🤤'] },
+  { key: 'energy', label: 'Energia durante la settimana', scale: ['A terra', 'Bassa', 'Normale', 'Alta', 'Al top'] },
+  { key: 'sleep', label: 'Qualità del sonno', scale: ['Pessima', 'Scarsa', 'Normale', 'Buona', 'Ottima'] },
+  { key: 'stress', label: 'Stress (lavoro, studio, vita)', scale: ['Nessuno', 'Poco', 'Normale', 'Alto', 'Altissimo'] },
+  { key: 'soreness', label: 'Dolori muscolari / articolari', scale: ['Nessuno', 'Lievi', 'Medi', 'Forti', 'Intensi'] },
+  { key: 'hunger', label: 'Fame durante il giorno', scale: HUNGER_WORDS },
   { key: 'adherence', label: 'Quanto hai rispettato calorie e macro?', scale: ['0–20%', '40%', '60%', '80%', '100%'] },
 ];
 const DEFAULT_ANSWERS: CheckInAnswers = { energy: 3, sleep: 3, stress: 3, soreness: 2, hunger: 3, adherence: 4 };
@@ -312,8 +312,8 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
             {QUESTIONS.map((q) => (
               <div key={q.key}>
                 <div className="mb-1.5 text-base text-fg">{q.label}</div>
-                {q.key === 'hunger' ? (
-                  <LevelScale label={q.label} value={answers.hunger} words={HUNGER_WORDS} onChange={(v) => setAnswers({ ...answers, hunger: v })} />
+                {q.key !== 'adherence' ? (
+                  <LevelScale label={q.label} value={answers[q.key]} words={q.scale} onChange={(v) => setAnswers({ ...answers, [q.key]: v })} />
                 ) : (
                   <Scale label={q.label} value={answers[q.key]} options={q.scale} onChange={(v) => {
                     if (q.key === 'adherence') touched.current = true;

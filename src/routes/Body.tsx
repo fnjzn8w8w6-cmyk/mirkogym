@@ -16,7 +16,7 @@ import { TrendLine } from '@/components/ui/Trend';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { WeightChart, type WeightPoint } from '@/components/charts/WeightChart';
-import { BodyLogModal, ENERGY } from '@/components/modals/BodyLogModal';
+import { BodyLogModal, ENERGY_LABELS } from '@/components/modals/BodyLogModal';
 import { formatKg, movingAverage7d, trendDelta } from '@/lib/analytics';
 import { formatRelativeDay, fromISODate, toISODate } from '@/lib/date-utils';
 import { cn } from '@/lib/cn';
@@ -261,7 +261,7 @@ export default function Body() {
 
 function EnergyDots({ value }: { value: number }) {
   return (
-    <span className="flex items-center gap-0.5" aria-label={`Energia ${value} su 5`} title={ENERGY[value - 1]}>
+    <span className="flex items-center gap-0.5" aria-label={`Energia: ${ENERGY_LABELS[value - 1] ?? value}`} title={ENERGY_LABELS[value - 1]}>
       {[1, 2, 3, 4, 5].map((i) => (
         <span key={i} className={`h-2 w-2 rounded-full ${i <= value ? 'bg-accent-500' : 'bg-surface-3'}`} />
       ))}

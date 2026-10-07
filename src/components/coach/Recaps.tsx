@@ -8,29 +8,6 @@ import { cn } from '@/lib/cn';
 import { NewBadge } from '@/components/ui/Help';
 import type { DayRecap, WorkoutRecap } from '@/types';
 
-function Scale({ label, value, onChange, options }: { label: string; value: number; onChange: (v: number) => void; options: string[] }) {
-  return (
-    <div>
-      <div className="mb-1.5 text-sm font-semibold text-fg-2">{label}</div>
-      <div role="radiogroup" aria-label={label} className="grid grid-cols-5 gap-1.5">
-        {options.map((o, i) => (
-          <button
-            key={o}
-            type="button"
-            role="radio"
-            aria-checked={value === i + 1}
-            aria-label={`${label}: ${i + 1} su 5`}
-            onClick={() => onChange(i + 1)}
-            className={cn('h-11 rounded-md border text-xl', value === i + 1 ? 'border-accent-500 bg-accent-glow' : 'border-line bg-surface-2')}
-          >
-            {o}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function NoteField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div className="relative [&_textarea]:pr-14">
@@ -60,8 +37,14 @@ export function WorkoutRecapForm({ initial, onSend }: { initial?: WorkoutRecap; 
   return (
     <div className="space-y-3 rounded-lg border border-line bg-surface-2/60 p-3 text-left">
       <div className="text-base font-bold text-fg">Com'è andata? Dillo al coach</div>
-      <Scale label="Allenamento" value={rating} onChange={setRating} options={['😖', '😕', '😐', '🙂', '🔥']} />
-      <Scale label="Energia" value={energy} onChange={setEnergy} options={['🪫', '😮‍💨', '😐', '💪', '⚡']} />
+      <div>
+        <div className="mb-1.5 text-sm font-semibold text-fg-2">Allenamento</div>
+        <LevelScale label="Allenamento" value={rating} onChange={setRating} words={['Pessimo', 'Scarso', 'Normale', 'Buono', 'Ottimo']} />
+      </div>
+      <div>
+        <div className="mb-1.5 text-sm font-semibold text-fg-2">Energia</div>
+        <LevelScale label="Energia" value={energy} onChange={setEnergy} words={['A terra', 'Bassa', 'Normale', 'Alta', 'Al top']} />
+      </div>
       <div>
         <div className="mb-1.5 text-sm font-semibold text-fg-2">Dolori o fastidi</div>
         <div className="flex flex-wrap gap-1.5">
