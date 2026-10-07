@@ -25,6 +25,8 @@ export interface Food {
   barcode?: string;
   image?: string;
   category?: string;
+  /** controllo dei valori: 'fixed' = corretti in automatico (es. kJ scritti come kcal), 'suspect' = da verificare con l'etichetta */
+  check?: 'fixed' | 'suspect';
 }
 
 interface BaseFoodRow {
@@ -120,7 +122,7 @@ export const sumMacros = (list: Macros[]): Macros =>
 /* ---------- Open Food Facts ---------- */
 
 const OFF = 'https://world.openfoodfacts.org';
-const OFF_FIELDS = 'code,product_name,product_name_it,generic_name_it,brands,nutriments,serving_quantity,serving_size,quantity,image_front_small_url';
+const OFF_FIELDS = 'code,product_name,product_name_it,generic_name_it,brands,nutriments,serving_quantity,serving_size,quantity,product_quantity,image_front_small_url';
 
 interface OffProduct {
   code?: string;
@@ -130,6 +132,7 @@ interface OffProduct {
   brands?: string;
   serving_quantity?: number | string;
   serving_size?: string;
+  product_quantity?: number | string;
   image_front_small_url?: string;
   nutriments?: Record<string, number | string | undefined>;
 }
@@ -139,29 +142,82 @@ const n = (v: unknown): number | null => {
   return Number.isFinite(x) ? x : null;
 };
 
+/**
+ * Controllo delle kcal di Open Food Facts (database compilato dagli utenti): devono tornare con i macro
+ * (4 kcal/g proteine e carboidrati, 9 grassi, 2 fibre, 7 alcol). Corregge i kJ scritti come kcal,
+ * usa il valore calcolato quando manca o è impossibile, segnala i casi dubbi.
+ */
+export function checkKcal(m: { kcal: number | null; kj: number | null; protein: number; carbs: number; fat: number; fiber?: number | null; alcohol?: number | null }): { kcal: number; check?: 'fixed' | 'suspect' } {
+  const est = 4 * m.protein + 4 * m.carbs + 9 * m.fat + 2 * (m.fiber ?? 0) + 7 * (m.alcohol ?? 0);
+  const near = (v: number) => Math.abs(v - est) <= Math.max(25, est * 0.2);
+  const macrosOk = m.protein + m.carbs + m.fat <= 105 && est <= 920;
+  const candidates: number[] = [];
+  if (m.kcal != null && m.kcal > 0) candidates.push(m.kcal);
+  if (m.kj != null && m.kj > 0) candidates.push(m.kj / 4.184);
+  // 1) un valore dichiarato coerente con i macro
+  const good = candidates.find(near);
+  if (good != null) return { kcal: good };
+  // 2) kJ scritti nel campo kcal (circa 4 volte di più)
+  if (m.kcal != null && near(m.kcal / 4.184)) return { kcal: m.kcal / 4.184, check: 'fixed' };
+  if (!macrosOk) return { kcal: m.kcal ?? (m.kj != null ? m.kj / 4.184 : est), check: 'suspect' };
+  // 3) kcal mancanti o impossibili: si usano quelle calcolate dai macro
+  if (!candidates.length || candidates.every((v) => v > 920)) return { kcal: est, check: 'fixed' };
+  return { kcal: candidates[0], check: 'suspect' };
+}
+
+/** Porzione di un prodotto: "1 panino (55 g)" → pezzo da 55 g; "3 biscotti (30 g)" → pezzo da 10 g; la confezione intera non è un pezzo. */
+export function servingInfo(servingSize: string | undefined, servingGrams: number | null, packGrams: number | null): { unitGrams?: number; unitLabel?: string } {
+  if (!servingGrams || servingGrams <= 0 || servingGrams >= 2000) return {};
+  const label = servingSize?.trim() ?? '';
+  const m = label.match(/^\s*(\d+(?:[.,]\d+)?)\s+([a-zA-Zàèéìòù]+)/);
+  const unitWord = m && !/^(g|gr|grammi|ml|cl|l|kg|porzion|serving|portion)/i.test(m[2]);
+  const count = unitWord ? Number(m![1].replace(',', '.')) : 1;
+  if (unitWord && count > 0) {
+    const per = Math.round((servingGrams / count) * 10) / 10;
+    return { unitGrams: per, unitLabel: count === 1 ? label.replace(/\s*\(.*$/, '') : `1 ${m![2].replace(/i$/, 'o').replace(/e$/, 'a')}` };
+  }
+  // porzione generica: se coincide con la confezione la si chiama così
+  if (packGrams && servingGrams >= packGrams * 0.9) return { unitGrams: servingGrams, unitLabel: 'confezione' };
+  return { unitGrams: servingGrams, unitLabel: 'porzione' };
+}
+
 /** Converte un prodotto Open Food Facts; null se mancano i valori nutrizionali. */
 export function fromOff(p: OffProduct): Food | null {
   const nu = p.nutriments ?? {};
-  const kj = n(nu['energy_100g']);
-  const kcal = n(nu['energy-kcal_100g']) ?? (kj != null ? kj / 4.184 : null);
   const protein = n(nu['proteins_100g']);
   const carbs = n(nu['carbohydrates_100g']);
   const fat = n(nu['fat_100g']);
-  if (kcal == null || protein == null || carbs == null || fat == null) return null;
+  if (protein == null || carbs == null || fat == null) return null;
+  const c = checkKcal({
+    kcal: n(nu['energy-kcal_100g']),
+    kj: n(nu['energy-kj_100g']) ?? n(nu['energy_100g']),
+    protein,
+    carbs,
+    fat,
+    fiber: n(nu['fiber_100g']),
+    alcohol: n(nu['alcohol_100g']),
+  });
   const name = (p.product_name_it || p.product_name || p.generic_name_it || '').trim();
   if (!name) return null;
-  const serving = n(p.serving_quantity);
+  const sv = servingInfo(p.serving_size, n(p.serving_quantity), n(p.product_quantity));
   return {
     id: `off:${p.code}`,
     name,
     brand: p.brands?.split(',')[0]?.trim() || undefined,
-    per100: { kcal: Math.round(kcal), protein: round1(protein), carbs: round1(carbs), fat: round1(fat) },
-    unitGrams: serving && serving > 0 && serving < 2000 ? serving : undefined,
-    unitLabel: serving ? `porzione (${p.serving_size ?? `${serving} g`})` : undefined,
+    per100: { kcal: Math.round(c.kcal), protein: round1(protein), carbs: round1(carbs), fat: round1(fat) },
+    ...sv,
     source: 'off',
     barcode: p.code,
     image: p.image_front_small_url,
+    check: c.check,
   };
+}
+
+/** Ricontrolla un prodotto salvato prima di questa versione (le kcal sbagliate restavano memorizzate). */
+export function recheckFood(f: Food): Food {
+  if (f.source !== 'off') return f;
+  const c = checkKcal({ kcal: f.per100.kcal, kj: null, protein: f.per100.protein, carbs: f.per100.carbs, fat: f.per100.fat });
+  return c.check ? { ...f, per100: { ...f.per100, kcal: Math.round(c.kcal) }, check: c.check } : f;
 }
 
 async function offFetch(url: string, ms = 12000): Promise<unknown> {

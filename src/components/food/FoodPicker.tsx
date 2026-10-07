@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/Input';
 import { useToast } from '@/components/ui/Toast';
 import { useMyFoods } from '@/hooks/use-food';
 import { cn } from '@/lib/cn';
-import { FOOD_CATEGORY, loadBaseFoods, lookupBarcode, macrosFor, round1, searchLocal, searchOff, type Food } from '@/lib/foods';
+import { FOOD_CATEGORY, loadBaseFoods, lookupBarcode, macrosFor, recheckFood, round1, searchLocal, searchOff, type Food } from '@/lib/foods';
+import { AlertTriangle, Check as CheckIcon } from 'lucide-react';
 import type { Recipe } from '@/lib/recipes';
 import { BarcodeScanner } from './BarcodeScanner';
 import { Segmented } from '@/components/ui/Input';
@@ -228,10 +229,10 @@ export function FoodPicker({ open, onClose, title = 'Aggiungi alimento', recipes
           <>
             {back}
             <AmountStep
-              food={step.food}
-              onConfirm={(grams, pieces) => {
-                void remember(step.food);
-                onPickFood(step.food, grams, pieces);
+              food={recheckFood(step.food)}
+              onConfirm={(grams, pieces, food) => {
+                void remember(food);
+                onPickFood(food, grams, pieces);
               }}
             />
           </>
@@ -263,18 +264,43 @@ export function FoodPicker({ open, onClose, title = 'Aggiungi alimento', recipes
 
 /* ---------- Quantità ---------- */
 
-function AmountStep({ food, onConfirm }: { food: Food; onConfirm: (grams: number, pieces?: { n: number; grams: number }) => void }) {
-  const unit = pieceGrams(food.name, food.unitGrams);
-  const [mode, setMode] = useState<'pz' | 'g'>(() => (unit ? (rememberedMode(food.id) ?? (isCountable(food.name) ? 'pz' : 'g')) : 'g'));
-  const [grams, setGrams] = useState(String(unit ?? 100));
+function AmountStep({ food: original, onConfirm }: { food: Food; onConfirm: (grams: number, pieces: { n: number; grams: number } | undefined, food: Food) => void }) {
+  // valori modificabili quando il database ha dati dubbi (o se vuoi correggerli dall'etichetta)
+  const [edit, setEdit] = useState(original.check === 'suspect');
+  const [vals, setVals] = useState(() => ({
+    kcal: String(original.per100.kcal),
+    protein: String(original.per100.protein).replace('.', ','),
+    carbs: String(original.per100.carbs).replace('.', ','),
+    fat: String(original.per100.fat).replace('.', ','),
+  }));
+  const num = (v: string) => Number(v.replace(',', '.'));
+  const edited = edit && Object.entries(vals).some(([k, v]) => num(v) !== original.per100[k as keyof Food['per100']]);
+  const food: Food = edited
+    ? {
+        ...original,
+        per100: { kcal: Math.round(num(vals.kcal)) || 0, protein: round1(num(vals.protein) || 0), carbs: round1(num(vals.carbs) || 0), fat: round1(num(vals.fat) || 0) },
+        source: 'custom',
+        check: undefined,
+      }
+    : original;
+  // prodotti confezionati: il "pezzo" è quello dell'etichetta (1 panino, 1 biscotto), mai stimato dal nome
+  const packaged = original.source !== 'base';
+  const unit = packaged ? original.unitGrams : pieceGrams(original.name, original.unitGrams);
+  const realPiece = !packaged || (original.unitLabel != null && !/^(porzione|confezione)/.test(original.unitLabel));
+  const pieceText = packaged && original.unitLabel ? `${original.unitLabel.charAt(0).toUpperCase()}${original.unitLabel.slice(1)} = ${fmtNum(unit ?? 0)} g` : `Pezzi (1 = ${fmtNum(unit ?? 0)} g)`;
+  const [mode, setMode] = useState<'pz' | 'g'>(() =>
+    unit ? (rememberedMode(original.id) ?? (realPiece && (packaged || isCountable(original.name)) ? 'pz' : 'g')) : 'g',
+  );
+  // la confezione intera non è una quantità tipica: si parte da 100 g
+  const [grams, setGrams] = useState(String(unit && original.unitLabel !== 'confezione' ? unit : 100));
   const [pieces, setPieces] = useState(1);
   const g = mode === 'pz' && unit ? Math.round(pieces * unit * 10) / 10 : Number(grams.replace(',', '.'));
-  const valid = Number.isFinite(g) && g > 0 && g <= 5000;
+  const valid = Number.isFinite(g) && g > 0 && g <= 5000 && (!edit || [vals.protein, vals.carbs, vals.fat, vals.kcal].every((v) => v !== '' && Number.isFinite(num(v)) && num(v) >= 0));
   const m = macrosFor(food.per100, valid ? g : 0);
   const presets = [...new Set([50, 100, 150, 200])];
   const switchMode = (v: 'pz' | 'g') => {
     setMode(v);
-    rememberMode(food.id, v);
+    rememberMode(original.id, v);
   };
   return (
     <div className="space-y-4">
@@ -286,15 +312,48 @@ function AmountStep({ food, onConfirm }: { food: Food; onConfirm: (grams: number
           <div className="text-xs text-fg-3">
             Per 100 g: {food.per100.kcal} kcal · P {fmtNum(food.per100.protein)} · C {fmtNum(food.per100.carbs)} · G {fmtNum(food.per100.fat)}
           </div>
+          {packaged && !edit && (
+            <button type="button" onClick={() => setEdit(true)} className="mt-0.5 text-xs font-semibold text-accent-400">
+              Correggi i valori
+            </button>
+          )}
         </div>
       </div>
+      {original.check === 'fixed' && !edit && (
+        <p className="flex gap-2 rounded-md border border-line bg-surface-2 p-2.5 text-xs text-fg-2">
+          <CheckIcon className="h-4 w-4 shrink-0 text-accent-400" aria-hidden />
+          Le kcal nel database erano sbagliate (kJ al posto di kcal o mancanti): le abbiamo ricalcolate da proteine, carboidrati e grassi.
+        </p>
+      )}
+      {edit && (
+        <div className="space-y-2 rounded-md border border-warning/30 bg-warning-bg p-3">
+          <p className="flex gap-2 text-sm text-fg-2">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-warning" aria-hidden />
+            {original.check === 'suspect'
+              ? 'I valori di questo prodotto non tornano: controlla l\'etichetta (per 100 g). La correzione resta salvata per le prossime volte.'
+              : 'Correggi i valori per 100 g copiandoli dall\'etichetta: resta salvato per le prossime volte.'}
+          </p>
+          <div className="grid grid-cols-4 gap-2">
+            {(
+              [
+                ['kcal', 'Kcal'],
+                ['protein', 'Prot.'],
+                ['carbs', 'Carbo'],
+                ['fat', 'Grassi'],
+              ] as const
+            ).map(([k, l]) => (
+              <Input key={k} label={l} kind="decimal" value={vals[k]} onChange={(e) => setVals({ ...vals, [k]: e.target.value })} />
+            ))}
+          </div>
+        </div>
+      )}
       {unit && (
         <Segmented<'pz' | 'g'>
           label="Unità"
           value={mode}
           onChange={switchMode}
           options={[
-            { value: 'pz', label: `Pezzi (1 = ${fmtNum(unit)} g)` },
+            { value: 'pz', label: pieceText },
             { value: 'g', label: 'Grammi' },
           ]}
         />
@@ -369,7 +428,7 @@ function AmountStep({ food, onConfirm }: { food: Food; onConfirm: (grams: number
           </div>
         ))}
       </div>
-      <Button fullWidth size="lg" disabled={!valid} onClick={() => onConfirm(Math.round(g * 10) / 10, mode === 'pz' && unit ? { n: pieces, grams: unit } : undefined)}>
+      <Button fullWidth size="lg" disabled={!valid} onClick={() => onConfirm(Math.round(g * 10) / 10, mode === 'pz' && unit ? { n: pieces, grams: unit } : undefined, food)}>
         Aggiungi
       </Button>
       {food.source === 'off' && <p className="text-xs text-fg-3">Valori dall'etichetta del prodotto (Open Food Facts).</p>}
