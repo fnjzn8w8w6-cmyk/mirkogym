@@ -1,0 +1,29 @@
+OK   OUTPUT/MONTACARICHI/MONTACARICHI_studio_preliminare.pdf: 1 pag., 420x297 mm, 2077 oggetti vettoriali
+OK   OUTPUT/REPORT_comparativo.pdf: 7 pag., 210x297 mm, 29 oggetti vettoriali
+OK   OUTPUT/SOLUZIONE_A/A_PT_planimetria.pdf: 1 pag., 420x297 mm, 736 oggetti vettoriali
+OK   OUTPUT/SOLUZIONE_A/A_S1_planimetria.pdf: 1 pag., 420x297 mm, 553 oggetti vettoriali
+OK   OUTPUT/SOLUZIONE_B/B_PT_planimetria.pdf: 1 pag., 420x297 mm, 741 oggetti vettoriali
+OK   OUTPUT/SOLUZIONE_B/B_S1_planimetria.pdf: 1 pag., 420x297 mm, 575 oggetti vettoriali
+OK   OUTPUT/SOLUZIONE_C/C_PT_planimetria.pdf: 1 pag., 420x297 mm, 754 oggetti vettoriali
+OK   OUTPUT/SOLUZIONE_C/C_S1_planimetria.pdf: 1 pag., 420x297 mm, 586 oggetti vettoriali
+OK   OUTPUT/MONTACARICHI/MONTACARICHI_studio_preliminare.svg: SVG valido
+OK   OUTPUT/SOLUZIONE_A/A_PT_planimetria.svg: SVG valido
+OK   OUTPUT/SOLUZIONE_A/A_S1_planimetria.svg: SVG valido
+OK   OUTPUT/SOLUZIONE_B/B_PT_planimetria.svg: SVG valido
+OK   OUTPUT/SOLUZIONE_B/B_S1_planimetria.svg: SVG valido
+OK   OUTPUT/SOLUZIONE_C/C_PT_planimetria.svg: SVG valido
+OK   OUTPUT/SOLUZIONE_C/C_S1_planimetria.svg: SVG valido
+OK   OUTPUT/SOLUZIONE_A/A_PT_planimetria.dxf: audit errori=0, muri originali 633/633 identici, moduli tavolo 13, sedie 23
+OK   OUTPUT/SOLUZIONE_A/A_S1_planimetria.dxf: audit errori=0, muri originali 382/382 identici, moduli tavolo 13, sedie 22
+OK   OUTPUT/SOLUZIONE_B/B_PT_planimetria.dxf: audit errori=0, muri originali 633/633 identici, moduli tavolo 12, sedie 28
+OK   OUTPUT/SOLUZIONE_B/B_S1_planimetria.dxf: audit errori=0, muri originali 382/382 identici, moduli tavolo 17, sedie 32
+OK   OUTPUT/SOLUZIONE_C/C_PT_planimetria.dxf: audit errori=0, muri originali 633/633 identici, moduli tavolo 13, sedie 32
+OK   OUTPUT/SOLUZIONE_C/C_S1_planimetria.dxf: audit errori=0, muri originali 382/382 identici, moduli tavolo 20, sedie 36
+OK   soluzione A terra: elementi fuori area di disegno = 0
+OK   soluzione A int: elementi fuori area di disegno = 0
+OK   soluzione B terra: elementi fuori area di disegno = 0
+OK   soluzione B int: elementi fuori area di disegno = 0
+OK   soluzione C terra: elementi fuori area di disegno = 0
+OK   soluzione C int: elementi fuori area di disegno = 0
+
+ESITO COMPLESSIVO: TUTTI I CONTROLLI SUPERATI

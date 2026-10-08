@@ -1,0 +1,18 @@
+B | PT - sala nord               | v1 | OPTIMAL  | coperti  20 | gruppi  3 |  74.4s | bound 19.8
+B | PT - sala sud (ingresso)     | v1 | OPTIMAL  | coperti   8 | gruppi  2 |   0.8s | bound 7.9
+B | S1 - sala interrata          | v1 | OPTIMAL  | coperti  16 | gruppi  4 |  32.8s | bound 15.8
+B | S1 - ex area bar             | v1 | OPTIMAL  | coperti  10 | gruppi  2 |   3.6s | bound 9.9
+B | S1 - ex area bar             | v2 | OPTIMAL  | coperti   8 | gruppi  3 |   2.0s | bound 7.9
+== B: PT 28  S1 26  TOT 54
+C | PT - sala nord               | v1 | FEASIBLE+seed | coperti  23 | gruppi  3 | 181.4s | bound 103.1
+C | PT - sala sud (ingresso)     | v1 | OPTIMAL  | coperti   9 | gruppi  2 |   1.7s | bound 8.9
+C | S1 - sala interrata          | v1 | FEASIBLE | coperti  20 | gruppi  4 | 181.3s | bound 105.4
+C | S1 - ex area bar             | v1 | OPTIMAL  | coperti  11 | gruppi  2 |  14.4s | bound 10.9
+C | S1 - ex area bar             | v2 | OPTIMAL  | coperti   9 | gruppi  3 |   2.4s | bound 8.9
+== C: PT 32  S1 31  TOT 63
+A | PT - sala nord               | v1 | OPTIMAL  | coperti  16 | gruppi  4 |   7.1s | bound 15.8
+A | PT - sala sud (ingresso)     | v1 | OPTIMAL  | coperti   6 | gruppi  2 |   0.7s | bound 5.9
+A | S1 - sala interrata          | v1 | OPTIMAL  | coperti  14 | gruppi  4 |   4.6s | bound 13.8
+A | S1 - ex area bar             | v1 | OPTIMAL  | coperti   6 | gruppi  1 |   2.0s | bound 5.9
+A | S1 - ex area bar             | v2 | OPTIMAL  | coperti   6 | gruppi  2 |   1.8s | bound 5.9
+== A: PT 22  S1 20  TOT 42

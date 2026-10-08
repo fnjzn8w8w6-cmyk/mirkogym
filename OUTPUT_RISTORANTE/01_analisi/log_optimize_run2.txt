@@ -1,0 +1,6 @@
+C | PT - sala nord               | v1 | FEASIBLE | coperti  24 | gruppi  3 | 150.1s | bound 107.7
+C | PT - sala sud (ingresso)     | v1 | OPTIMAL  | coperti   9 | gruppi  2 |   0.9s | bound 8.9
+C | S1 - sala interrata          | v1 | OPTIMAL  | coperti  20 | gruppi  4 | 138.0s | bound 19.8
+C | S1 - ex area bar             | v1 | OPTIMAL  | coperti  11 | gruppi  2 |   7.9s | bound 10.9
+C | S1 - ex area bar             | v2 | OPTIMAL  | coperti  11 | gruppi  2 |   1.1s | bound 10.9
+== C: PT 33  S1 31  TOT 64

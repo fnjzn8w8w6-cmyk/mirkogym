@@ -1,0 +1,2 @@
+B {'progetto': 56, 'senza montacarichi': 64, 'corridoi principali 100 cm': 56, 'corridoi principali 90 cm (sotto il criterio indicato)': 63, 'montacarichi compatto 80x80 con appoggio ribaltabile': 60}
+C {'progetto': 64, 'senza montacarichi': 72, 'corridoi principali 100 cm': 64, 'corridoi principali 90 cm (sotto il criterio indicato)': 69, 'montacarichi compatto 80x80 con appoggio ribaltabile': 68}

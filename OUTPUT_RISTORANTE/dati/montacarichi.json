@@ -1,0 +1,72 @@
+{
+ "vano": [
+  2075.0,
+  120.0,
+  2155.0,
+  200.0
+ ],
+ "L": 80,
+ "P": 80,
+ "alternativa": [
+  2075.0,
+  395.0,
+  2165.0,
+  485.0
+ ],
+ "interferenze": {
+  "terra": [
+   [
+    37,
+    "rimosso/modificato"
+   ]
+  ],
+  "int": []
+ },
+ "superficie_vano_m2": 0.64,
+ "candidate_scartate": [
+  {
+   "nome": "X1",
+   "rett": [
+    1900,
+    309,
+    1990,
+    392
+   ],
+   "dove": "cucina, nicchia lato est tra banco e isola",
+   "motivo": "al S1 cade nel corridoio di servizio (117 cm) verso WC personale/spogliatoio: lo ostruirebbe"
+  },
+  {
+   "nome": "X2",
+   "rett": [
+    1800,
+    -15,
+    1890,
+    75
+   ],
+   "dove": "corridoio di servizio a nord della cucina (lavaggio -> sala)",
+   "motivo": "al S1 cade nel locale immondizia: incompatibile per igiene e funzione"
+  },
+  {
+   "nome": "X3",
+   "rett": [
+    1771,
+    160,
+    1856,
+    316
+   ],
+   "dove": "cucina, zona armadio/frigo esistente",
+   "motivo": "al S1 cade tra locale immondizia e corridoio di servizio"
+  },
+  {
+   "nome": "X4",
+   "rett": [
+    1900,
+    560,
+    1985,
+    648
+   ],
+   "dove": "cucina, angolo SE (banco sud)",
+   "motivo": "al S1 cade su armadietti spogliatoio e massa muraria di fondazione"
+  }
+ ]
+}

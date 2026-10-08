@@ -1,0 +1,16 @@
+{
+ "B": {
+  "PROGETTO: vano MC 80x80 + mensola ribaltabile": 60,
+  "vano MC 90x90 + piano di appoggio fisso 100x50": 56,
+  "senza montacarichi (solo riferimento)": 64,
+  "vano 90x90, corridoi principali 100 cm": 56,
+  "vano 90x90, corridoi principali 90 cm (sotto il criterio 100-120)": 63
+ },
+ "C": {
+  "PROGETTO: vano MC 80x80 + mensola ribaltabile": 68,
+  "vano MC 90x90 + piano di appoggio fisso 100x50": 64,
+  "senza montacarichi (solo riferimento)": 72,
+  "vano 90x90, corridoi principali 100 cm": 64,
+  "vano 90x90, corridoi principali 90 cm (sotto il criterio 100-120)": 69
+ }
+}

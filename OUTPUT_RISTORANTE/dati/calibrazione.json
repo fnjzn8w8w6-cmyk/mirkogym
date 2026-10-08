@@ -1,0 +1,67 @@
+{
+ "mm_per_raster_px": 25.4,
+ "terra": {
+  "s_px_per_pt": 1.5866418402792113,
+  "theta_deg": -0.05846460088040162,
+  "t": [
+   78.95907926628081,
+   286.35219644268864
+  ],
+  "mm_per_pt": 40.30592720387906,
+  "frac_within_2px": 0.426,
+  "frac_within_4px": 0.589,
+  "median_dist_mm": 62.8
+ },
+ "int": {
+  "s_px_per_pt": 1.4209428362232979,
+  "theta_deg": -0.0020804001433081054,
+  "t": [
+   533.2666462311886,
+   1297.5631943838366
+  ],
+  "chamfer": 10.132281875049879,
+  "mm_per_pt": 38.27070605108194,
+  "frac_within_2px": 0.3394875659382065,
+  "frac_within_4px": 0.43971363978899775,
+  "median_dist_mm": 139.97214689288,
+  "mm_per_pt_catastale": 36.096626890673136,
+  "nota": "registrazione sulla catastale poco discriminante (bacino 36-38.6 mm/pt); adottata la scala da elementi comuni al PT"
+ },
+ "int_su_terra": {
+  "metodo": "similitudine su punti omologhi (muri perimetrali + scala)",
+  "scale_cm_per_pt": 3.8270706051081937,
+  "mm_per_pt": 38.27070605108194,
+  "rot_deg": 0.08833356216019576,
+  "R": [
+   [
+    0.9999988115630617,
+    -0.001541710888968107
+   ],
+   [
+    0.0015417108889681447,
+    0.9999988115630614
+   ]
+  ],
+  "t": [
+   93.06460192174472,
+   31.630489152013183
+  ],
+  "rms_cm": 2.039662553618141,
+  "residui_cm": [
+   0.9762621049347414,
+   2.428175397915593,
+   0.7279520799307552,
+   1.6549681704083505,
+   1.74697467875338,
+   3.433869847747953
+  ],
+  "coppie": [
+   "spigolo NE esterno facciata",
+   "estremo S facciata esterna",
+   "cambio direzione muro nord",
+   "scala: angolo SW (muro ovest/sud)",
+   "scala: fine rampa 2 (lato est)",
+   "scala: inizio rampa 1 (lato nord)"
+  ]
+ }
+}

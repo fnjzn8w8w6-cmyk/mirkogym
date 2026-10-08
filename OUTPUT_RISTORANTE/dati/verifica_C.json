@@ -1,0 +1,162 @@
+{
+ "solution": "C",
+ "rooms": {
+  "PT - sala nord": {
+   "floor": "terra",
+   "variante": "v1",
+   "solver": "FEASIBLE",
+   "coperti": 23,
+   "gruppi": 4,
+   "moduli": 10,
+   "passaggio_min_tra_gruppi_cm": 40,
+   "tavoli": [
+    {
+     "T": 1,
+     "moduli": "3x1",
+     "dim_cm": "240x80",
+     "coperti": 8,
+     "lati_seduta": "NSEW",
+     "x": 2305,
+     "y": 15,
+     "esito": "OK"
+    },
+    {
+     "T": 2,
+     "moduli": "5x1",
+     "dim_cm": "400x80",
+     "coperti": 10,
+     "lati_seduta": "NS",
+     "x": 2200,
+     "y": 260,
+     "esito": "OK"
+    },
+    {
+     "T": 3,
+     "moduli": "1x1",
+     "dim_cm": "80x80",
+     "coperti": 3,
+     "lati_seduta": "EWS",
+     "x": 2245,
+     "y": 430,
+     "esito": "OK"
+    },
+    {
+     "T": 4,
+     "moduli": "1x1",
+     "dim_cm": "80x80",
+     "coperti": 2,
+     "lati_seduta": "EW",
+     "x": 2465,
+     "y": 430,
+     "esito": "OK"
+    }
+   ],
+   "area_zona_m2": 34.4
+  },
+  "PT - sala sud (ingresso)": {
+   "floor": "terra",
+   "variante": "v1",
+   "solver": "OPTIMAL",
+   "coperti": 9,
+   "gruppi": 2,
+   "moduli": 3,
+   "passaggio_min_tra_gruppi_cm": 40,
+   "tavoli": [
+    {
+     "T": 5,
+     "moduli": "2x1",
+     "dim_cm": "160x80",
+     "coperti": 6,
+     "lati_seduta": "NSEW",
+     "x": 2335,
+     "y": 680,
+     "esito": "OK"
+    },
+    {
+     "T": 6,
+     "moduli": "1x1",
+     "dim_cm": "80x80",
+     "coperti": 3,
+     "lati_seduta": "EWS",
+     "x": 2335,
+     "y": 850,
+     "esito": "OK"
+    }
+   ],
+   "area_zona_m2": 19.7
+  },
+  "S1 - sala interrata": {
+   "floor": "int",
+   "variante": "v1",
+   "solver": "FEASIBLE",
+   "coperti": 24,
+   "gruppi": 2,
+   "moduli": 12,
+   "passaggio_min_tra_gruppi_cm": 40,
+   "tavoli": [
+    {
+     "T": 7,
+     "moduli": "1x6",
+     "dim_cm": "80x480",
+     "coperti": 12,
+     "lati_seduta": "EW",
+     "x": 2225,
+     "y": -35,
+     "esito": "OK"
+    },
+    {
+     "T": 8,
+     "moduli": "1x6",
+     "dim_cm": "80x480",
+     "coperti": 12,
+     "lati_seduta": "EW",
+     "x": 2445,
+     "y": -35,
+     "esito": "OK"
+    }
+   ],
+   "area_zona_m2": 33.2
+  },
+  "S1 - ex area bar": {
+   "floor": "int",
+   "variante": "v1",
+   "solver": "OPTIMAL+seed",
+   "coperti": 12,
+   "gruppi": 2,
+   "moduli": 8,
+   "passaggio_min_tra_gruppi_cm": 35,
+   "tavoli": [
+    {
+     "T": 9,
+     "moduli": "4x1",
+     "dim_cm": "320x80",
+     "coperti": 4,
+     "lati_seduta": "S",
+     "x": 2189,
+     "y": 825,
+     "esito": "OK"
+    },
+    {
+     "T": 10,
+     "moduli": "4x1",
+     "dim_cm": "320x80",
+     "coperti": 8,
+     "lati_seduta": "NS",
+     "x": 2169,
+     "y": 1040,
+     "esito": "OK"
+    }
+   ],
+   "area_zona_m2": 19.7
+  }
+ },
+ "blocking": [],
+ "warnings": [],
+ "montacarichi_interferenze_terra": [],
+ "montacarichi_interferenze_int": [],
+ "coperti_PT": 32,
+ "coperti_S1": 36,
+ "coperti_tot": 68,
+ "moduli_tot": 33,
+ "esito": "VERIFICATO (geometria nominale)"
+}

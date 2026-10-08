@@ -1,0 +1,9 @@
+B | PT - sala nord               | v1 | FEASIBLE | coperti  20 | gruppi  3 | 182.4s | bound 79.4
+B | PT - sala sud (ingresso)     | v1 | OPTIMAL  | coperti   8 | gruppi  1 |   2.0s | bound 7.9
+   riparazione 1: gruppi irraggiungibili [0, 1]
+B | S1 - sala interrata          | v1 | OPTIMAL+rip1 | coperti  12 | gruppi  3 | 202.2s | bound 11.9
+   riparazione 1: gruppi irraggiungibili [1]
+   riparazione 2: gruppi irraggiungibili [1]
+B | S1 - ex area bar             | v1 | OPTIMAL+rip2 | coperti   8 | gruppi  1 |  18.3s | bound 7.9
+B | S1 - ex area bar             | v2 | OPTIMAL  | coperti  12 | gruppi  2 |   4.5s | bound 11.9
+== B: PT 28  S1 24  TOT 52
