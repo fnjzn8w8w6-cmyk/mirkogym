@@ -27,9 +27,12 @@ import os
 MC_POS = os.environ.get('MC_POS', 'M1')
 _C = os.environ.get('MC_COMPACT', '1') == '1'   # DEFAULT: vano compatto 80x80, mensola ribaltabile sulla porta (MC_COMPACT=0 -> 90x90 + piano fisso)
 _M = {'M1': Montacarichi(L=80 if _C else 90, P=80 if _C else 90, x0=k(2075), y0=k(120)),
-      'M2': Montacarichi(x0=k(2075), y0=k(395))}
+      'M2': Montacarichi(x0=k(2075), y0=k(395)),
+      # 'F' = posizione della versione finale concordata col cliente: vicino al varco tra le sale del PT,
+      #       al S1 subito a sud del varco personale; carico/scarico dal lato est
+      'F': Montacarichi(L=80, P=80, x0=k(2075), y0=k(385))}
 MC = _M[MC_POS]
-MC_ALT = _M['M2' if MC_POS == 'M1' else 'M1']
+MC_ALT = _M['M1' if MC_POS == 'F' else ('M2' if MC_POS == 'M1' else 'M1')]
 
 # ------------------------------------------------------------------ arredi esistenti da rimuovere
 # PT: tavoli, sedie e panche delle sale (path 172-294) + mobile di servizio 37-39 (accorciato, v. sotto)
@@ -47,7 +50,8 @@ FIXED = {
                                               (2400, 1318), (2058, 1318)]),
         'cassa': kp([(2016, 774), (2103, 774), (2103, 1023), (2016, 1023)]),
         'banco cassa': kp([(2140, 794), (2185, 794), (2185, 998), (2140, 998)]),
-        'S1 postazione di servizio': kp([(2057, 260), (2092, 260), (2092, 476), (2057, 476)]) if MC_POS == 'M1'
+        'S1 postazione di servizio': kp([(2057, 260), (2092, 260), (2092, 375), (2057, 375)]) if MC_POS == 'F' else
+                                     kp([(2057, 260), (2092, 260), (2092, 476), (2057, 476)]) if MC_POS == 'M1'
                                      else kp([(2057, 168), (2092, 168), (2092, 385), (2057, 385)]),
     },
     'int': {
@@ -63,10 +67,12 @@ FIXED = {
 _ap = (MC.x0 + MC.L, MC.y0 + 40, MC.x0 + MC.L + 100, MC.y0 + 90)   # appoggio bevande 100x50 (progetto)
 MENSOLA = None
 if _C:   # mensola ribaltabile 80x40 sulla porta di sbarco: ingombro solo quando aperta, nessun ingombro fisso
-    MENSOLA = (MC.x0, MC.y0 + MC.P, MC.x0 + MC.L, MC.y0 + MC.P + 40)
+    MENSOLA = ((MC.x0 + MC.L, MC.y0, MC.x0 + MC.L + 40, MC.y0 + MC.P) if MC_POS == 'F'
+               else (MC.x0, MC.y0 + MC.P, MC.x0 + MC.L, MC.y0 + MC.P + 40))
     _ap = (MC.x0, MC.y0 + MC.P, MC.x0 + MC.L, MC.y0 + MC.P + 1)
 NEW_SERVICE = {
     'terra': {'S1 postazione di servizio (mobile esistente accorciato)':
+              (k(2057), k(260), k(2092), k(375)) if MC_POS == 'F' else
               (k(2057), k(260), k(2092), k(476)) if MC_POS == 'M1' else (k(2057), k(168), k(2092), k(385))},
     'int': ({'S2 mensola ribaltabile 80x40 (aperta)': MENSOLA} if _C else {'S2 piano appoggio bevande 100x50': _ap}),
 }

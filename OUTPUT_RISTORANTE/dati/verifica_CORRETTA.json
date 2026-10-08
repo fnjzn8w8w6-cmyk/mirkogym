@@ -1,0 +1,315 @@
+{
+ "versione": "corretta",
+ "piani": {
+  "terra": {
+   "tavoli": 18,
+   "coperti": 36,
+   "tavoli_dettaglio": [
+    {
+     "T": "T1",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 2.9
+    },
+    {
+     "T": "T2",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 4.3
+    },
+    {
+     "T": "T3",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 5.7
+    },
+    {
+     "T": "T4",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 7.1
+    },
+    {
+     "T": "T5",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 8.4
+    },
+    {
+     "T": "T6",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 185.9
+    },
+    {
+     "T": "T7",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 207.0
+    },
+    {
+     "T": "T8",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 117.7
+    },
+    {
+     "T": "T9",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 28.6
+    },
+    {
+     "T": "T10",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 1.5
+    },
+    {
+     "T": "T11",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 1.3
+    },
+    {
+     "T": "T12",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 1.2
+    },
+    {
+     "T": "T13",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 1.0
+    },
+    {
+     "T": "T14",
+     "sala": "PT - sala dell'ingresso",
+     "dist_min_da_muri_cm": 2.1
+    },
+    {
+     "T": "T15",
+     "sala": "PT - sala dell'ingresso",
+     "dist_min_da_muri_cm": 2.6
+    },
+    {
+     "T": "T16",
+     "sala": "PT - sala dell'ingresso",
+     "dist_min_da_muri_cm": 3.2
+    },
+    {
+     "T": "T17",
+     "sala": "PT - sala dell'ingresso",
+     "dist_min_da_muri_cm": 3.2
+    },
+    {
+     "T": "T18",
+     "sala": "PT - sala dell'ingresso",
+     "dist_min_da_muri_cm": 15.6
+    }
+   ],
+   "distanza_tra_tavoli_stessa_fila_cm": [
+    5.0,
+    10.0
+   ],
+   "passaggio_minimo_tra_schienali_cm": {
+    "valore": 28.0,
+    "tra": "T1-T6"
+   },
+   "percorsi": {
+    "porta cucina -> varco sala ingresso (camerieri)": {
+     "larghezza_utile_cm": 102,
+     "richiesta_cm": 90,
+     "esito": "OK"
+    },
+    "porta cucina -> carico montacarichi": {
+     "larghezza_utile_cm": 113,
+     "richiesta_cm": 80,
+     "esito": "OK"
+    },
+    "ingresso -> varco sala cucina (clienti)": {
+     "larghezza_utile_cm": 110,
+     "richiesta_cm": 90,
+     "esito": "OK"
+    },
+    "ingresso -> scala per interrato": {
+     "larghezza_utile_cm": 99,
+     "richiesta_cm": 90,
+     "esito": "OK"
+    },
+    "ingresso -> porta disimpegno WC": {
+     "larghezza_utile_cm": 110,
+     "richiesta_cm": 90,
+     "esito": "OK"
+    }
+   },
+   "accesso_sedie_cm": {
+    "minimo": 5,
+    "tavolo": "T11",
+    "sotto_40cm": [
+     "T11",
+     "T12",
+     "T13",
+     "T15",
+     "T16",
+     "T18",
+     "T2",
+     "T3",
+     "T4",
+     "T5",
+     "T7",
+     "T8",
+     "T9"
+    ]
+   }
+  },
+  "int": {
+   "tavoli": 17,
+   "coperti": 34,
+   "tavoli_dettaglio": [
+    {
+     "T": "T101",
+     "sala": "S1 - sala interrata",
+     "dist_min_da_muri_cm": 2.1
+    },
+    {
+     "T": "T102",
+     "sala": "S1 - sala interrata",
+     "dist_min_da_muri_cm": 2.7
+    },
+    {
+     "T": "T103",
+     "sala": "S1 - sala interrata",
+     "dist_min_da_muri_cm": 3.3
+    },
+    {
+     "T": "T104",
+     "sala": "S1 - sala interrata",
+     "dist_min_da_muri_cm": 3.9
+    },
+    {
+     "T": "T105",
+     "sala": "S1 - sala interrata",
+     "dist_min_da_muri_cm": 4.5
+    },
+    {
+     "T": "T106",
+     "sala": "S1 - sala interrata",
+     "dist_min_da_muri_cm": 101.8
+    },
+    {
+     "T": "T107",
+     "sala": "S1 - sala interrata",
+     "dist_min_da_muri_cm": 95.9
+    },
+    {
+     "T": "T108",
+     "sala": "S1 - sala interrata",
+     "dist_min_da_muri_cm": 11.7
+    },
+    {
+     "T": "T109",
+     "sala": "S1 - sala interrata",
+     "dist_min_da_muri_cm": 8.4
+    },
+    {
+     "T": "T110",
+     "sala": "S1 - ex area bar",
+     "dist_min_da_muri_cm": 3.3
+    },
+    {
+     "T": "T111",
+     "sala": "S1 - ex area bar",
+     "dist_min_da_muri_cm": 2.6
+    },
+    {
+     "T": "T112",
+     "sala": "S1 - ex area bar",
+     "dist_min_da_muri_cm": 1.9
+    },
+    {
+     "T": "T113",
+     "sala": "S1 - ex area bar",
+     "dist_min_da_muri_cm": 1.2
+    },
+    {
+     "T": "T114",
+     "sala": "S1 - ex area bar",
+     "dist_min_da_muri_cm": 1.8
+    },
+    {
+     "T": "T115",
+     "sala": "S1 - ex area bar",
+     "dist_min_da_muri_cm": 8.8
+    },
+    {
+     "T": "T116",
+     "sala": "S1 - ex area bar",
+     "dist_min_da_muri_cm": 4.2
+    },
+    {
+     "T": "T117",
+     "sala": "S1 - ex area bar",
+     "dist_min_da_muri_cm": 7.7
+    }
+   ],
+   "distanza_tra_tavoli_stessa_fila_cm": [
+    5.0,
+    10.0
+   ],
+   "passaggio_minimo_tra_schienali_cm": {
+    "valore": 45.0,
+    "tra": "T101-T109"
+   },
+   "percorsi": {
+    "piede scala -> varco verso sala (clienti)": {
+     "larghezza_utile_cm": 73,
+     "richiesta_cm": 90,
+     "esito": "INSUFFICIENTE"
+    },
+    "varco -> sala interrata (clienti)": {
+     "larghezza_utile_cm": 102,
+     "richiesta_cm": 90,
+     "esito": "OK"
+    },
+    "varco -> scarico montacarichi (personale)": {
+     "larghezza_utile_cm": 102,
+     "richiesta_cm": 80,
+     "esito": "OK"
+    },
+    "scarico MC -> varco WC personale/spogliatoio": {
+     "larghezza_utile_cm": 139,
+     "richiesta_cm": 80,
+     "esito": "OK"
+    }
+   },
+   "accesso_sedie_cm": {
+    "minimo": 5,
+    "tavolo": "T114",
+    "sotto_40cm": [
+     "T101",
+     "T102",
+     "T103",
+     "T104",
+     "T109",
+     "T110",
+     "T111",
+     "T112",
+     "T114",
+     "T115",
+     "T116",
+     "T117"
+    ]
+   }
+  }
+ },
+ "problemi": [
+  "terra: sedia di T11 raggiungibile solo con 5 cm",
+  "int: percorso \"piede scala -> varco verso sala (clienti)\" largo 73 cm < 90 cm",
+  "int: sedia di T114 raggiungibile solo con 5 cm"
+ ],
+ "avvisi": [],
+ "montacarichi": {
+  "vano_cm": [
+   2075.0,
+   385.0,
+   2155.0,
+   465.0
+  ],
+  "stessa_impronta_PT_S1": true,
+  "linee_attraversate_PT": [],
+  "linee_attraversate_S1": [],
+  "dentro_pavimento_PT": true,
+  "dentro_pavimento_S1": true
+ },
+ "coperti_totali": 70,
+ "esito": "3 PROBLEMI"
+}

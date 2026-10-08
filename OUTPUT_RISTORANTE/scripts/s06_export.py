@@ -97,7 +97,16 @@ def draw_plan(ax, floor, L, show_keep=True, fs_t=5.2):
     text(ax, ((x0+x1)/2, (y0+y1)/2), 'MC', ha='center', va='center', fontsize=5.5,
          color='#702459', fontweight='bold', zorder=8, bbox=dict(fc='white', ec='none', alpha=0.7, pad=0.3))
     # porta di sbarco/carico (lato)
-    if floor == 'terra':
+    import progetto as _pg
+    if _pg.MC_POS == 'F':   # versione finale: porte di carico (PT) e scarico (S1) sul lato est
+        P = T([(x1+4, y0+10), (x1+4, y1-10)])
+        if floor == 'int':
+            for kname, r in NEW_SERVICE['int'].items():
+                poly(ax, rect_pts(*r), fc='#fbd5e6', ec=COL['mc'], lw=0.6, ls='--', zorder=7)
+        poly(ax, rect_pts(x1, y0, x1+90, y1), fc='none', ec=COL['mc'], lw=0.5, ls=':', zorder=7)
+        text(ax, (x1+55, (y0+y1)/2), 'carico' if floor == 'terra' else 'scarico\n+mensola', ha='center', va='center',
+             fontsize=4, color=COL['mc'], zorder=8)
+    elif floor == 'terra':
         P = T([(x0+10, y0-4), (x1-10, y0-4)])
         poly(ax, rect_pts(x0, y0-90, x1, y0), fc='none', ec=COL['mc'], lw=0.5, ls=':', zorder=7)
         text(ax, ((x0+x1)/2, y0-45), 'carico', ha='center', va='center', fontsize=4, color=COL['mc'], zorder=8)
