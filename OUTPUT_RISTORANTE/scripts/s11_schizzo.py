@@ -28,7 +28,7 @@ PT = {'Sala davanti alla cucina (14 tavoli)': nord_1 + nord_2 + nord_3,
       "Sala dell'ingresso (5 tavoli)": ingr_3 + ingr_2}
 # ---------------- INTERRATO
 s_nord = row(2170, 7, 5, 10)            # fila contro muro nord
-s_fac = col(2470, 200, 3, 10)           # colonna lungo facciata (schienale verso facciata)
+s_fac = row(2353, 290, 3, 5)            # fila orizzontale verso la facciata (come le altre)
 s_ovest = col(2125, 390, 2, 8)          # colonna lungo parete ovest, a sud del varco personale
 b_nord = row(2180, 769, 3, 10)          # ex bar: fila contro il setto (schienale al setto)
 b_sud = row(2165, 1050, 4, 5)           # ex bar: fila verso la scala
@@ -63,8 +63,9 @@ sheet('terra', PT, [
     ((2450, 804), (2450, 827), '23'),                       # fila setto -> tavolo facciata
 ], 'PIANO TERRA - tutti tavoli da 2 leggermente distanziati (5-10 cm)', 'schizzo_PT.png', (1950, -80, 2720, 1340))
 sheet('int', S1, [
-    ((2300, 137), (2300, 200), '63'),
-    ((2255, 450), (2420, 450), '165 passaggio centrale'),
+    ((2450, 137), (2450, 240), '103'),
+    ((2255, 330), (2353, 330), '98'),
+    ((2450, 420), (2450, 558), '138'),
     ((2300, 899), (2300, 1000), '101'),
     ((2440, 760), (2541, 760), '~100'),
 ], "PIANO INTERRATO - tavoli spinti verso le pareti, passaggio al centro", 'schizzo_S1.png', (1950, -80, 2720, 1340))
