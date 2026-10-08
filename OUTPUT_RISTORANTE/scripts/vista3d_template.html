@@ -1,0 +1,389 @@
+<title>Dvca Rovello 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: scena 3D a tutto schermo; pannelli sovrapposti agli angoli come strumenti di un rilievo */
+:root {
+  --bg: #e9e6e1;          /* fondo neutro caldo, come intonaco */
+  --panel: rgba(250, 248, 245, 0.92);
+  --fg: #23201c;
+  --muted: #6d665d;
+  --line: #cfc8bd;
+  --accent: #b5532f;      /* cotto milanese, per selezioni e posizione */
+  --mc: #c2417f;
+  --chip: #f1ede7;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1d1b19; --panel: rgba(34, 31, 28, 0.92); --fg: #efe9e1; --muted: #a79e92; --line: #4a443d;
+  --accent: #e07a52; --mc: #e46aa6; --chip: #2c2824; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #1d1b19; --panel: rgba(34, 31, 28, 0.92); --fg: #efe9e1; --muted: #a79e92; --line: #4a443d;
+  --accent: #e07a52; --mc: #e46aa6; --chip: #2c2824; color-scheme: dark }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-display); overflow: hidden; }
+#scena { position: fixed; inset: 0; touch-action: none; cursor: grab; }
+#scena:active { cursor: grabbing; }
+.pannello { position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+#testa { top: calc(12px + env(safe-area-inset-top, 0px)); left: 16px; right: 16px; max-width: 520px;
+  padding: 10px 14px; display: grid; gap: 4px; }
+#testa h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: 0.01em; text-wrap: balance; }
+#testa .riga { display: flex; flex-wrap: wrap; gap: 6px 14px; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); }
+#piano { color: var(--accent); font-weight: 500; }
+#punti { left: 16px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); padding: 10px; max-width: min(560px, calc(100% - 32px));
+  display: grid; gap: 8px; }
+#punti .gruppo { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+#punti .etichetta { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); min-width: 92px; }
+button { font: 500 12.5px var(--font-display); color: var(--fg); background: var(--chip); border: 1px solid var(--line);
+  border-radius: 4px; padding: 6px 9px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+#mappa { right: 16px; top: calc(12px + env(safe-area-inset-top, 0px)); padding: 6px; display: grid; gap: 4px; }
+#mappa canvas { display: block; width: 190px; height: 230px; cursor: crosshair; }
+#mappa .didascalia { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); text-align: center; }
+#opzioni { right: 16px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; max-width: 220px; }
+#aiuto { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 14px 18px; max-width: 320px;
+  font-size: 13.5px; line-height: 1.45; text-align: center; pointer-events: none; transition: opacity .6s; }
+#mirino { position: fixed; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px; border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,.9); box-shadow: 0 0 0 1px rgba(0,0,0,.35); pointer-events: none; }
+#passi { position: fixed; right: 16px; display: none; flex-direction: column; gap: 6px;
+  bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
+#passi button { width: 46px; height: 46px; font-size: 18px; padding: 0; background: var(--panel); }
+@media (max-width: 760px) {
+  #mappa canvas { width: 112px; height: 136px; }
+  #mappa .didascalia { display: none; }
+  #testa { right: 148px; padding: 8px 10px; }
+  #testa h1 { font-size: 14.5px; }
+  #punti .etichetta { min-width: 0; width: 100%; }
+  #punti { max-height: 38vh; overflow-y: auto; }
+  #opzioni { display: none; }
+  #passi { display: flex; }
+}
+@media (prefers-reduced-motion: reduce) { #aiuto { transition: none; } }
+</style>
+
+<canvas id="scena" aria-label="Vista 3D navigabile del ristorante"></canvas>
+<div id="mirino"></div>
+
+<header id="testa" class="pannello">
+  <h1>Dvca Rovello · Via Rovello 18, Milano</h1>
+  <div class="riga"><span id="piano">Piano terra</span><span>70 coperti · 35 tavoli 80×80 da 2</span><span>Studio preliminare</span></div>
+</header>
+
+<nav id="punti" class="pannello" aria-label="Punti di vista">
+  <div class="gruppo" id="pt"><span class="etichetta">Piano terra</span></div>
+  <div class="gruppo" id="s1"><span class="etichetta">Interrato</span></div>
+</nav>
+
+<aside id="mappa" class="pannello">
+  <canvas id="mini" width="380" height="460" aria-label="Pianta: tocca per spostarti"></canvas>
+  <div class="didascalia">Pianta · tocca per spostarti</div>
+</aside>
+
+<div id="opzioni" class="pannello">
+  <button id="tSoffitto" aria-pressed="true">Soffitti</button>
+  <button id="tNumeri" aria-pressed="true">Numeri tavoli</button>
+  <button id="tAlto">Vista dall'alto</button>
+</div>
+
+<div id="passi"><button id="avanti" aria-label="Avanti">▲</button><button id="indietro" aria-label="Indietro">▼</button></div>
+
+<div id="aiuto" class="pannello">Trascina per guardarti intorno.<br>Tocca il pavimento per spostarti, come su Street View.<br>Da tastiera: frecce o W A S D.</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const DATA = /*__DATA__*/null;
+const EYE = 1.6;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+const canvas = document.getElementById('scena');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xdcd6cd);
+const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 200);
+
+scene.add(new THREE.HemisphereLight(0xfffaf2, 0x8a7f72, 0.85));
+const sole = new THREE.DirectionalLight(0xffffff, 0.35); sole.position.set(30, 20, -10); scene.add(sole);
+
+const MAT = {
+  muro: new THREE.MeshLambertMaterial({ color: 0xf2eee8, side: THREE.DoubleSide }),
+  basso: new THREE.MeshLambertMaterial({ color: 0xb9b4ad, side: THREE.DoubleSide }),
+  banco: new THREE.MeshLambertMaterial({ color: 0x8c6a4f, side: THREE.DoubleSide }),
+  tavolo: new THREE.MeshLambertMaterial({ color: 0xa88462, side: THREE.DoubleSide }),
+  parapetto: new THREE.MeshLambertMaterial({ color: 0x6f6a63, side: THREE.DoubleSide }),
+  mensola: new THREE.MeshLambertMaterial({ color: 0x9aa3a8, side: THREE.DoubleSide }),
+  pavPT: new THREE.MeshLambertMaterial({ color: 0xb08a63, side: THREE.DoubleSide }),
+  pavS1: new THREE.MeshLambertMaterial({ color: 0xa9a49c, side: THREE.DoubleSide }),
+  soffitto: new THREE.MeshLambertMaterial({ color: 0xf4f1ec, emissive: 0x6e6a64, side: THREE.DoubleSide }),
+  piano: new THREE.MeshLambertMaterial({ color: 0xc89e70 }),
+  gamba: new THREE.MeshLambertMaterial({ color: 0x3b3631 }),
+  sedia: new THREE.MeshLambertMaterial({ color: 0x2f2b27 }),
+  gradino: new THREE.MeshLambertMaterial({ color: 0xc7beb2 }),
+  servizio: new THREE.MeshLambertMaterial({ color: 0x8e979c }),
+  mc: new THREE.MeshLambertMaterial({ color: 0xc2417f, transparent: true, opacity: 0.45, side: THREE.DoubleSide }),
+};
+const HCLS = { basso: 0.9, banco: 1.1, tavolo: 0.75, parapetto: 1.0, mensola: 1.9 };
+
+const pickables = [];
+const ceilings = [];
+const labels = [];
+
+function wallMesh(segs, z0, h, mat) {
+  const pos = [];
+  for (const [x1, y1, x2, y2] of segs) {
+    pos.push(x1, z0, y1, x2, z0, y2, x2, z0 + h, y2,  x1, z0, y1, x2, z0 + h, y2, x1, z0 + h, y1);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  return new THREE.Mesh(g, mat);
+}
+function lines(segs, y, color) {
+  const pos = [];
+  for (const [x1, y1, x2, y2] of segs) pos.push(x1, y, y1, x2, y, y2);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  return new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color }));
+}
+function polyMesh(rings, y, mat) {
+  const grp = new THREE.Group();
+  for (const r of rings) {
+    const s = new THREE.Shape(r.outer.map(p => new THREE.Vector2(p[0], p[1])));
+    for (const h of r.holes) s.holes.push(new THREE.Path(h.map(p => new THREE.Vector2(p[0], p[1]))));
+    const m = new THREE.Mesh(new THREE.ShapeGeometry(s), mat);
+    m.rotation.x = Math.PI / 2; m.position.y = y;
+    grp.add(m);
+  }
+  return grp;
+}
+function boxMesh(x0, y0, x1, y1, zb, zt, mat) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(Math.max(x1 - x0, 0.01), Math.max(zt - zb, 0.01), Math.max(y1 - y0, 0.01)), mat);
+  m.position.set((x0 + x1) / 2, (zb + zt) / 2, (y0 + y1) / 2);
+  return m;
+}
+function textSprite(txt, color, size) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 96;
+  const x = c.getContext('2d');
+  x.font = '600 52px Archivo, Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillStyle = 'rgba(255,255,255,0.88)'; const w = Math.min(250, x.measureText(txt).width + 34);
+  x.beginPath(); x.roundRect ? x.roundRect(128 - w / 2, 14, w, 68, 12) : x.rect(128 - w / 2, 14, w, 68); x.fill();
+  x.fillStyle = color; x.fillText(txt, 128, 50);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, transparent: true }));
+  sp.scale.set(size * 2.67, size, 1);
+  return sp;
+}
+
+// --------------------------------------------------------------- costruzione scena
+for (const [key, fl] of Object.entries(DATA.floors)) {
+  const floorKey = key === 'PT' ? 'terra' : 'int';
+  const z0 = DATA.z0[floorKey], H = DATA.h[floorKey];
+  for (const [cls, segs] of Object.entries(fl.walls)) {
+    if (!segs.length) continue;
+    if (cls === 'arco') { scene.add(lines(segs, z0 + 0.005, 0x8a8178)); continue; }
+    const h = cls === 'muro' ? H : HCLS[cls];
+    scene.add(wallMesh(segs, z0, h, MAT[cls] || MAT.muro));
+    scene.add(lines(segs, z0 + 0.003, 0x5f5850));
+  }
+  const pav = polyMesh(fl.floor, z0, key === 'PT' ? MAT.pavPT : MAT.pavS1);
+  pav.traverse(o => { if (o.isMesh) { o.userData.floor = key; pickables.push(o); } });
+  scene.add(pav);
+  const ceil = polyMesh(fl.ceil, z0 + H, MAT.soffitto);
+  ceilings.push(ceil); scene.add(ceil);
+  for (const [x0, y0, x1, y1] of fl.tables) {
+    scene.add(boxMesh(x0, y0, x1, y1, z0 + 0.72, z0 + 0.75, MAT.piano));
+    for (const [px, py] of [[x0 + 0.05, y0 + 0.05], [x1 - 0.05, y0 + 0.05], [x0 + 0.05, y1 - 0.05], [x1 - 0.05, y1 - 0.05]])
+      scene.add(boxMesh(px - 0.02, py - 0.02, px + 0.02, py + 0.02, z0, z0 + 0.72, MAT.gamba));
+  }
+  for (const [x0, y0, x1, y1, s] of fl.chairs) {
+    scene.add(boxMesh(x0, y0, x1, y1, z0 + 0.43, z0 + 0.47, MAT.sedia));
+    const b = { N: [x0, y0, x1, y0 + 0.04], S: [x0, y1 - 0.04, x1, y1], W: [x0, y0, x0 + 0.04, y1], E: [x1 - 0.04, y0, x1, y1] }[s];
+    scene.add(boxMesh(b[0], b[1], b[2], b[3], z0 + 0.47, z0 + 0.9, MAT.sedia));
+    for (const [px, py] of [[x0 + 0.04, y0 + 0.04], [x1 - 0.04, y0 + 0.04], [x0 + 0.04, y1 - 0.04], [x1 - 0.04, y1 - 0.04]])
+      scene.add(boxMesh(px - 0.012, py - 0.012, px + 0.012, py + 0.012, z0, z0 + 0.43, MAT.sedia));
+  }
+  for (const [t, x, y] of fl.labels) {
+    const sp = textSprite(t, '#23201c', 0.22); sp.position.set(x, z0 + 1.15, y); sp.userData.floor = key; labels.push(sp); scene.add(sp);
+  }
+  for (const [x0, y0, x1, y1] of fl.service) scene.add(boxMesh(x0, y0, x1, y1, z0, z0 + 0.9, MAT.servizio));
+  if (fl.bar.length) scene.add(lines(fl.bar, z0 + 0.01, 0xd9822b));
+  for (const [x, y, zz] of [[22.5, 3, z0 + H - 0.1], [22.5, 7, z0 + H - 0.1], [24, 10, z0 + H - 0.1], [23.5, 0.5, z0 + H - 0.1]]) {
+    const l = new THREE.PointLight(0xfff1dc, 0.35, 9); l.position.set(x, zz, y); scene.add(l);
+  }
+}
+// scala
+for (const [x0, y0, x1, y1, top] of DATA.stairs) {
+  const st = boxMesh(x0, y0, x1, y1, -3.1, top, MAT.gradino);
+  st.userData.floor = top < -1.55 ? 'S1' : 'PT'; pickables.push(st); scene.add(st);
+}
+// montacarichi
+{
+  const [x0, y0, x1, y1] = DATA.mc;
+  scene.add(boxMesh(x0, y0, x1, y1, DATA.z0.int, DATA.z0.terra + DATA.h.terra, MAT.mc));
+  for (const z of [DATA.z0.int, DATA.z0.terra]) {
+    const sp = textSprite('Montacarichi', '#a3205f', 0.2); sp.position.set((x0 + x1) / 2, z + 2.05, (y0 + y1) / 2);
+    sp.userData.floor = z < -1 ? 'S1' : 'PT'; sp.userData.mc = true; labels.push(sp); scene.add(sp);
+  }
+}
+
+// --------------------------------------------------------------- navigazione
+const VIEWS = [
+  { f: 'PT', n: 'Ingresso', p: [24.8, 10.65], yaw: Math.PI },
+  { f: 'PT', n: 'Sala davanti alla cucina', p: [21.55, 5.15], yaw: -1.05 },
+  { f: 'PT', n: 'Dalla porta della cucina', p: [20.85, 0.55], yaw: 0.22 },
+  { f: 'PT', n: "Sala dell'ingresso", p: [22.5, 6.9], yaw: 0.95 },
+  { f: 'PT', n: 'Montacarichi (carico)', p: [22.75, 4.25], yaw: Math.PI },
+  { f: 'PT', n: 'Inizio scala', p: [24.6, 12.45], yaw: Math.PI },
+  { f: 'S1', n: 'Piede della scala', p: [21.1, 9.35], yaw: 0 },
+  { f: 'S1', n: 'Ex area bar', p: [24.7, 9.4], yaw: Math.PI },
+  { f: 'S1', n: 'Varco verso la sala', p: [25.15, 6.6], yaw: -2.1 },
+  { f: 'S1', n: 'Sala interrata', p: [24.3, 5.0], yaw: -2.35 },
+  { f: 'S1', n: 'Montacarichi (scarico)', p: [22.75, 4.25], yaw: Math.PI },
+];
+const pos = new THREE.Vector3(), tgt = new THREE.Vector3();
+let yaw = 0, pitch = -0.08, tween = null, alto = false;
+
+function floorY(f) { return (f === 'PT' ? DATA.z0.terra : DATA.z0.int) + EYE; }
+function goTo(v, animate = true) {
+  const to = new THREE.Vector3(v.p[0], floorY(v.f), v.p[1]);
+  setAlto(false);
+  if (animate) tween = { from: pos.clone(), to, t0: performance.now(), yawFrom: yaw, yawTo: v.yaw ?? yaw, d: 700 };
+  else { pos.copy(to); if (v.yaw !== undefined) yaw = v.yaw; }
+  marcaAttivo(v);
+}
+function marcaAttivo(v) {
+  document.querySelectorAll('#punti button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.n === (v && v.n))));
+}
+for (const v of VIEWS) {
+  const b = document.createElement('button'); b.textContent = v.n; b.dataset.n = v.n; b.id = 'v-' + VIEWS.indexOf(v);
+  b.addEventListener('click', () => goTo(v));
+  document.getElementById(v.f === 'PT' ? 'pt' : 's1').appendChild(b);
+}
+
+const ray = new THREE.Raycaster();
+let down = null;
+canvas.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY, t: performance.now(), lx: e.clientX, ly: e.clientY }; canvas.setPointerCapture(e.pointerId); nascondiAiuto(); });
+canvas.addEventListener('pointermove', e => {
+  if (!down) return;
+  const dx = e.clientX - down.lx, dy = e.clientY - down.ly; down.lx = e.clientX; down.ly = e.clientY;
+  if (alto) return;
+  yaw += dx * 0.0055; pitch = Math.max(-1.35, Math.min(1.25, pitch - dy * 0.0055));
+});
+canvas.addEventListener('pointerup', e => {
+  if (!down) return;
+  const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
+  if (moved < 7 && performance.now() - down.t < 450) {
+    const r = canvas.getBoundingClientRect();
+    ray.setFromCamera({ x: ((e.clientX - r.left) / r.width) * 2 - 1, y: -((e.clientY - r.top) / r.height) * 2 + 1 }, camera);
+    const first = ray.intersectObjects(scene.children, true).find(h => h.object.isMesh && h.object.material !== MAT.mc);
+    const hit = first && pickables.includes(first.object) &&
+      (first.object.geometry.type === 'ShapeGeometry' || (first.face && first.face.normal.y > 0.5)) ? first : null;
+    if (hit) {
+      const to = new THREE.Vector3(hit.point.x, hit.point.y + EYE, hit.point.z);
+      setAlto(false);
+      tween = { from: pos.clone(), to, t0: performance.now(), yawFrom: yaw, yawTo: yaw, d: Math.min(1200, 350 + pos.distanceTo(to) * 120) };
+      marcaAttivo(null);
+    }
+  }
+  down = null;
+});
+
+const keys = {};
+addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; nascondiAiuto(); });
+addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+let passo = 0;
+for (const [id, d] of [['avanti', 1], ['indietro', -1]]) {
+  const b = document.getElementById(id);
+  b.addEventListener('pointerdown', () => passo = d); b.addEventListener('pointerup', () => passo = 0); b.addEventListener('pointerleave', () => passo = 0);
+}
+
+function setAlto(v) {
+  alto = v; document.getElementById('tAlto').setAttribute('aria-pressed', String(v));
+  ceilings.forEach(c => c.visible = !v && document.getElementById('tSoffitto').getAttribute('aria-pressed') === 'true');
+}
+document.getElementById('tSoffitto').addEventListener('click', e => {
+  const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', String(on));
+  ceilings.forEach(c => c.visible = on && !alto);
+});
+document.getElementById('tNumeri').addEventListener('click', e => {
+  const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', String(on));
+  showLabels = on;
+});
+let showLabels = true;
+document.getElementById('tAlto').addEventListener('click', () => setAlto(!alto));
+
+function nascondiAiuto() { const a = document.getElementById('aiuto'); a.style.opacity = 0; setTimeout(() => a.hidden = true, 700); }
+setTimeout(nascondiAiuto, 7000);
+
+// --------------------------------------------------------------- minimappa
+const mini = document.getElementById('mini'), mctx = mini.getContext('2d');
+const BB = { x0: 20.4, x1: 27.8, y0: -0.7, y1: 14.0 };
+function m2c(x, y) { const s = Math.min(mini.width / (BB.x1 - BB.x0), mini.height / (BB.y1 - BB.y0));
+  return [(x - BB.x0) * s + (mini.width - (BB.x1 - BB.x0) * s) / 2, (y - BB.y0) * s + (mini.height - (BB.y1 - BB.y0) * s) / 2]; }
+function c2m(cx, cy) { const s = Math.min(mini.width / (BB.x1 - BB.x0), mini.height / (BB.y1 - BB.y0));
+  return [(cx - (mini.width - (BB.x1 - BB.x0) * s) / 2) / s + BB.x0, (cy - (mini.height - (BB.y1 - BB.y0) * s) / 2) / s + BB.y0]; }
+function curFloor() { return pos.y < -0.8 ? 'S1' : 'PT'; }
+function drawMini() {
+  const f = DATA.floors[curFloor()];
+  mctx.clearRect(0, 0, mini.width, mini.height);
+  mctx.strokeStyle = css('--fg'); mctx.lineWidth = 1.2; mctx.beginPath();
+  for (const [x1, y1, x2, y2] of f.walls.muro) { const a = m2c(x1, y1), b = m2c(x2, y2); mctx.moveTo(a[0], a[1]); mctx.lineTo(b[0], b[1]); }
+  mctx.stroke();
+  mctx.strokeStyle = css('--muted'); mctx.lineWidth = 0.8; mctx.beginPath();
+  for (const k of ['basso', 'banco', 'parapetto']) for (const [x1, y1, x2, y2] of (f.walls[k] || [])) { const a = m2c(x1, y1), b = m2c(x2, y2); mctx.moveTo(a[0], a[1]); mctx.lineTo(b[0], b[1]); }
+  mctx.stroke();
+  mctx.fillStyle = '#a88462';
+  for (const [x0, y0, x1, y1] of f.tables) { const a = m2c(x0, y0), b = m2c(x1, y1); mctx.fillRect(a[0], a[1], b[0] - a[0], b[1] - a[1]); }
+  mctx.fillStyle = css('--mc'); { const [x0, y0, x1, y1] = DATA.mc; const a = m2c(x0, y0), b = m2c(x1, y1); mctx.fillRect(a[0], a[1], b[0] - a[0], b[1] - a[1]); }
+  const p = m2c(pos.x, pos.z);
+  mctx.fillStyle = css('--accent'); mctx.globalAlpha = 0.25; mctx.beginPath(); mctx.moveTo(p[0], p[1]);
+  mctx.arc(p[0], p[1], 34, yaw - 0.6, yaw + 0.6); mctx.closePath(); mctx.fill(); mctx.globalAlpha = 1;
+  mctx.beginPath(); mctx.arc(p[0], p[1], 6, 0, Math.PI * 2); mctx.fill();
+  mctx.strokeStyle = '#fff'; mctx.lineWidth = 2; mctx.stroke();
+}
+mini.addEventListener('click', e => {
+  const r = mini.getBoundingClientRect();
+  const [x, y] = c2m((e.clientX - r.left) * mini.width / r.width, (e.clientY - r.top) * mini.height / r.height);
+  goTo({ f: curFloor(), p: [x, y] });
+});
+
+// --------------------------------------------------------------- ciclo
+function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+goTo(VIEWS[0], false);
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (tween) {
+    const k = Math.min(1, (now - tween.t0) / tween.d), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    pos.lerpVectors(tween.from, tween.to, e);
+    let dyaw = tween.yawTo - tween.yawFrom; dyaw = Math.atan2(Math.sin(dyaw), Math.cos(dyaw)); yaw = tween.yawFrom + dyaw * e;
+    if (k >= 1) tween = null;
+  }
+  const f = (keys['w'] || keys['arrowup'] ? 1 : 0) - (keys['s'] || keys['arrowdown'] ? 1 : 0) + passo;
+  const side = (keys['d'] ? 1 : 0) - (keys['a'] ? 1 : 0);
+  if (keys['arrowleft']) yaw -= 1.6 * dt; if (keys['arrowright']) yaw += 1.6 * dt;
+  if ((f || side) && !alto) { tween = null; pos.x += (Math.cos(yaw) * f - Math.sin(yaw) * side) * 1.4 * dt; pos.z += (Math.sin(yaw) * f + Math.cos(yaw) * side) * 1.4 * dt; }
+  if (alto) {
+    const zc = curFloor() === 'PT' ? 0 : DATA.z0.int;
+    camera.up.set(0, 0, -1); camera.position.set(23.6, zc + 16, 6.9); camera.lookAt(23.6, zc, 6.9);
+  } else {
+    camera.up.set(0, 1, 0);
+    camera.position.copy(pos);
+    tgt.set(pos.x + Math.cos(yaw) * Math.cos(pitch), pos.y + Math.sin(pitch), pos.z + Math.sin(yaw) * Math.cos(pitch));
+    camera.lookAt(tgt);
+  }
+  const cf = curFloor();
+  labels.forEach(l => l.visible = l.userData.floor === cf && (showLabels || l.userData.mc));
+  document.getElementById('piano').textContent = curFloor() === 'PT' ? 'Piano terra' : 'Piano interrato (−3,10 m)';
+  drawMini();
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
