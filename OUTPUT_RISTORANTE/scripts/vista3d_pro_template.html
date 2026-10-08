@@ -875,9 +875,12 @@ for (const [key, fl] of Object.entries(DATA.floors)) {
     const ls = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xff9a3c, toneMapped: false })); ls.visible = false; ls.userData.exbar = true; grp.add(ls);
   }
 }
+function dentro(r, x, y) { let c = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const [xi, yi] = r[i], [xj, yj] = r[j];
+  if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; }
 function stairTop(x, y, z0) {
   let best = null;
   for (const [x0, y0, x1, y1, top] of DATA.stairs) if (x >= x0 - 0.12 && x <= x1 + 0.12 && y >= y0 - 0.12 && y <= y1 + 0.12) best = best === null ? top : Math.max(best, top);
+  for (const v of DATA.ventagli) for (const [dx, dy] of [[0, 0], [0.12, 0], [-0.12, 0], [0, 0.12], [0, -0.12]]) if (dentro(v.ring, x + dx, y + dy)) best = best === null ? v.top : Math.max(best, v.top);
   return best === null ? z0 : best;
 }
 
@@ -886,6 +889,10 @@ for (const [x0, y0, x1, y1, top] of DATA.stairs) {
   const body = boxXY(x0, y0, x1, y1, -3.1, top - 0.04, MAT.scalaCorpo, G.S1);
   const tread = boxXY(x0 - 0.01, y0 - 0.01, x1 + 0.01, y1 + 0.01, top - 0.04, top, MAT.gradino, top < -1.55 ? G.S1 : G.PT);
   tread.userData.floor = top < -1.55 ? 'S1' : 'PT'; pickables.push(tread); blockers.push(body);
+}
+for (const v of DATA.ventagli) {   // gradini a ventaglio del tratto che gira a destra
+  blockers.push(extrude(v.ring, -3.1, v.top - 0.04, MAT.scalaCorpo, G.S1));
+  const t = extrude(v.ring, v.top - 0.04, v.top, MAT.gradino, v.top < -1.55 ? G.S1 : G.PT); t.userData.floor = v.top < -1.55 ? 'S1' : 'PT'; pickables.push(t);
 }
 
 {   // spessore del solaio attorno al vano scala (tra il soffitto dell'interrato e il pavimento del piano terra)
@@ -1215,9 +1222,9 @@ const TOUR = [
   { p: [21.95, 4.3, 0], look: [25.2, 2.3, 0.85] },
   { p: [21.9, 2.6, 0], look: [25.0, 0.9, 0.9] },
   { p: [21.75, 1.45, 0], look: [21.15, 4.25, 1.15], hold: 3, t: 'Montacarichi bevande', c: 'Vano 80×80 rivestito in noce, a due passi dalla porta della cucina: si carica dal lato sala.' },
-  { p: [24.55, 12.48, 0], look: [21.0, 12.5, -0.9], cut: true, hold: 2, t: "Scendiamo all'interrato", c: "La scala parte a sinistra dell'ingresso: gradini in rovere e parapetti in vetro. Proseguendo dritti dall'ingresso, in piano, si arriva all'antibagno." },
+  { p: [24.55, 12.48, 0], look: [21.0, 12.5, -0.9], cut: true, hold: 2, t: "Scendiamo all'interrato", c: "La scala parte a sinistra dell'ingresso e scende in tre tratti, girando due volte a destra. Proseguendo dritti dall'ingresso, in piano, si arriva all'antibagno." },
   { p: [23.4, 12.53, -0.39], look: [20.6, 12.5, -1.6] },
-  { p: [22.3, 12.53, -1.12], look: [20.6, 12.6, -1.7] },
+  { p: [22.3, 12.53, -0.95], look: [20.9, 12.2, -1.7] },
   { p: [21.1, 9.45, PS], look: [23.2, 8.3, -2.35], cut: true, hold: 3, t: 'Ex area bar', c: "5 tavoli · 12 coperti dove prima c'era il bancone." },
   { p: [21.85, 9.55, PS], look: [20.6, 8.45, -1.95], hold: 3, t: 'La parete dei vini', c: "Scaffalatura a tutta altezza retroilluminata: la cantina diventa parte dell'arredo." },
   { p: [23.4, 9.64, PS], look: [25.4, 9.2, -2.1] },

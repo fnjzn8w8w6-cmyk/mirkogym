@@ -244,8 +244,8 @@ MOBILI = {
     'terra': [dict(tipo='credenza_vetrina', box=(2058, 100, 2103, 255), fronte='E'),
               dict(tipo='credenza', box=(2057, 260, 2092, 375), fronte='E'),            # postazione di servizio accorciata
               dict(tipo='cantinetta', box=(2058, 475, 2093, 555), fronte='E')],
-    'int': [dict(tipo='credenza_vetrina', box=(2075, 160, 2120, 255), fronte='E'),
-            dict(tipo='credenza', box=(2263, 518, 2388, 565), fronte='N'),               # elemento fisso 158 come credenza
+    'int': [dict(tipo='credenza_vetrina', box=(2160, 515, 2258, 560), fronte='N'),      # bicchieri: accanto alla panadora, vicino al MC
+            dict(tipo='credenza', box=(2263, 518, 2388, 565), fronte='N'),               # elemento fisso 158 (panadora)
             dict(tipo='cantinetta', box=(2060, 738, 2094, 955), fronte='E')],            # parete dei vini dell'ex bar
 }
 
@@ -258,7 +258,8 @@ LIGHTS = {   # punti luce d'ambiente (cm): calde in sala, neutra in cucina
 
 def main():
     L = json.loads((ROOT / 'dati/layout_MODIFICHE3.json').read_text())
-    data = {'floors': {}, 'mc': [m(v) for v in MC.vano()], 'z0': Z0, 'h': H, 'stairs': stairs(),
+    sb, sp = scala_3_tratti()
+    data = {'floors': {}, 'mc': [m(v) for v in MC.vano()], 'z0': Z0, 'h': H, 'stairs': sb, 'ventagli': sp,
             'outer': {f: [[m(v) for v in p] for p in OUTER[f]] for f in OUTER},
             'vano': [[m(x), m(y)] for x, y in FIXED['terra']['scala (rampa 1+2, pianerottolo)']]}
     for floor, key in (('terra', 'PT'), ('int', 'S1')):
@@ -299,8 +300,9 @@ def main():
                     Q = np.array(ln['pts'])
                     for a, b in zip(Q[:-1], Q[1:]): bar.append([m(a[0]), m(a[1]), m(b[0]), m(b[1])])
         def rail_ok(a, b):   # al PT il vano e' solo rampa 2 + pianerottolo: niente parapetti sulla rampa 1 (pavimento in piano)
-            if floor != 'terra': return True
             mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+            if floor != 'terra':   # interrato: niente corrimano nel sottoscala (cuneo sotto la rampa 1) e contro il muro sud
+                return not (mx > 2385 or my > 1290)
             if my < 1190: return False                                   # bordi della rampa 1 (linea 15)
             if 2150 < mx < 2185 and abs(b[0] - a[0]) < 20: return False  # tra pianerottolo e rampa 2: e' un unico vano
             if mx > 2385 and abs(b[0] - a[0]) < 20: return False         # testa della rampa 2: si entra dall'ingresso
@@ -349,6 +351,30 @@ def main():
         print('autonoma', len(sa) // 1024, 'KB')
     print('ok', out, len(html) // 1024, 'KB',
           {k: {kk: len(v) for kk, v in f.items() if isinstance(v, list)} for k, f in data['floors'].items()})
+
+
+def scala_3_tratti():
+    """Scala (indicazione del cliente): 1) rampa che parte a sinistra dell'ingresso e scende verso ovest,
+    2) tratto a gradini a ventaglio che gira a destra nell'angolo, 3) rampa che scende verso nord fino all'interrato.
+    8 + 3 + 8 pedate, 20 alzate uguali su 3,10 m. Restituisce box [x0,y0,x1,y1,quota] e poligoni dei ventagli."""
+    n1, nv, n3 = 8, 3, 8
+    r = 3.10 / (n1 + nv + n3 + 1)
+    B, P, k = [], [], 0
+    for i in range(n1):          # rampa 1: da x 2400 a 2164, fascia y 1196-1310
+        k += 1
+        xb, xa = 2400 - i * (2400 - 2164) / n1, 2400 - (i + 1) * (2400 - 2164) / n1
+        B.append([m(xa), m(1196), m(xb), m(1310), round(-k * r, 3)])
+    c = (2164, 1196)             # vertice interno del ventaglio
+    edge = [(2164, 1310), (2100, 1310), (2058, 1310), (2058, 1250), (2058, 1196)]
+    cuts = [[edge[0], edge[1]], [edge[1], edge[2], edge[3]], [edge[3], edge[4]]]
+    for poly in cuts:            # tratto 2: ventaglio di 3 gradini che gira a destra
+        k += 1
+        P.append({'ring': [[m(c[0]), m(c[1])]] + [[m(x), m(y)] for x, y in poly], 'top': round(-k * r, 3)})
+    for i in range(n3):          # rampa 3: da y 1196 a 978, fascia x 2058-2164
+        k += 1
+        yb, ya = 1196 - i * (1196 - 978) / n3, 1196 - (i + 1) * (1196 - 978) / n3
+        B.append([m(2058), m(ya), m(2164), m(yb), round(-k * r, 3)])
+    return B, P
 
 
 def MC_box():
