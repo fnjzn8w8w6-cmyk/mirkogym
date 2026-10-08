@@ -888,6 +888,15 @@ for (const [x0, y0, x1, y1, top] of DATA.stairs) {
   tread.userData.floor = top < -1.55 ? 'S1' : 'PT'; pickables.push(tread); blockers.push(body);
 }
 
+{   // spessore del solaio attorno al vano scala (tra il soffitto dell'interrato e il pavimento del piano terra)
+  const b = new Bag(), r = DATA.vano, zt = 0, zb = DATA.z0.int + DATA.h.int;
+  for (let i = 0; i < r.length; i++) {
+    const [x1, y1] = r[i], [x2, y2] = r[(i + 1) % r.length]; const L = Math.hypot(x2 - x1, y2 - y1), dx = (x2 - x1) / L, dy = (y2 - y1) / L;
+    for (const s of [1, -1]) b.quad('m', V3(s > 0 ? x1 : x2, s > 0 ? y1 : y2, zb), V3(s > 0 ? x2 : x1, s > 0 ? y2 : y1, zb), V3(s > 0 ? x2 : x1, s > 0 ? y2 : y1, zt), V3(s > 0 ? x1 : x2, s > 0 ? y1 : y2, zt),
+      new THREE.Vector3(-dy * s, 0, dx * s), [[0, 0], [L / 2, 0], [L / 2, 0.2], [0, 0.2]]);
+  }
+  b.build(G.PT, { m: MAT.intonaco });
+}
 // ------------------------------------------------------------------ montacarichi, consolle, cassa
 {
   const [x0, y0, x1, y1] = DATA.mc;
@@ -1206,13 +1215,10 @@ const TOUR = [
   { p: [21.95, 4.3, 0], look: [25.2, 2.3, 0.85] },
   { p: [21.9, 2.6, 0], look: [25.0, 0.9, 0.9] },
   { p: [21.75, 1.45, 0], look: [21.15, 4.25, 1.15], hold: 3, t: 'Montacarichi bevande', c: 'Vano 80×80 rivestito in noce, a due passi dalla porta della cucina: si carica dal lato sala.' },
-  { p: [24.55, 12.48, 0], look: [21.0, 12.5, -0.9], cut: true, hold: 2, t: "Scendiamo all'interrato", c: 'Scala con gradini in rovere e parapetti in vetro.' },
+  { p: [24.55, 12.48, 0], look: [21.0, 12.5, -0.9], cut: true, hold: 2, t: "Scendiamo all'interrato", c: "La scala parte a sinistra dell'ingresso: gradini in rovere e parapetti in vetro. Proseguendo dritti dall'ingresso, in piano, si arriva all'antibagno." },
   { p: [23.4, 12.53, -0.39], look: [20.6, 12.5, -1.6] },
-  { p: [22.2, 12.53, -1.18], look: [20.4, 12.3, -1.9] },
-  { p: [21.35, 12.5, -1.55], look: [20.9, 10.5, -2.0] },
-  { p: [21.1, 11.7, -1.75], look: [21.1, 8.5, -2.6] },
-  { p: [21.1, 10.4, -2.66], look: [21.6, 8.0, -2.3] },
-  { p: [21.1, 9.45, PS], look: [23.2, 8.3, -2.35], hold: 3, t: 'Ex area bar', c: "5 tavoli · 12 coperti dove prima c'era il bancone." },
+  { p: [22.3, 12.53, -1.12], look: [20.6, 12.6, -1.7] },
+  { p: [21.1, 9.45, PS], look: [23.2, 8.3, -2.35], cut: true, hold: 3, t: 'Ex area bar', c: "5 tavoli · 12 coperti dove prima c'era il bancone." },
   { p: [21.85, 9.55, PS], look: [20.6, 8.45, -1.95], hold: 3, t: 'La parete dei vini', c: "Scaffalatura a tutta altezza retroilluminata: la cantina diventa parte dell'arredo." },
   { p: [23.4, 9.64, PS], look: [25.4, 9.2, -2.1] },
   { p: [25.02, 8.85, PS], look: [25.2, 6.0, -1.9] },

@@ -259,7 +259,8 @@ LIGHTS = {   # punti luce d'ambiente (cm): calde in sala, neutra in cucina
 def main():
     L = json.loads((ROOT / 'dati/layout_MODIFICHE3.json').read_text())
     data = {'floors': {}, 'mc': [m(v) for v in MC.vano()], 'z0': Z0, 'h': H, 'stairs': stairs(),
-            'outer': {f: [[m(v) for v in p] for p in OUTER[f]] for f in OUTER}}
+            'outer': {f: [[m(v) for v in p] for p in OUTER[f]] for f in OUTER},
+            'vano': [[m(x), m(y)] for x, y in FIXED['terra']['scala (rampa 1+2, pianerottolo)']]}
     for floor, key in (('terra', 'PT'), ('int', 'S1')):
         W, G, paths, slabs = walls(floor)
         S, LOW, burners = solids(floor, paths)
@@ -297,8 +298,15 @@ def main():
                 if ln['id'] in BAR_IDS:
                     Q = np.array(ln['pts'])
                     for a, b in zip(Q[:-1], Q[1:]): bar.append([m(a[0]), m(a[1]), m(b[0]), m(b[1])])
+        def rail_ok(a, b):   # al PT il vano e' solo rampa 2 + pianerottolo: niente parapetti sulla rampa 1 (pavimento in piano)
+            if floor != 'terra': return True
+            mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+            if my < 1190: return False                                   # bordi della rampa 1 (linea 15)
+            if 2150 < mx < 2185 and abs(b[0] - a[0]) < 20: return False  # tra pianerottolo e rampa 2: e' un unico vano
+            if mx > 2385 and abs(b[0] - a[0]) < 20: return False         # testa della rampa 2: si entra dall'ingresso
+            return True
         rail = [[m(a[0]), m(a[1]), m(b[0]), m(b[1])] for pl in paths.get('parapetto', {}).values() for Q in pl
-                for a, b in zip(Q[:-1], Q[1:]) if np.hypot(*(b - a)) > 5]
+                for a, b in zip(Q[:-1], Q[1:]) if np.hypot(*(b - a)) > 5 and rail_ok(a, b)]
         bm = []
         if floor == 'terra':
             for g in (sala.geoms if sala.geom_type == 'MultiPolygon' else [sala]):

@@ -55,6 +55,7 @@ FLOOR = {
         box(2080, 560, 2187, 631),                                              # varco tra le due sale
         Polygon([(2057, 629), (2579, 626), (2485, 1290), (2400, 1295), (2400, 1183),
                  (2185, 1183), (2185, 770), (2057, 770)]),                      # sala ingresso + disimpegno
+        Polygon([(2058, 1023), (2185, 1023), (2185, 1183), (2164, 1196), (2058, 1196)]),   # in piano davanti all'antibagno (sopra la rampa 1)
     ]),
     'int': unary_union([
         Polygon([(2073, -38), (2674, -42), (2588, 558), (2077, 558), (2073, 385)]),  # sala interrata (filo muri 4/7)
@@ -87,6 +88,7 @@ ROUTES = {   # percorsi principali: (da, a, larghezza minima richiesta cm)
         'ingresso -> varco sala cucina (clienti)': ((2490, 1067), (2133, 600), 90),
         'ingresso -> scala per interrato': ((2490, 1067), (2440, 1240), 90),
         'ingresso -> porta disimpegno WC': ((2490, 1067), (2070, 690), 90),
+        'ingresso -> antibagno (bagni clienti)': ((2490, 1067), (2072, 1104), 90),
     },
     'int': {
         'piede scala -> varco verso sala (clienti)': ((2110, 965), (2520, 640), 90),

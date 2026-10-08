@@ -46,8 +46,9 @@ BAR_IDS = {49, 50, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 1
 # ------------------------------------------------------------------ elementi fissi da evidenziare
 FIXED = {
     'terra': {
-        'scala (rampa 1+2, pianerottolo)': kp([(2058, 975), (2163, 975), (2163, 1183), (2400, 1183),
-                                              (2400, 1318), (2058, 1318)]),
+        # vano aperto al PT: solo rampa 2 (parte a sinistra dell'ingresso) e pianerottolo; la rampa 1 scende sotto il
+        # pavimento del PT, che davanti all'antibagno e' in piano (informazione del cliente)
+        'scala (rampa 1+2, pianerottolo)': kp([(2058, 1196), (2164, 1196), (2391, 1183), (2400, 1318), (2058, 1318)]),
         'cassa': kp([(2016, 774), (2103, 774), (2103, 1023), (2016, 1023)]),
         'banco cassa': kp([(2140, 794), (2185, 794), (2185, 998), (2140, 998)]),
         'S1 postazione di servizio': kp([(2057, 260), (2092, 260), (2092, 375), (2057, 375)]) if MC_POS == 'F' else

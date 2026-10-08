@@ -6,20 +6,20 @@
   "misura": 21,
   "minimo": 40,
   "p1": [
-   2419.0,
-   818.0
+   2393.0,
+   840.0
   ],
   "p2": [
-   2419.0,
-   838.0
+   2393.0,
+   820.0
   ],
   "c": [
-   2412.0,
-   744.75
+   2399.0,
+   745.75
   ],
   "tra": [
-   "sedia di T11",
-   "tavolo T13"
+   "tavolo T13",
+   "sedia di T11"
   ],
   "sedia": [
    2382.5,
@@ -29,9 +29,9 @@
   ],
   "span": [
    260,
-   316.5
+   318.5
   ],
-  "spiega": "Per arrivare dall'ingresso alla sedia evidenziata in rosso, anche scegliendo il giro più largo, si passa in un varco di 21 cm tra sedia di T11 e tavolo T13. Un ospite passa di fianco con ~40 cm, un cameriere con il piatto con ~60 cm.",
+  "spiega": "Per arrivare dall'ingresso alla sedia evidenziata in rosso, anche scegliendo il giro più largo, si passa in un varco di 21 cm tra tavolo T13 e sedia di T11. Un ospite passa di fianco con ~40 cm, un cameriere con il piatto con ~60 cm.",
   "piano": "Piano terra"
  },
  {
