@@ -55,6 +55,7 @@ button.primario { background: var(--accent); color: var(--accent-ink); border-co
 #aiuto { left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 16px 20px; max-width: 330px; font-size: 13.5px;
   line-height: 1.5; text-align: center; pointer-events: none; transition: opacity .6s; }
 #vignetta { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,0.38) 100%); }
+#nero { position: fixed; inset: 0; pointer-events: none; background: #000; opacity: 0; }
 #mirino { position: fixed; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%;
   background: rgba(255,255,255,.75); box-shadow: 0 0 0 1px rgba(0,0,0,.35); pointer-events: none; opacity: .7; }
 #passi { position: fixed; right: 16px; display: none; flex-direction: column; gap: 8px; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
@@ -80,6 +81,7 @@ button.primario { background: var(--accent); color: var(--accent-ink); border-co
 
 <canvas id="scena" aria-label="Vista 3D navigabile del ristorante"></canvas>
 <div id="vignetta"></div>
+<div id="nero"></div>
 <div id="mirino"></div>
 <div id="carico"><div>Apparecchio la sala…</div></div>
 
@@ -249,19 +251,19 @@ function texMetro() {   // piastrelle diamantate bianche 7,5 x 15 per la cucina,
   }
   return c;
 }
-function texNoce(seed = 3, light = false) {   // noce: fondo bruno, venatura fine e irregolare
-  const N = 512; const [c, x] = cnv(N, N); const im = x.createImageData(N, N); const R = rng(seed); const ph = [R() * 6, R() * 6, R() * 6, R() * 6];
-  const base = light ? [128, 86, 56] : [92, 60, 40];
+function texNoce(seed = 3, light = false) {   // noce a fibra diritta: venature lungo u, tavole con tono diverso
+  const N = 512; const [c, x] = cnv(N, N); const im = x.createImageData(N, N); const R = rng(seed);
+  const base = light ? [124, 84, 56] : [88, 58, 39];
+  const fr = [], ph = []; for (let k = 0; k < 7; k++) { fr.push(20 + R() * 140); ph.push(R() * 6.28); }
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
     const u = i / N, v = j / N;
-    const warp = Math.sin(u * 6.283 * 2 + ph[0]) * 0.012 + Math.sin(u * 6.283 * 7 + ph[1]) * 0.004;
-    const r = (v + warp) * 34;
-    const ring = Math.pow(Math.abs(Math.sin(r * Math.PI + Math.sin(u * 6.283 + ph[2]) * 0.8)), 10);
-    const fine = Math.sin((v + warp) * 900 + Math.sin(u * 40 + ph[3]) * 2) * 0.5 + 0.5;
-    const L = 1 - ring * 0.22 - fine * 0.05 + Math.sin(u * 6.283 * 3 + v * 4 + ph[0]) * 0.04;
+    const w = v + Math.sin(u * 6.283 + ph[0]) * 0.006 + Math.sin(u * 6.283 * 3 + ph[1]) * 0.002;
+    let g = 0; for (let k = 0; k < 7; k++) g += Math.sin(w * fr[k] * 6.283 / 4 + ph[k]) / (k + 1.5);
+    const streak = Math.pow(Math.abs(Math.sin(w * 6.283 * 9 + Math.sin(u * 12.566 + ph[2]) * 0.3)), 18);
+    const L = 1 + g * 0.05 - streak * 0.16 + Math.sin(w * 6.283 * 2 + ph[3]) * 0.05;
     const o = (j * N + i) * 4; im.data[o] = base[0] * L; im.data[o + 1] = base[1] * L; im.data[o + 2] = base[2] * L; im.data[o + 3] = 255;
   }
-  x.putImageData(im, 0, 0); return c;
+  x.putImageData(im, 0, 0); noise(x, N, N, R, [0.05], [64], '40,20,10', '255,230,200'); return c;
 }
 function texMarmo() {   // marmo bianco con venature grigie
   const N = 512; const [c, x] = cnv(N, N); const R = rng(9);
@@ -489,6 +491,8 @@ const MAT = {
   vaso: STD({ color: 0x9a5a3a, roughness: 0.85 }),
   terra: STD({ color: 0x3a2a1e, roughness: 1 }),
   tronco: STD({ color: 0x5a4a3a, roughness: 0.9 }),
+  foglie: STD({ color: 0xffffff, roughness: 0.7 }),
+  fiori: STD({ color: 0xffffff, roughness: 0.8 }),
   candela: STD({ color: 0xf2e6cf, roughness: 0.6, emissive: 0x6b4a20, emissiveIntensity: 0.6 }),
 };
 const glowTex = texRadiale('255,214,160', null, [[0, 0.95], [0.18, 0.55], [0.5, 0.12], [1, 0]]);
@@ -600,18 +604,29 @@ GEO.portacandela = lathe([[0, 0], [0.032, 0], [0.033, 0.075], [0.03, 0.075], [0.
 GEO.paralume = lathe([[0.025, 0.2], [0.04, 0.19], [0.1, 0.12], [0.16, 0.03], [0.175, 0]], 28);
 GEO.vaso = lathe([[0, 0], [0.16, 0], [0.2, 0.08], [0.22, 0.42], [0.23, 0.46], [0.2, 0.46], [0, 0.46]], 24);
 GEO.vasino = lathe([[0, 0], [0.05, 0], [0.065, 0.11], [0.07, 0.12], [0, 0.12]], 16);
-function sediaGeo() {   // sedia bistrot in faggio curvato e seduta in paglia di Vienna (avanti = +z)
-  const leg = (x, z, h, lean) => { const g = new THREE.CylinderGeometry(0.0125, 0.015, h, 8); return tr(g, x, h / 2, z, 0, lean, 0); };
+function tubo(pts, r, seg = 48, rs = 8) {
+  return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(...p)), false, 'centripetal'), seg, r, rs, false);
+}
+function asta(a, b, r1, r2) {   // cilindro rastremato da a a b
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), d = B.clone().sub(A);
+  const g = new THREE.CylinderGeometry(r2, r1, d.length(), 10);
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize());
+  return g.applyMatrix4(new THREE.Matrix4().compose(A.clone().add(B).multiplyScalar(0.5), q, new THREE.Vector3(1, 1, 1)));
+}
+function sediaGeo() {   // sedia bistrot n.14 in faggio curvato, seduta in paglia di Vienna (avanti = +z)
   const wood = [
-    leg(-0.15, 0.13, 0.45, 0.05), leg(0.15, 0.13, 0.45, 0.05),
-    tr(new THREE.CylinderGeometry(0.013, 0.015, 0.9, 8), -0.14, 0.45, -0.14, 0, -0.08, 0),
-    tr(new THREE.CylinderGeometry(0.013, 0.015, 0.9, 8), 0.14, 0.45, -0.14, 0, -0.08, 0),
-    tr(new THREE.TorusGeometry(0.205, 0.016, 8, 40), 0, 0.455, 0, 0, Math.PI / 2, 0),
-    tr(new THREE.TorusGeometry(0.17, 0.008, 6, 36), 0, 0.2, 0.0, 0, Math.PI / 2, 0),
-    tr(new THREE.TorusGeometry(0.145, 0.014, 8, 30, Math.PI), 0, 0.735, -0.185, 0, -0.08, 0),
-    tr(new THREE.TorusGeometry(0.09, 0.01, 8, 26, Math.PI), 0, 0.6, -0.175, 0, -0.08, 0),
+    // gambe posteriori che salgono e chiudono lo schienale ad arco in un unico pezzo curvato
+    tubo([[-0.155, 0, -0.215], [-0.145, 0.25, -0.17], [-0.14, 0.45, -0.14], [-0.138, 0.66, -0.185], [-0.115, 0.82, -0.225],
+          [-0.06, 0.885, -0.24], [0, 0.895, -0.243], [0.06, 0.885, -0.24], [0.115, 0.82, -0.225], [0.138, 0.66, -0.185],
+          [0.14, 0.45, -0.14], [0.145, 0.25, -0.17], [0.155, 0, -0.215]], 0.0135, 120, 10),
+    tubo([[-0.12, 0.47, -0.15], [-0.1, 0.6, -0.175], [-0.05, 0.69, -0.195], [0, 0.705, -0.2], [0.05, 0.69, -0.195],
+          [0.1, 0.6, -0.175], [0.12, 0.47, -0.15]], 0.0085, 48, 8),
+    asta([-0.148, 0.44, 0.115], [-0.175, 0, 0.165], 0.0145, 0.012),
+    asta([0.148, 0.44, 0.115], [0.175, 0, 0.165], 0.0145, 0.012),
+    tr(new THREE.TorusGeometry(0.2, 0.018, 10, 48), 0, 0.452, -0.01, 0, Math.PI / 2, 0),        // cerchio della seduta
+    tr(new THREE.TorusGeometry(0.168, 0.008, 8, 40), 0, 0.2, -0.015, 0, Math.PI / 2, 0),        // anello delle gambe
   ];
-  const seat = tr(new THREE.CylinderGeometry(0.195, 0.195, 0.02, 36), 0, 0.455, 0);
+  const seat = tr(new THREE.CylinderGeometry(0.188, 0.188, 0.012, 40), 0, 0.458, -0.01);
   return { wood: merge(wood), seat };
 }
 GEO.sedia = sediaGeo();
@@ -620,6 +635,15 @@ function tavoloBaseGeo() {
     tr(new THREE.BoxGeometry(0.56, 0.035, 0.06), 0, 0.02, 0, Math.PI / 4), tr(new THREE.BoxGeometry(0.56, 0.035, 0.06), 0, 0.02, 0, -Math.PI / 4)]);
 }
 GEO.base = tavoloBaseGeo();
+function pianoTavolo(w, d) {   // piano 3 cm con bordo arrotondato
+  const r = 0.015, x = w / 2 - 0.006, y = d / 2 - 0.006, sh = new THREE.Shape();
+  sh.moveTo(-x + r, -y); sh.lineTo(x - r, -y); sh.quadraticCurveTo(x, -y, x, -y + r); sh.lineTo(x, y - r); sh.quadraticCurveTo(x, y, x - r, y);
+  sh.lineTo(-x + r, y); sh.quadraticCurveTo(-x, y, -x, y - r); sh.lineTo(-x, -y + r); sh.quadraticCurveTo(-x, -y, -x + r, -y);
+  const g = new THREE.ExtrudeGeometry(sh, { depth: 0.026, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.006, bevelSegments: 3, curveSegments: 6 });
+  g.rotateX(-Math.PI / 2); g.translate(0, 0.006, 0);
+  const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 1.1, uv.getY(i) * 1.1);
+  return g;
+}
 
 function instanced(geo, mat, list, grp, color) {   // list: [x, y, z, ry, (s)]
   if (!list.length) return null;
@@ -649,7 +673,8 @@ for (const [key, fl] of Object.entries(DATA.floors)) {
     for (const [side, zn] of [[1, zA], [-1, zB]]) {
       const [low, high] = WALLMAT[key][zn] || WALLMAT[key].servizio;
       const nx = -dy * side, ny = dx * side; const n = new THREE.Vector3(nx, 0, ny);
-      const p = side > 0 ? [x1, y1] : [x2, y2], q = side > 0 ? [x2, y2] : [x1, y1];
+      const o2 = 0.002;   // le due facce dello stesso muro non coincidono (evita sfarfallii nei render)
+      const p = side > 0 ? [x1 + nx * o2, y1 + ny * o2] : [x2 + nx * o2, y2 + ny * o2], q = side > 0 ? [x2 + nx * o2, y2 + ny * o2] : [x1 + nx * o2, y1 + ny * o2];
       const ua = (p[0] * dx + p[1] * dy), ub = (q[0] * dx + q[1] * dy);
       const bands = low !== high ? [[zb, Math.min(zt, BAND), low], [Math.max(zb, BAND), zt, high]] : [[zb, zt, low]];
       for (const [a, b, mk] of bands) {
@@ -739,8 +764,8 @@ for (const [key, fl] of Object.entries(DATA.floors)) {
   // ---- tavoli apparecchiati
   const bases = [], plates = [], napkins = [], forks = [], knives = [], glasses = [], candles = [], vases = [], flowers = [], shades = [], bulbs = [], cords = [];
   for (const [x0, y0, x1, y1] of fl.tables) {
-    const top = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0 - 0.01, 0.035, y1 - y0 - 0.01), MAT.noceTavolo);
-    top.position.set((x0 + x1) / 2, z0 + 0.7425, (y0 + y1) / 2); grp.add(top); blockers.push(top);
+    const top = new THREE.Mesh(pianoTavolo(x1 - x0 - 0.012, y1 - y0 - 0.012), MAT.noceTavolo);
+    top.position.set((x0 + x1) / 2, z0 + 0.722, (y0 + y1) / 2); grp.add(top); blockers.push(top);
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, big = Math.max(x1 - x0, y1 - y0) > 1.2, horiz = x1 - x0 > y1 - y0;
     const pts = big ? (horiz ? [[cx - 0.4, cy], [cx + 0.4, cy]] : [[cx, cy - 0.4], [cx, cy + 0.4]]) : [[cx, cy]];
     for (const [px, py] of pts) {
@@ -754,12 +779,18 @@ for (const [key, fl] of Object.entries(DATA.floors)) {
       flick.push({ s: glow(px, py, zs + 0.04, 0.9, SOFF[key], 0.85), base: 0.9 });
       glow(px, py, zs - 0.02, 2.6, SOFF[key], 0.18);
     }
-    // centrotavola: candela e fiore
-    const ox = big ? (horiz ? 0 : 0.17) : 0.17, oy = big ? (horiz ? 0.17 : 0) : 0;
-    candles.push([cx - ox * 0.5, cy - oy * 0.5, z0 + 0.76, 0]);
-    flick.push({ s: glow(cx - ox * 0.5, cy - oy * 0.5, z0 + 0.84, 0.35, grp, 0.9), base: 0.35, c: true });
-    vases.push([cx + ox * 0.5, cy + oy * 0.5, z0 + 0.76, 0]);
-    flowers.push([cx + ox * 0.5, cy + oy * 0.5, z0 + 0.76 + 0.14, 0]);
+    // centrotavola: candela e fiore sulla linea di mezzo del tavolo (i calici stanno a 12 cm dal centro)
+    const along = horiz || !big ? [1, 0] : [0, 1];
+    const cxs = [], k2 = big ? [-0.4, 0.4] : [0];
+    for (const o of k2) cxs.push([cx + along[0] * o, cy + along[1] * o]);
+    cxs.forEach(([qx, qy], i) => {
+      const s2 = i % 2 ? -1 : 1;
+      if (i === 0 || big) {
+        candles.push([qx - along[0] * 0.05 * s2, qy - along[1] * 0.05 * s2, z0 + 0.76, 0]);
+        flick.push({ s: glow(qx - along[0] * 0.05 * s2, qy - along[1] * 0.05 * s2, z0 + 0.83, 0.35, grp, 0.9), base: 0.35, c: true });
+      }
+      if (i === 0) { vases.push([qx + along[0] * 0.05, qy + along[1] * 0.05, z0 + 0.76, 0]); flowers.push([qx + along[0] * 0.05, qy + along[1] * 0.05, z0 + 0.76 + 0.14, 0]); }
+    });
   }
   const chairsW = [];
   for (const [x0, y0, x1, y1, s] of fl.chairs) {
@@ -769,13 +800,14 @@ for (const [key, fl] of Object.entries(DATA.floors)) {
     chairsW.push([cx - fx * 0.03, cy - fy * 0.03, z0, ry]);
     decal(cx, cy, z0 + 0.006, 0.32, M_SHADOW, grp);
     // coperto: piatto davanti alla sedia, posate ai lati, calice a destra
-    const ex = cx + fx * (0.05 + 0.22), ey = cy + fy * (0.05 + 0.22);
+    const e0 = 0.275;   // dal centro della sedia al bordo del tavolo (sedia 45 cm a 5 cm dal tavolo)
+    const ex = cx + fx * (e0 + 0.19), ey = cy + fy * (e0 + 0.19);
     const rx = -fy, rY = fx;    // destra del commensale
     plates.push([ex, ey, z0 + 0.76, ry]);
     napkins.push([ex, ey, z0 + 0.775, ry]);
-    forks.push([ex - rx * 0.165, ey - rY * 0.165, z0 + 0.762, ry]);
-    knives.push([ex + rx * 0.165, ey + rY * 0.165, z0 + 0.762, ry]);
-    glasses.push([ex + rx * 0.14 + fx * 0.15, ey + rY * 0.14 + fy * 0.15, z0 + 0.76, 0]);
+    forks.push([ex - rx * 0.175, ey - rY * 0.175, z0 + 0.762, ry]);
+    knives.push([ex + rx * 0.175, ey + rY * 0.175, z0 + 0.762, ry]);
+    glasses.push([cx + fx * (e0 + 0.33) + rx * 0.12, cy + fy * (e0 + 0.33) + rY * 0.12, z0 + 0.76, 0]);
   }
   instanced(GEO.base, MAT.ghisa, bases, grp);
   instanced(GEO.sedia.wood, MAT.legnoSedia, chairsW, grp);
@@ -788,7 +820,7 @@ for (const [key, fl] of Object.entries(DATA.floors)) {
   instanced(GEO.portacandela, MAT.calice, candles, grp);
   instanced(new THREE.CylinderGeometry(0.018, 0.018, 0.05, 12).translate(0, 0.031, 0), MAT.candela, candles, grp);
   instanced(GEO.vasetto, MAT.ceramica, vases, grp);
-  instanced(new THREE.IcosahedronGeometry(0.03, 1), STD({ color: 0xd8b4a0, roughness: 0.8 }), flowers, grp,
+  instanced(new THREE.IcosahedronGeometry(0.03, 1), MAT.fiori, flowers, grp,
     i => new THREE.Color([0xd9a0a0, 0xe8d8c0, 0xc9785a, 0xf2e6a8][i % 4]));
   instanced(GEO.paralume, MAT.paralume, shades, SOFF[key]);
   instanced(GEO.paralume.clone().scale(0.97, 0.97, 0.97), MAT.paralumeIn, shades, SOFF[key]);
@@ -819,17 +851,22 @@ for (const [key, fl] of Object.entries(DATA.floors)) {
     const l = new THREE.PointLight(t === 'c' ? 0xf4f1ea : 0xffb978, 1, 8, 1.4); l.position.set(x, z0 + H - 0.5, y); l.userData.base = t === 'c' ? 0.7 : 0.8;
     grp.add(l); lights[key].push(l);
   }
-  // ---- parapetti in vetro con corrimano
+  // ---- parapetti in vetro con corrimano continuo (lungo le rampe segue la pendenza dei gradini)
   for (const [x1, y1, x2, y2] of fl.rail) {
-    const L = Math.hypot(x2 - x1, y2 - y1); const n = Math.max(1, Math.round(L / 0.3));
+    const L = Math.hypot(x2 - x1, y2 - y1); const n = Math.max(2, Math.round(L / 0.1));
+    const pts = []; for (let i = 0; i <= n; i++) { const t = i / n; pts.push([x1 + (x2 - x1) * t, y1 + (y2 - y1) * t]); }
+    let zs = pts.map(([x, y]) => key === 'PT' ? z0 : stairTop(x, y, z0));
+    for (let it = 0; it < 4; it++) zs = zs.map((z, i) => (zs[Math.max(0, i - 2)] + zs[Math.max(0, i - 1)] + z + zs[Math.min(n, i + 1)] + zs[Math.min(n, i + 2)]) / 5);
+    const g = new Bag(); const dx = (x2 - x1) / L, dy = (y2 - y1) / L; const nn = new THREE.Vector3(-dy, 0, dx);
     for (let i = 0; i < n; i++) {
-      const a = i / n, b = (i + 1) / n; const xa = x1 + (x2 - x1) * a, ya = y1 + (y2 - y1) * a, xb = x1 + (x2 - x1) * b, yb = y1 + (y2 - y1) * b;
-      const zb = key === 'PT' ? z0 : stairTop((xa + xb) / 2, (ya + yb) / 2, z0);
-      const g = new Bag(); const dx = (x2 - x1) / L, dy = (y2 - y1) / L;
-      g.quad('v', V3(xa, ya, zb + 0.06), V3(xb, yb, zb + 0.06), V3(xb, yb, zb + 1.0), V3(xa, ya, zb + 1.0), new THREE.Vector3(-dy, 0, dx), [[0, 0], [1, 0], [1, 1], [0, 1]]);
-      g.build(grp, { v: MAT.vetro });
-      boxAlong(xa, ya, xb, yb, zb + 1.0, zb + 1.04, 0.045, MAT.noce, grp);
+      const [xa, ya] = pts[i], [xb, yb] = pts[i + 1];
+      g.quad('v', V3(xa, ya, zs[i] + 0.05), V3(xb, yb, zs[i + 1] + 0.05), V3(xb, yb, zs[i + 1] + 0.98), V3(xa, ya, zs[i] + 0.98), nn, [[0, 0], [1, 0], [1, 1], [0, 1]]);
     }
+    g.build(grp, { v: MAT.vetro });
+    const tube = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(([x, y], i) => V3(x, y, zs[i] + 1.0))), n * 2, 0.022, 10, false);
+    grp.add(new THREE.Mesh(tube, MAT.noce));
+    const base = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(([x, y], i) => V3(x, y, zs[i] + 0.03))), n * 2, 0.012, 6, false);
+    grp.add(new THREE.Mesh(base, MAT.ferro));
   }
   // ---- ex bar (solo traccia, a richiesta)
   if (fl.bar.length) {
@@ -964,8 +1001,12 @@ const ESTERNO = {};
     const v = new THREE.Mesh(GEO.vaso, MAT.vaso); v.position.set(px, 0, py); G.fuori.add(v);
     const tr0 = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 1.2, 8), MAT.tronco); tr0.position.set(px, 0.95, py); G.fuori.add(tr0);
     const R = rng(Math.round(yy * 10)); const lv = [];
-    for (let i = 0; i < 26; i++) lv.push([px + (R() - 0.5) * 0.7, py + (R() - 0.5) * 0.7, 1.45 + R() * 0.75, R() * 6, 0.7 + R() * 0.7]);
-    instanced(new THREE.IcosahedronGeometry(0.16, 0), MAT.pianta, lv, G.fuori);
+    for (let i = 0; i < 900; i++) {   // chioma d'ulivo: foglie strette e argentate attorno a un volume tondeggiante
+      const a = R() * 6.283, r = Math.sqrt(R()) * 0.42, h = 1.42 + R() * 0.8;
+      lv.push([px + Math.cos(a) * r, py + Math.sin(a) * r * 0.9, h, R() * 6.283, 0.8 + R() * 0.5, R() * 3, R() * 3]);
+    }
+    instanced(new THREE.BoxGeometry(0.012, 0.003, 0.055), MAT.foglie, lv, G.fuori, () => new THREE.Color().setHSL(0.24 + R() * 0.04, 0.18 + R() * 0.1, 0.32 + R() * 0.14));
+    for (let k = 0; k < 5; k++) { const a = k * 1.25; const br = new THREE.Mesh(asta([px, 1.4, py], [px + Math.cos(a) * 0.3, 1.75 + R() * 0.3, py + Math.sin(a) * 0.3], 0.025, 0.012), MAT.tronco); G.fuori.add(br); }
   }
 }
 // erbe aromatiche sui davanzali delle vetrine del piano terra
@@ -1096,40 +1137,106 @@ function nascondiAiuto() { const a = document.getElementById('aiuto'); a.classLi
 setTimeout(nascondiAiuto, 8000);
 
 // ------------------------------------------------------------------ tour guidato
+// Il tour e' un percorso continuo (curva per i punti di passaggio, 0,75 m/s) con fermate e didascalie.
+// La direzione di sguardo e' interpolata tra punti d'interesse, mai lungo i muri. Lo stesso percorso,
+// campionato fotogramma per fotogramma, guida il video renderizzato.
+const PS = -3.1;   // quota pavimento interrato
 const TOUR = [
-  { f: 'PT', p: [26.4, 11.0], yaw: Math.PI + 0.1, pitch: -0.04, d: 10, t: 'Benvenuti da Dvca', c: "L'ingresso su via Rovello: vetrina in ferro brunito, zerbino incassato e uno spazio libero di 150×150 cm davanti alla porta." },
-  { f: 'PT', p: [24.6, 10.6], yaw: Math.PI - 0.25, pitch: -0.05, d: 3.5, t: 'Accoglienza e cassa', c: 'Il banco cassa in noce cannettato con piano in marmo accoglie gli ospiti; alle spalle la bottigliera retroilluminata.' },
-  { f: 'PT', p: [23.3, 7.6], yaw: -1.9, pitch: -0.1, d: 4, t: "Sala dell'ingresso", c: '3 tavoli · 8 coperti. Due tavoli da quattro e uno da due, lungo la vetrina e contro il setto.' },
-  { f: 'PT', p: [21.8, 5.85], yaw: -0.95, pitch: -0.1, d: 3.5, t: 'Verso la sala principale', c: 'Il varco tra le sale resta libero per il passaggio di camerieri e ospiti (≥ 90 cm).' },
-  { f: 'PT', p: [25.6, 5.2], yaw: -2.55, pitch: -0.12, d: 4.5, t: 'Sala davanti alla cucina', c: '10 tavoli · 22 coperti. Boiserie verde, travi a vista, una lampada sospesa sopra ogni tavolo.' },
-  { f: 'PT', p: [22.9, 4.25], yaw: Math.PI, pitch: -0.18, d: 4, t: 'Montacarichi bevande', c: 'Vano compatto 80×80 rivestito in noce: si carica dal lato sala, a un passo dalla porta della cucina.' },
-  { f: 'PT', p: [24.3, 12.5], yaw: Math.PI, pitch: -0.3, d: 5, t: 'Scendiamo', c: "La scala in rovere porta all'interrato, con parapetti in vetro." },
-  { f: 'PT', p: [21.9, 12.52], z: -1.35, yaw: Math.PI, pitch: -0.25, d: 3.2, t: 'Scendiamo', c: "La scala in rovere porta all'interrato, con parapetti in vetro." },
-  { f: 'PT', p: [21.1, 12.4], z: -1.55, yaw: -Math.PI / 2, pitch: -0.25, d: 1.6, t: 'Scendiamo', c: "La scala in rovere porta all'interrato, con parapetti in vetro." },
-  { f: 'S1', p: [21.1, 9.45], yaw: -0.25, pitch: -0.06, d: 3.2, t: 'Ex area bar', c: '5 tavoli · 12 coperti dove prima c\'era il bancone. A sinistra la parete dei vini.' },
-  { f: 'S1', p: [22.6, 8.6], yaw: Math.PI - 0.3, pitch: -0.05, d: 3.5, t: 'La parete dei vini', c: 'Scaffale a tutta altezza retroilluminato: la cantina diventa parte dell\'arredo.' },
-  { f: 'S1', p: [25.15, 6.7], yaw: -2.0, pitch: -0.08, d: 4, t: 'Verso la sala interrata', c: 'Il varco lungo la facciata collega le due zone dell\'interrato.' },
-  { f: 'S1', p: [25.1, 4.6], yaw: -2.6, pitch: -0.1, d: 4, t: 'Sala interrata', c: '9 tavoli · 18 coperti. Mattoni a vista, pavimento in cotto, applique in ottone.' },
-  { f: 'S1', p: [23.0, 4.25], yaw: Math.PI, pitch: -0.15, d: 3.5, t: 'Scarico del montacarichi', c: 'Scarico dal lato est con mensola ribaltabile in acciaio: nessun ingombro fisso in sala.' },
-  { f: 'S1', p: [24.0, 6.0], plastico: true, d: 3, t: 'Il locale in sintesi', c: '60 coperti su due livelli · 27 tavoli · percorsi verificati dal software di controllo.' },
+  { p: [27.3, 10.72, 0], look: [25.4, 10.7, 1.3], hold: 3, t: 'Benvenuti da Dvca', c: "L'ingresso su via Rovello: vetrina in ferro brunito, porta a vetri e due ulivi." },
+  { p: [26.05, 10.72, 0], look: [24.0, 10.2, 1.3] },
+  { p: [24.9, 10.62, 0], look: [21.6, 8.9, 1.25], hold: 3, t: 'Accoglienza e cassa', c: 'Il banco cassa in noce cannettato con piano in marmo; alle spalle la bottigliera retroilluminata.' },
+  { p: [23.25, 10.45, 0], look: [24.5, 7.4, 0.85], hold: 3, t: "Sala dell'ingresso", c: '3 tavoli · 8 coperti: due tavoli da quattro e uno da due, lungo la vetrina e contro il setto.' },
+  { p: [22.55, 9.2, 0], look: [22.2, 6.6, 1.3] },
+  { p: [22.0, 7.25, 0], look: [21.6, 3.5, 1.2] },
+  { p: [21.4, 6.2, 0], look: [22.6, 3.0, 1.1] },
+  { p: [21.45, 5.15, 0], look: [24.2, 2.5, 0.9], hold: 3.5, t: 'Sala davanti alla cucina', c: '10 tavoli · 22 coperti. Boiserie verde, travi a vista e una lampada sopra ogni tavolo.' },
+  { p: [21.95, 4.3, 0], look: [25.2, 2.3, 0.85] },
+  { p: [21.9, 2.6, 0], look: [25.0, 0.9, 0.9] },
+  { p: [21.75, 1.45, 0], look: [21.15, 4.25, 1.15], hold: 3, t: 'Montacarichi bevande', c: 'Vano 80×80 rivestito in noce, a due passi dalla porta della cucina: si carica dal lato sala.' },
+  { p: [24.55, 12.48, 0], look: [21.0, 12.5, -0.9], cut: true, hold: 2, t: "Scendiamo all'interrato", c: 'Scala con gradini in rovere e parapetti in vetro.' },
+  { p: [23.4, 12.53, -0.39], look: [20.6, 12.5, -1.6] },
+  { p: [22.2, 12.53, -1.18], look: [20.4, 12.3, -1.9] },
+  { p: [21.35, 12.5, -1.55], look: [20.9, 10.5, -2.0] },
+  { p: [21.1, 11.7, -1.75], look: [21.1, 8.5, -2.6] },
+  { p: [21.1, 10.4, -2.66], look: [21.6, 8.0, -2.3] },
+  { p: [21.1, 9.45, PS], look: [23.2, 8.3, -2.35], hold: 3, t: 'Ex area bar', c: "5 tavoli · 12 coperti dove prima c'era il bancone." },
+  { p: [21.85, 9.55, PS], look: [20.6, 8.45, -1.95], hold: 3, t: 'La parete dei vini', c: "Scaffalatura a tutta altezza retroilluminata: la cantina diventa parte dell'arredo." },
+  { p: [23.4, 9.64, PS], look: [25.4, 9.2, -2.1] },
+  { p: [25.02, 8.85, PS], look: [25.2, 6.0, -1.9] },
+  { p: [25.15, 7.1, PS], look: [24.2, 3.6, -2.2] },
+  { p: [25.0, 5.25, PS], look: [22.6, 1.6, -2.35], hold: 3.5, t: 'Sala interrata', c: '9 tavoli · 18 coperti. Mattoni a vista, pavimento in cotto, applique in ottone.' },
+  { p: [23.6, 4.85, PS], look: [21.15, 4.25, -1.95], hold: 3, t: 'Scarico del montacarichi', c: 'Si scarica dal lato est su una mensola ribaltabile in acciaio: nessun ingombro fisso in sala.' },
+  { p: [22.7, 4.8, PS], look: [24.9, 1.2, -2.3], hold: 4, t: 'Dvca Rovello', c: '60 coperti su due livelli · 27 tavoli · percorsi verificati dal software di controllo.' },
 ];
-let tour = null;
-function avviaTour() {
-  setPlastico(false); nascondiAiuto(); tour = { i: -1 }; prossima(); document.getElementById('bTour').textContent = '■ Ferma tour';
+function campionaTour(fps = 30, v = 0.75) {
+  // il percorso e' diviso in sequenze dagli stacchi (cut): tra una sequenza e l'altra dissolvenza al nero
+  const seqs = [[]]; TOUR.forEach((w, i) => { if (w.cut) seqs.push([]); seqs[seqs.length - 1].push(i); });
+  const out = { fps, pos: [], dir: [], cap: [], fade: [], didascalie: TOUR.map(w => w.t ? { t: w.t, c: w.c } : null) };
+  const dt = 1 / fps; let curCap = 0, d = null;
+  seqs.forEach((idx, si) => {
+    const W = idx.map(i => TOUR[i]), n = W.length, SUB = 60;
+    const curve = new THREE.CatmullRomCurve3(W.map(w => new THREE.Vector3(w.p[0], w.p[2] + EYE, w.p[1])), false, 'centripetal', 0.5);
+    const P = [], S = [0]; for (let k = 0; k <= (n - 1) * SUB; k++) P.push(curve.getPoint(k / ((n - 1) * SUB)));
+    for (let k = 1; k < P.length; k++) S.push(S[k - 1] + P[k].distanceTo(P[k - 1]));
+    const sw = W.map((_, i) => S[i * SUB]);
+    const look = W.map(w => w.look ? new THREE.Vector3(w.look[0], w.look[2], w.look[1]) : null);
+    for (let i = 0; i < n; i++) if (!look[i]) { let a = i - 1, b = i + 1; while (!look[b]) b++; const f = (sw[i] - sw[a]) / (sw[b] - sw[a]); look[i] = look[a].clone().lerp(look[b], f); }
+    const start = out.pos.length; if (si > 0) d = null;
+    const push = (sArc) => {
+      let k = 1; while (k < S.length - 1 && S[k] < sArc) k++;
+      const f = (sArc - S[k - 1]) / Math.max(1e-6, S[k] - S[k - 1]); const p = P[k - 1].clone().lerp(P[k], f);
+      let i = 0; while (i < n - 2 && sw[i + 1] < sArc) i++;
+      const u = Math.min(1, Math.max(0, (sArc - sw[i]) / Math.max(1e-6, sw[i + 1] - sw[i]))); const e = u * u * (3 - 2 * u);
+      const want = look[i].clone().lerp(look[i + 1], e).sub(p).normalize();
+      d = d ? d.lerp(want, 1 - Math.exp(-dt * 3.2)).normalize() : want;
+      out.pos.push([+p.x.toFixed(4), +p.y.toFixed(4), +p.z.toFixed(4)]); out.dir.push([+d.x.toFixed(4), +d.y.toFixed(4), +d.z.toFixed(4)]);
+      out.cap.push(curCap); out.fade.push(0);
+    };
+    const stops = [0]; for (let i = 1; i < n - 1; i++) if (W[i].hold) stops.push(i); stops.push(n - 1);
+    for (let j = 0; j < stops.length - 1; j++) {
+      const a = stops[j], b = stops[j + 1];
+      if (W[a].t) curCap = idx[a];
+      for (let t = 0; t < (W[a].hold || 0); t += dt) push(sw[a]);
+      const len = sw[b] - sw[a], ramp = 1.2, T = len / v + ramp;
+      for (let t = 0; t < T; t += dt) {   // profilo trapezoidale: accelera, velocita' costante, rallenta
+        let s2;
+        if (t < ramp) s2 = v * t * t / (2 * ramp);
+        else if (t > T - ramp) { const r = T - t; s2 = len - v * r * r / (2 * ramp); }
+        else s2 = v * ramp / 2 + v * (t - ramp);
+        push(sw[a] + Math.min(len, s2));
+      }
+    }
+    if (W[n - 1].t) curCap = idx[n - 1];
+    for (let t = 0; t < (W[n - 1].hold || 0); t += dt) push(sw[n - 1]);
+    // dissolvenze di 0,7 s alle estremita' degli stacchi
+    const nf = Math.round(0.7 * fps), end = out.pos.length;
+    if (si > 0) for (let k = 0; k < nf; k++) out.fade[start + k] = 1 - k / nf;
+    if (si < seqs.length - 1) for (let k = 0; k < nf; k++) out.fade[end - 1 - k] = Math.max(out.fade[end - 1 - k], 1 - k / nf);
+  });
+  return out;
 }
-function prossima() {
-  if (!tour) return;
-  tour.i++;
-  const k = TOUR[tour.i];
-  if (!k) { fermaTour(); return; }
-  const cap = document.getElementById('didascalia');
-  cap.querySelector('h2').textContent = k.t; cap.querySelector('p').textContent = k.c; cap.classList.remove('nascosto');
-  if (k.plastico) { pos.y = floorY('S1'); orbit = { az: -0.75, el: 0.9, d: 16 }; setPlastico(true); tour.until = performance.now() + 6000; return; }
-  goTo(k, true, k.d * 1000 * (tour.i === 0 ? 0.15 : 1));
-  tour.until = performance.now() + k.d * 1000 * (tour.i === 0 ? 0.15 : 1) + (TOUR[tour.i + 1] && TOUR[tour.i + 1].t === k.t ? 0 : 2600);
+let tour = null, TOURCAMP = null;
+function avviaTour() {
+  setPlastico(false); nascondiAiuto(); tween = null;
+  TOURCAMP = TOURCAMP || campionaTour(30);
+  tour = { t0: performance.now(), cap: -1 }; document.getElementById('bTour').textContent = '■ Ferma tour';
+}
+function passoTour(now) {
+  const C = TOURCAMP, x = (now - tour.t0) / 1000 * C.fps; const i = Math.floor(x);
+  if (i >= C.pos.length - 1) { fermaTour(); return; }
+  const f = x - i, a = C.pos[i], b = C.pos[i + 1], da = C.dir[i], db = C.dir[i + 1];
+  pos.set(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f);
+  const dx = da[0] + (db[0] - da[0]) * f, dy = da[1] + (db[1] - da[1]) * f, dz = da[2] + (db[2] - da[2]) * f;
+  yaw = Math.atan2(dz, dx); pitch = Math.atan2(dy, Math.hypot(dx, dz));
+  document.getElementById('nero').style.opacity = C.fade[i];
+  if (C.cap[i] !== tour.cap) {
+    tour.cap = C.cap[i]; const k = C.didascalie[tour.cap]; const el = document.getElementById('didascalia');
+    if (k) { el.querySelector('h2').textContent = k.t; el.querySelector('p').textContent = k.c; el.classList.remove('nascosto'); }
+  }
 }
 function fermaTour() {
   if (!tour) return; tour = null; document.getElementById('bTour').textContent = '▶ Tour guidato';
+  document.getElementById('nero').style.opacity = 0;
   document.getElementById('didascalia').classList.add('nascosto');
 }
 document.getElementById('bTour').addEventListener('click', () => tour ? fermaTour() : avviaTour());
@@ -1176,12 +1283,12 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (tween) {
     const k = Math.min(1, (now - tween.t0) / tween.d), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-    pos.lerpVectors(tween.from, tween.to, tour ? k * 0.15 + e * 0.85 : e);
+    pos.lerpVectors(tween.from, tween.to, e);
     let dyaw = tween.yawTo - tween.yawFrom; dyaw = Math.atan2(Math.sin(dyaw), Math.cos(dyaw)); yaw = tween.yawFrom + dyaw * e;
     pitch = tween.pFrom + (tween.pTo - tween.pFrom) * e;
     if (k >= 1) tween = null;
   }
-  if (tour && !tween && now > tour.until) prossima();
+  if (tour) passoTour(now);
   const f = (keys['w'] || keys['arrowup'] ? 1 : 0) - (keys['s'] || keys['arrowdown'] ? 1 : 0) + passo;
   const side = (keys['d'] ? 1 : 0) - (keys['a'] ? 1 : 0);
   if (keys['arrowleft']) yaw -= 1.6 * dt; if (keys['arrowright']) yaw += 1.6 * dt;
@@ -1189,7 +1296,6 @@ function frame(now) {
   const cf = curFloor();
   if (plastico) {
     const zc = cf === 'PT' ? 0 : DATA.z0.int; const cx = 23.4, cz = 6.4;
-    if (tour) orbit.az += dt * 0.12;
     camera.position.set(cx + Math.cos(orbit.az) * Math.cos(orbit.el) * orbit.d, zc + Math.sin(orbit.el) * orbit.d, cz + Math.sin(orbit.az) * Math.cos(orbit.el) * orbit.d);
     camera.lookAt(cx, zc, cz);
   } else {

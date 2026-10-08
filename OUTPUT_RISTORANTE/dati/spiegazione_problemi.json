@@ -1,0 +1,155 @@
+[
+ {
+  "floor": "terra",
+  "tipo": "accesso",
+  "titolo": "accesso a una sedia di T11",
+  "misura": 21,
+  "minimo": 40,
+  "p1": [
+   2419.0,
+   818.0
+  ],
+  "p2": [
+   2419.0,
+   838.0
+  ],
+  "c": [
+   2412.0,
+   744.75
+  ],
+  "tra": [
+   "sedia di T11",
+   "tavolo T13"
+  ],
+  "sedia": [
+   2382.5,
+   639.0,
+   2427.5,
+   684.0
+  ],
+  "span": [
+   260,
+   316.5
+  ],
+  "spiega": "Per arrivare dall'ingresso alla sedia evidenziata in rosso, anche scegliendo il giro più largo, si passa in un varco di 21 cm tra sedia di T11 e tavolo T13. Un ospite passa di fianco con ~40 cm, un cameriere con il piatto con ~60 cm.",
+  "piano": "Piano terra"
+ },
+ {
+  "floor": "terra",
+  "tipo": "schienali",
+  "titolo": "schienali T1 / T5",
+  "misura": 28,
+  "minimo": 60,
+  "p1": [
+   2262.5,
+   142.0
+  ],
+  "p2": [
+   2267.5,
+   170.0
+  ],
+  "c": [
+   2265.0,
+   156.0
+  ],
+  "tra": [
+   "sedia di T1",
+   "sedia di T5"
+  ],
+  "spiega": "Tra gli schienali delle due file ci sono 28 cm a sedie accostate. Quando gli ospiti si siedono arretrano la sedia di 15-25 cm, quindi le due persone si toccano schiena contro schiena e lì non passa nessuno. Per il comfort servono ~60 cm (per far passare un cameriere ~90).",
+  "piano": "Piano terra"
+ },
+ {
+  "floor": "int",
+  "tipo": "percorso",
+  "titolo": "piede scala -> varco verso sala (clienti) e ex bar: lungo facciata verso il varco",
+  "misura": 86,
+  "minimo": 90,
+  "p1": [
+   2546.0,
+   862.0
+  ],
+  "p2": [
+   2462.0,
+   858.0
+  ],
+  "c": [
+   2504.0,
+   860.0
+  ],
+  "tra": [
+   "limite della sala",
+   "tavolo T111"
+  ],
+  "a": [
+   2110,
+   965
+  ],
+  "b": [
+   2520,
+   640
+  ],
+  "spiega": "Il passaggio più stretto è tra limite della sala e tavolo T111: 86 cm. Per un percorso dei clienti servono almeno 90 cm: mancano 4 cm.",
+  "piano": "Interrato"
+ },
+ {
+  "floor": "int",
+  "tipo": "accesso",
+  "titolo": "accesso a una sedia di T110",
+  "misura": 15,
+  "minimo": 40,
+  "p1": [
+   2364.0,
+   850.0
+  ],
+  "p2": [
+   2380.0,
+   850.0
+  ],
+  "c": [
+   2348.5,
+   800.25
+  ],
+  "tra": [
+   "tavolo T110",
+   "tavolo T111"
+  ],
+  "sedia": [
+   2302.5,
+   728.0,
+   2347.5,
+   773.0
+  ],
+  "span": [
+   260,
+   249.5
+  ],
+  "spiega": "Per arrivare dall'ingresso alla sedia evidenziata in rosso, anche scegliendo il giro più largo, si passa in un varco di 15 cm tra tavolo T110 e tavolo T111. Un ospite passa di fianco con ~40 cm, un cameriere con il piatto con ~60 cm.",
+  "piano": "Interrato"
+ },
+ {
+  "floor": "int",
+  "tipo": "schienali",
+  "titolo": "schienali T102 / T106",
+  "misura": 40,
+  "minimo": 60,
+  "p1": [
+   2262.5,
+   152.0
+  ],
+  "p2": [
+   2262.5,
+   192.0
+  ],
+  "c": [
+   2262.5,
+   172.0
+  ],
+  "tra": [
+   "sedia di T102",
+   "sedia di T106"
+  ],
+  "spiega": "Tra gli schienali delle due file ci sono 40 cm a sedie accostate. Quando gli ospiti si siedono arretrano la sedia di 15-25 cm, quindi le due persone si toccano schiena contro schiena e lì non passa nessuno. Per il comfort servono ~60 cm (per far passare un cameriere ~90).",
+  "piano": "Interrato"
+ }
+]

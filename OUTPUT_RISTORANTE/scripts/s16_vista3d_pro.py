@@ -43,6 +43,9 @@ OPEN = {
 SKIP_EXTRA = {'terra': {127}, 'int': set()}   # lesena esterna dentro la vetrina
 OUTER = {'terra': ((2756, -140), (2548, 1337)), 'int': ((2757, -140), (2549, 1335))}   # filo esterno facciata
 KITCHEN = box(1600, -100, 1992, 662)
+# testate dei muri aperte nel rilievo (si vedrebbe l'interno del muro doppio) e varchi senza architrave
+CAPS = {'terra': [((2187, 562), (2187, 629)), ((2079, 562), (2085, 631))], 'int': []}
+LINTELS = {'terra': [dict(box=(2079, 562, 2187, 630), head=2.45)], 'int': [dict(box=(2472, 638, 2568, 725), head=2.25)]}
 
 
 def m(v):
@@ -127,6 +130,14 @@ def walls(floor):
                     continue
                 if o['k'] == 'win': pieces.append((p, q, 0.0, o['sill']))
                 pieces.append((p, q, o['head'], Hf))
+    for a, b in CAPS[floor]:
+        pieces.append((np.array(a, float), np.array(b, float), 0.0, Hf))
+    for L in LINTELS[floor]:   # architrave: due facce lungo il lato lungo del varco + intradosso
+        x0, y0, x1, y1 = L['box']
+        if x1 - x0 > y1 - y0: sides = [((x0, y0), (x1, y0)), ((x1, y1), (x0, y1))]
+        else: sides = [((x0, y1), (x0, y0)), ((x1, y0), (x1, y1))]
+        for a, b in sides: pieces.append((np.array(a, float), np.array(b, float), L['head'], Hf))
+        slabs.append({'ring': [[m(x0), m(y0)], [m(x1), m(y0)], [m(x1), m(y1)], [m(x0), m(y1)]], 'z': L['head'], 'mat': 'intradosso', 'down': True})
     # facce: materiale per lato (normale sinistra / destra), campionando 12 cm dentro l'ambiente
     out = []
     for p, q, zb, zt in pieces:
