@@ -66,12 +66,12 @@ sheet('terra', PT, [(t10, 'T10 tolto')], [
     ((2155, 300), (2245, 300), '90'),             # corridoio verso fila 2
 ], 'PIANO TERRA - VARIANTE: montacarichi vicino a T10', 'schizzo_PT_variante_MC.png')
 
-# ---- S1: T109 spostato nell'angolo NW (dove era il montacarichi), T110 resta
+# ---- S1: T109 spostato nell'angolo NW (dove era il montacarichi), T110 eliminato (richiesta cliente)
 t109, t110 = S.s_ovest
 t109n = dict(t109, x=2080, y=110, sides='NS')
-S1 = {'Sala interrata (10 tavoli)': S.s_nord + S.s_fac + [t109n, t110],
+S1 = {'Sala interrata (9 tavoli)': S.s_nord + S.s_fac + [t109n],
       'Ex area bar (7 tavoli)': S.b_nord + S.b_sud}
-sheet('int', S1, [(t109, 'T109 spostato')], [
+sheet('int', S1, [(t109, 'ex T109 spostato'), (t110, 'ex T110 eliminato')], [
     ((2245, 425), (2353, 425), '108'),
 ], "PIANO INTERRATO - VARIANTE: montacarichi vicino a T10 (sopra)", 'schizzo_S1_variante_MC.png')
 print('ok')
