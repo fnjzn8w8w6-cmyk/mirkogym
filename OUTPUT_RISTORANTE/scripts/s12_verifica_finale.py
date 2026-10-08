@@ -169,7 +169,7 @@ def verify():
         tables = [it['tavolo'] for it in info]
         chairs = [c for it in info for c in it['sedie']]
         same_row = [tables[i].distance(tables[j]) for i in range(len(tables)) for j in range(i+1, len(tables))
-                    if abs(tables[i].bounds[1] - tables[j].bounds[1]) < 1 and tables[i].distance(tables[j]) < 30]
+                    if abs(tables[i].bounds[1] - tables[j].bounds[1]) < 1 and tables[i].distance(tables[j]) < 50]
         F['distanza_tra_tavoli_stessa_fila_cm'] = [round(min(same_row), 1), round(max(same_row), 1)] if same_row else None
         backs = []
         for i, a in enumerate(info):
