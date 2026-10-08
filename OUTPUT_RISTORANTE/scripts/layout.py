@@ -148,6 +148,9 @@ def solve(zones, keepouts, prm: Params, max_groups=None, fixed_hint=None, log=Fa
     sol.parameters.log_search_progress = log
     sol.parameters.use_energetic_reasoning_in_no_overlap_2d = True
     sol.parameters.use_timetabling_in_no_overlap_2d = True
+    import os as _os
+    if _os.environ.get('FIX_HINT') == '1':      # diagnostica: impone esattamente la soluzione suggerita
+        sol.parameters.fix_variables_to_their_hinted_value = True
     st = sol.Solve(m)
     res = []
     if st in (cp_model.OPTIMAL, cp_model.FEASIBLE):

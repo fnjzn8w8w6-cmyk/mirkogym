@@ -1,0 +1,732 @@
+{
+ "solo da 2": {
+  "tot": 44,
+  "rooms": {
+   "PT - sala nord": {
+    "groups": [
+     {
+      "x": 2250,
+      "y": -35,
+      "nx": 1,
+      "ny": 1,
+      "sides": "EW",
+      "seats": 2
+     },
+     {
+      "x": 2250,
+      "y": 65,
+      "nx": 1,
+      "ny": 1,
+      "sides": "EW",
+      "seats": 2
+     },
+     {
+      "x": 2250,
+      "y": 170,
+      "nx": 1,
+      "ny": 1,
+      "sides": "EW",
+      "seats": 2
+     },
+     {
+      "x": 2295,
+      "y": 270,
+      "nx": 1,
+      "ny": 1,
+      "sides": "EW",
+      "seats": 2
+     },
+     {
+      "x": 2295,
+      "y": 370,
+      "nx": 1,
+      "ny": 1,
+      "sides": "EW",
+      "seats": 2
+     },
+     {
+      "x": 2295,
+      "y": 475,
+      "nx": 1,
+      "ny": 1,
+      "sides": "EW",
+      "seats": 2
+     }
+    ],
+    "seats": 12,
+    "keepouts": {
+     "corridoio servizio ovest": [
+      2050,
+      -60,
+      2200,
+      575
+     ],
+     "montacarichi + zona di carico": [
+      2050,
+      375,
+      2245,
+      475
+     ]
+    },
+    "zones": {
+     "z": [
+      [
+       2064.0,
+       -34.0
+      ],
+      [
+       2060.0,
+       559.0
+      ],
+      [
+       2586.4,
+       558.0
+      ],
+      [
+       2667.6,
+       -42.9
+      ]
+     ]
+    },
+    "floor": "terra",
+    "status": "OPTIMAL"
+   },
+   "PT - sala sud (ingresso)": {
+    "groups": [
+     {
+      "x": 2295,
+      "y": 685,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2395,
+      "y": 860,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2295,
+      "y": 935,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     }
+    ],
+    "seats": 6,
+    "keepouts": {
+     "corridoio cassa/varco": [
+      2180,
+      620,
+      2295,
+      1190
+     ],
+     "corridoio ingresso-scala": [
+      2180,
+      1093,
+      2520,
+      1190
+     ],
+     "ingresso (anta + 150x150)": [
+      2410,
+      990,
+      2600,
+      1190
+     ]
+    },
+    "zones": {
+     "z": [
+      [
+       2188.0,
+       632.0
+      ],
+      [
+       2188.0,
+       1180.0
+      ],
+      [
+       2497.5,
+       1180.0
+      ],
+      [
+       2575.5,
+       629.0
+      ]
+     ]
+    },
+    "floor": "terra",
+    "status": "OPTIMAL"
+   },
+   "S1 - sala interrata": {
+    "groups": [
+     {
+      "x": 2080,
+      "y": 110,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2200,
+      "y": 22,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2320,
+      "y": 22,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2440,
+      "y": 22,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2560,
+      "y": 22,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2335,
+      "y": 272,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2430,
+      "y": 272,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2525,
+      "y": 272,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     }
+    ],
+    "seats": 16,
+    "keepouts": {
+     "zona montacarichi + scarico": [
+      2070,
+      375,
+      2245,
+      475
+     ],
+     "corridoio varco personale": [
+      2070,
+      250,
+      2170,
+      385
+     ],
+     "corridoio sud (varco clienti)": [
+      2070,
+      468,
+      2700,
+      575
+     ]
+    },
+    "zones": {
+     "z": [
+      [
+       2078.0,
+       -35.0
+      ],
+      [
+       2080.0,
+       555.0
+      ],
+      [
+       2585.2,
+       555.0
+      ],
+      [
+       2670.5,
+       -39.0
+      ]
+     ]
+    },
+    "floor": "int",
+    "status": "OPTIMAL+mano"
+   },
+   "S1 - ex area bar": {
+    "groups": [
+     {
+      "x": 2250,
+      "y": 778,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2370,
+      "y": 778,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2170,
+      "y": 1051,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2290,
+      "y": 1051,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2410,
+      "y": 1051,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     }
+    ],
+    "seats": 10,
+    "keepouts": {
+     "arrivo scala + corridoio": [
+      2050,
+      908,
+      2600,
+      1001
+     ],
+     "corridoio facciata": [
+      2457,
+      715,
+      2600,
+      1001
+     ],
+     "pianerottolo piede scala": [
+      2050,
+      880,
+      2175,
+      1001
+     ]
+    },
+    "zones": {
+     "z1": [
+      [
+       2061.0,
+       727.0
+      ],
+      [
+       2061.0,
+       975.0
+      ],
+      [
+       2527.1,
+       975.0
+      ],
+      [
+       2562.5,
+       728.0
+      ]
+     ],
+     "z2": [
+      [
+       2167.0,
+       727.0
+      ],
+      [
+       2167.0,
+       1181.0
+      ],
+      [
+       2497.6,
+       1181.0
+      ],
+      [
+       2562.5,
+       728.0
+      ]
+     ]
+    },
+    "floor": "int",
+    "status": "OPTIMAL+mano"
+   }
+  }
+ },
+ "con da 4": {
+  "tot": 46,
+  "rooms": {
+   "PT - sala nord": {
+    "groups": [
+     {
+      "x": 2250,
+      "y": -35,
+      "nx": 1,
+      "ny": 2,
+      "sides": "EW",
+      "seats": 4
+     },
+     {
+      "x": 2250,
+      "y": 220,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NSEW",
+      "seats": 4
+     },
+     {
+      "x": 2295,
+      "y": 395,
+      "nx": 1,
+      "ny": 2,
+      "sides": "EW",
+      "seats": 4
+     }
+    ],
+    "seats": 12,
+    "keepouts": {
+     "corridoio servizio ovest": [
+      2050,
+      -60,
+      2200,
+      575
+     ],
+     "montacarichi + zona di carico": [
+      2050,
+      375,
+      2245,
+      475
+     ]
+    },
+    "zones": {
+     "z": [
+      [
+       2064.0,
+       -34.0
+      ],
+      [
+       2060.0,
+       559.0
+      ],
+      [
+       2586.4,
+       558.0
+      ],
+      [
+       2667.6,
+       -42.9
+      ]
+     ]
+    },
+    "floor": "terra",
+    "status": "OPTIMAL"
+   },
+   "PT - sala sud (ingresso)": {
+    "groups": [
+     {
+      "x": 2345,
+      "y": 635,
+      "nx": 1,
+      "ny": 2,
+      "sides": "EW",
+      "seats": 4
+     },
+     {
+      "x": 2345,
+      "y": 815,
+      "nx": 1,
+      "ny": 2,
+      "sides": "EW",
+      "seats": 4
+     }
+    ],
+    "seats": 8,
+    "keepouts": {
+     "corridoio cassa/varco": [
+      2180,
+      620,
+      2295,
+      1190
+     ],
+     "corridoio ingresso-scala": [
+      2180,
+      1093,
+      2520,
+      1190
+     ],
+     "ingresso (anta + 150x150)": [
+      2410,
+      990,
+      2600,
+      1190
+     ]
+    },
+    "zones": {
+     "z": [
+      [
+       2188.0,
+       632.0
+      ],
+      [
+       2188.0,
+       1180.0
+      ],
+      [
+       2497.5,
+       1180.0
+      ],
+      [
+       2575.5,
+       629.0
+      ]
+     ]
+    },
+    "floor": "terra",
+    "status": "OPTIMAL"
+   },
+   "S1 - sala interrata": {
+    "groups": [
+     {
+      "x": 2080,
+      "y": 110,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2200,
+      "y": 22,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2320,
+      "y": 22,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2440,
+      "y": 22,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2560,
+      "y": 22,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2335,
+      "y": 272,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2430,
+      "y": 272,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2525,
+      "y": 272,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     }
+    ],
+    "seats": 16,
+    "keepouts": {
+     "zona montacarichi + scarico": [
+      2070,
+      375,
+      2245,
+      475
+     ],
+     "corridoio varco personale": [
+      2070,
+      250,
+      2170,
+      385
+     ],
+     "corridoio sud (varco clienti)": [
+      2070,
+      468,
+      2700,
+      575
+     ]
+    },
+    "zones": {
+     "z": [
+      [
+       2078.0,
+       -35.0
+      ],
+      [
+       2080.0,
+       555.0
+      ],
+      [
+       2585.2,
+       555.0
+      ],
+      [
+       2670.5,
+       -39.0
+      ]
+     ]
+    },
+    "floor": "int",
+    "status": "OPTIMAL+mano"
+   },
+   "S1 - ex area bar": {
+    "groups": [
+     {
+      "x": 2250,
+      "y": 778,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2370,
+      "y": 778,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2170,
+      "y": 1051,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2290,
+      "y": 1051,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     },
+     {
+      "x": 2410,
+      "y": 1051,
+      "nx": 1,
+      "ny": 1,
+      "sides": "NS",
+      "seats": 2
+     }
+    ],
+    "seats": 10,
+    "keepouts": {
+     "arrivo scala + corridoio": [
+      2050,
+      908,
+      2600,
+      1001
+     ],
+     "corridoio facciata": [
+      2457,
+      715,
+      2600,
+      1001
+     ],
+     "pianerottolo piede scala": [
+      2050,
+      880,
+      2175,
+      1001
+     ]
+    },
+    "zones": {
+     "z1": [
+      [
+       2061.0,
+       727.0
+      ],
+      [
+       2061.0,
+       975.0
+      ],
+      [
+       2527.1,
+       975.0
+      ],
+      [
+       2562.5,
+       728.0
+      ]
+     ],
+     "z2": [
+      [
+       2167.0,
+       727.0
+      ],
+      [
+       2167.0,
+       1181.0
+      ],
+      [
+       2497.6,
+       1181.0
+      ],
+      [
+       2562.5,
+       728.0
+      ]
+     ]
+    },
+    "floor": "int",
+    "status": "OPTIMAL+mano"
+   }
+  }
+ }
+}
