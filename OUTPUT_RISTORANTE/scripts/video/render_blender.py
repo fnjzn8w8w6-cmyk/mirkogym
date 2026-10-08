@@ -7,10 +7,13 @@ import bpy
 from mathutils import Vector
 
 src, dst = sys.argv[1], sys.argv[2]
-f0, f1 = int(sys.argv[3]), int(sys.argv[4])
-step = int(sys.argv[5]) if len(sys.argv) > 5 else 1
-W = int(sys.argv[6]) if len(sys.argv) > 6 else 1280
-SPP = int(sys.argv[7]) if len(sys.argv) > 7 else 64
+FOTO = sys.argv[3] == 'foto'          # modalita' foto: python render_blender.py <dati> <uscita> foto <scatti.json> <larghezza> <campioni>
+if FOTO: f0 = f1 = 0
+else: f0, f1 = int(sys.argv[3]), int(sys.argv[4])
+step = int(sys.argv[5]) if len(sys.argv) > 5 and not FOTO else 1
+A = sys.argv[5:] if FOTO else sys.argv[6:]     # [larghezza, campioni]
+W = int(A[0]) if len(A) > 0 else 1280
+SPP = int(A[1]) if len(A) > 1 else 64
 os.makedirs(dst, exist_ok=True)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -130,6 +133,23 @@ bpy.context.preferences.addons['cycles'].preferences.compute_device_type = 'NONE
 sc.render.threads_mode = 'AUTO'
 ENG = os.environ.get('ENGINE')
 if ENG: sc.render.engine = ENG
+
+if FOTO:
+    sc.cycles.use_fast_gi = False; sc.cycles.diffuse_bounces = 4; sc.cycles.glossy_bounces = 4; sc.cycles.adaptive_threshold = 0.01
+    for k in json.load(open(sys.argv[4])):
+        out = os.path.join(dst, k['nome'] + '.png')
+        if os.path.exists(out): continue
+        x, y, z = k['p']; e = k.get('occhio', 1.6)
+        P = Vector((x, -y, z + e)); L = Vector((k['look'][0], -k['look'][1], k['look'][2]))
+        cam.location = P; cam.rotation_mode = 'QUATERNION'; cam.rotation_quaternion = (L - P).to_track_quat('-Z', 'Y')
+        cd.lens = k.get('lente', 24)
+        cd.dof.use_dof = 'fuoco' in k
+        if cd.dof.use_dof: cd.dof.focus_distance = (L - P).length; cd.dof.aperture_fstop = k['fuoco']
+        sc.view_settings.exposure = k.get('esposizione', 0.6)
+        t = time.time(); sc.render.filepath = out
+        bpy.ops.render.render(write_still=True)
+        print(f"foto {k['nome']} {time.time() - t:.0f}s", flush=True)
+    sys.exit(0)
 
 for f in range(f0, min(f1, len(tour['pos']) - 1) + 1, step):
     out = os.path.join(dst, f'f{f:05d}.png')
