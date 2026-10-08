@@ -164,7 +164,7 @@ def solids(floor, paths):
     S, LOW, burners = [], [], []
     for k in ('basso', 'banco', 'tavolo', 'mensola'):
         for pid, polys in paths.get(k, {}).items():
-            if floor == 'int' and pid in BAR_IDS: continue
+            if floor == 'int' and (pid in BAR_IDS or pid == 158): continue     # 158 diventa una credenza (MOBILI)
             if floor == 'terra' and k == 'banco': continue     # cassa e banco cassa: disegnati a parte
             P = np.vstack(polys)
             hull = MultiPoint([tuple(p) for p in P]).convex_hull
@@ -239,6 +239,16 @@ def decor(floor, W, keep):
     return art, sconce
 
 
+# mobili di sala (cm, fronte = lato verso cui si aprono): credenze con cassetti posate, vetrine bicchieri/piatti, vini
+MOBILI = {
+    'terra': [dict(tipo='credenza_vetrina', box=(2058, 100, 2103, 255), fronte='E'),
+              dict(tipo='credenza', box=(2057, 260, 2092, 375), fronte='E'),            # postazione di servizio accorciata
+              dict(tipo='cantinetta', box=(2058, 475, 2093, 555), fronte='E')],
+    'int': [dict(tipo='credenza_vetrina', box=(2075, 160, 2120, 255), fronte='E'),
+            dict(tipo='credenza', box=(2263, 518, 2388, 565), fronte='N'),               # elemento fisso 158 come credenza
+            dict(tipo='cantinetta', box=(2060, 738, 2094, 955), fronte='E')],            # parete dei vini dell'ex bar
+}
+
 LIGHTS = {   # punti luce d'ambiente (cm): calde in sala, neutra in cucina
     'terra': [(2230, 140, 'w'), (2500, 150, 'w'), (2240, 420, 'w'), (2480, 430, 'w'), (2360, 800, 'w'),
               (2300, 1080, 'w'), (1820, 330, 'c')],
@@ -307,6 +317,7 @@ def main():
             'floors': floors, 'ceil': rings(ceil), 'beams': bm, 'tables': tables, 'chairs': chairs, 'labels': labels,
             'art': art, 'sconce': sconce, 'bar': bar, 'rail': rail, 'service': serv,
             'lights': [[m(x), m(y), t] for x, y, t in LIGHTS[floor]], 'cassa': cassa,
+            'mobili': [dict(tipo=d['tipo'], box=[m(v) for v in d['box']], fronte=d['fronte']) for d in MOBILI[floor]],
             'sala': rings(sala),
         }
     tpl = (ROOT / 'scripts/vista3d_pro_template.html').read_text()

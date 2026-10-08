@@ -902,13 +902,10 @@ for (const [x0, y0, x1, y1, top] of DATA.stairs) {
 }
 for (const [key, fl] of Object.entries(DATA.floors)) {
   const z0 = key === 'PT' ? DATA.z0.terra : DATA.z0.int;
-  for (const [x0, y0, x1, y1, name] of fl.service) {
-    if (/ribalt/.test(name)) { boxXY(x0, y0 + 0.02, x1, y1 - 0.02, z0 + 0.84, z0 + 0.865, MAT.inox, G[key]); continue; }
-    boxXY(x0, y0, x1, y1, z0 + 0.08, z0 + 0.92, MAT.noce, G[key]); boxXY(x0 + 0.01, y0 + 0.01, x1 - 0.01, y1 - 0.01, z0, z0 + 0.08, MAT.ferro, G[key]);
-    boxXY(x0 - 0.01, y0 - 0.01, x1 + 0.01, y1 + 0.01, z0 + 0.92, z0 + 0.95, MAT.marmo, G[key]);
-    const bt = []; for (let i = 0; i < 4; i++) bt.push([x0 + 0.1, y0 + 0.15 + i * 0.09, z0 + 0.95, 0]);
-    instanced(GEO.bottiglia, MAT.bottiglia, bt, G[key], i => new THREE.Color(0x9fb8b0));
+  for (const [x0, y0, x1, y1, name] of fl.service) {   // la postazione di servizio e' tra i mobili; resta la mensola ribaltabile
+    if (/ribalt/.test(name)) boxXY(x0, y0 + 0.02, x1, y1 - 0.02, z0 + 0.84, z0 + 0.865, MAT.inox, G[key]);
   }
+  for (const mb of fl.mobili) mobile(mb, G[key], z0, key);
 }
 const CA = DATA.floors.PT.cassa;
 if (CA) {
@@ -949,20 +946,76 @@ if (CA) {
   const kick = new THREE.Mesh(new THREE.BoxGeometry(0.77, 0.25, 0.05), MAT.inox); kick.position.set(0.395, 0.14, 0); g.add(kick);
   G.PT.add(g);
 }
-// ------------------------------------------------------------------ parete vini nell'interrato (ex area bar)
-{
-  const x0 = 20.6, y0 = 7.38, y1 = 9.55, z0 = DATA.z0.int, g = G.S1, d = 0.34;
-  boxXY(x0, y0 - 0.04, x0 + d, y0, z0, z0 + 2.45, MAT.noce, g); boxXY(x0, y1, x0 + d, y1 + 0.04, z0, z0 + 2.45, MAT.noce, g);
-  boxXY(x0, y0, x0 + d, y1, z0 + 2.41, z0 + 2.45, MAT.noce, g); boxXY(x0, y0, x0 + d, y1, z0, z0 + 0.12, MAT.ferro, g);
-  const back = new THREE.Mesh(new THREE.PlaneGeometry(y1 - y0, 2.28), new THREE.MeshBasicMaterial({ color: 0x5a3a1c }));
-  back.rotation.y = Math.PI / 2; back.position.set(x0 + 0.005, z0 + 1.27, (y0 + y1) / 2); g.add(back);
-  const R = rng(5); const bt = [];
-  for (let z = z0 + 0.2; z < z0 + 2.32; z += 0.095) for (let y = y0 + 0.05; y < y1 - 0.03; y += 0.088)
-    if (R() > 0.06) bt.push([x0 + 0.02, y, z, 0, 1, 0, -Math.PI / 2]);
-  instanced(GEO.bottiglia, MAT.bottiglia, bt, g, () => new THREE.Color([0x24361f, 0x1b2a18, 0x3a1f12, 0x111111, 0x2e4a2c][Math.floor(R() * 5)]));
-  for (let z = z0 + 0.15; z < z0 + 2.4; z += 0.38) boxXY(x0 + d - 0.03, y0, x0 + d, y1, z, z + 0.015, MAT.ottone, g);
-  const wash = new THREE.Mesh(new THREE.PlaneGeometry(y1 - y0, 2.3), M_WASH); wash.rotation.y = Math.PI / 2; wash.position.set(x0 + 0.01, z0 + 1.3, (y0 + y1) / 2); g.add(wash);
-  const l = new THREE.PointLight(0xffb066, 0.6, 3.2, 2); l.position.set(x0 + 0.6, z0 + 1.6, (y0 + y1) / 2); l.userData.base = 0.6; g.add(l); lights.S1.push(l);
+// ------------------------------------------------------------------ mobili: credenze, vetrine, cantinette
+function mobile(mb, grp, z0, key) {
+  const [x0, y0, x1, y1] = mb.box, F = mb.fronte;
+  const f = { E: [1, 0], W: [-1, 0], N: [0, -1], S: [0, 1] }[F];
+  const along = F === 'E' || F === 'W' ? y1 - y0 : x1 - x0, D = F === 'E' || F === 'W' ? x1 - x0 : y1 - y0;
+  const back = { E: [x0, (y0 + y1) / 2], W: [x1, (y0 + y1) / 2], N: [(x0 + x1) / 2, y1], S: [(x0 + x1) / 2, y0] }[F];
+  const g = new THREE.Group(); g.position.set(back[0], z0, back[1]); g.rotation.y = Math.atan2(f[0], f[1]); grp.add(g);
+  const W = along;
+  const lb = (a0, a1, h0, h1, d0, d1, mat) => { const m = new THREE.Mesh(new THREE.BoxGeometry(a1 - a0, h1 - h0, d1 - d0), mat);
+    m.position.set((a0 + a1) / 2, (h0 + h1) / 2, (d0 + d1) / 2); g.add(m); blockers.push(m); return m; };
+  const R = rng(Math.round((x0 + y0) * 100));
+  if (mb.tipo === 'cantinetta') {
+    const H = 2.32;
+    lb(-W / 2, -W / 2 + 0.03, 0, H, 0, D, MAT.noce); lb(W / 2 - 0.03, W / 2, 0, H, 0, D, MAT.noce);
+    lb(-W / 2, W / 2, H - 0.035, H, 0, D, MAT.noce); lb(-W / 2, W / 2, 0, 0.1, 0.01, D - 0.02, MAT.ferro);
+    const bk = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.06, H - 0.14), new THREE.MeshBasicMaterial({ color: 0x5a3a1c })); bk.position.set(0, 0.1 + (H - 0.14) / 2, 0.006); g.add(bk);
+    const bt = [];
+    for (let h = 0.2; h < H - 0.1; h += 0.095) for (let a = -W / 2 + 0.08; a < W / 2 - 0.05; a += 0.088)
+      if (R() > 0.06) bt.push([a, 0.02, h, 0, 1, Math.PI / 2, 0]);
+    instanced(GEO.bottiglia, MAT.bottiglia, bt, g, () => new THREE.Color([0x24361f, 0x1b2a18, 0x3a1f12, 0x111111, 0x2e4a2c, 0x5a1a22][Math.floor(R() * 6)]));
+    for (let h = 0.15; h < H - 0.05; h += 0.38) lb(-W / 2 + 0.03, W / 2 - 0.03, h, h + 0.015, D - 0.03, D, MAT.ottone);
+    const wash = new THREE.Mesh(new THREE.PlaneGeometry(W, H), M_WASH); wash.position.set(0, H / 2, 0.012); g.add(wash);
+    const l = new THREE.PointLight(0xffb066, 0.6, 3.2, 2); l.position.set(back[0] + f[0] * 0.6, z0 + 1.6, back[1] + f[1] * 0.6); l.userData.base = 0.6; grp.add(l); lights[key].push(l);
+    return;
+  }
+  // credenza: zoccolo, corpo in noce con cassetti per posate e ante, piano in marmo
+  const Hc = 0.92;
+  lb(-W / 2 + 0.02, W / 2 - 0.02, 0, 0.08, 0.03, D - 0.05, MAT.ferro);
+  lb(-W / 2, W / 2, 0.08, Hc - 0.03, 0, D - 0.015, MAT.noce);
+  lb(-W / 2 - 0.01, W / 2 + 0.01, Hc - 0.03, Hc, 0, D + 0.012, MAT.marmo);
+  const n = Math.max(1, Math.round(W / 0.45)), mw = W / n;
+  for (let i = 0; i < n; i++) {
+    const a0 = -W / 2 + i * mw + 0.004, a1 = a0 + mw - 0.008;
+    lb(a0, a1, 0.69, Hc - 0.045, D - 0.015, D, MAT.noceTavolo);            // cassetto posate
+    lb(a0, a1, 0.095, 0.68, D - 0.015, D, MAT.noceTavolo);                // anta
+    lb((a0 + a1) / 2 - 0.06, (a0 + a1) / 2 + 0.06, 0.78, 0.795, D, D + 0.018, MAT.ottone);
+    lb(i % 2 ? a0 + 0.03 : a1 - 0.045, i % 2 ? a0 + 0.045 : a1 - 0.03, 0.42, 0.56, D, D + 0.018, MAT.ottone);
+  }
+  // sul piano: pile di piatti, bicchieri capovolti su un panno, bicchieri per le posate, tovaglioli
+  const top = Hc, dz = Math.min(D, 0.42) / 2, pl = [], gl = [], cups = [], forks = [], knv = [];
+  const slots = Math.max(2, Math.floor(W / 0.3));
+  for (let k = 0; k < slots; k++) {
+    const a = -W / 2 + (k + 0.5) * W / slots, t = k % 4;
+    if (t === 0) for (let j = 0; j < 9; j++) pl.push([a, dz, top + j * 0.017, 0, 0.9]);
+    else if (t === 1) for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) gl.push([a - 0.08 + c * 0.08, dz - 0.07 + r * 0.12, top + 0.216, 0, 1, Math.PI, 0]);
+    else if (t === 2) for (let c = 0; c < 2; c++) { cups.push([a - 0.05 + c * 0.1, dz, top, 0]);
+      for (let j = 0; j < 7; j++) (c ? knv : forks).push([a - 0.05 + c * 0.1 + (R() - 0.5) * 0.03, dz + (R() - 0.5) * 0.03, top + 0.12, R() * 3, 1, 1.45 + (R() - 0.5) * 0.25, (R() - 0.5) * 0.25]); }
+    else { const nb = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.08, 0.2), MAT.lino); nb.position.set(a, top + 0.04, dz); g.add(nb); }
+  }
+  instanced(GEO.piatto, MAT.piatto, pl, g); instanced(GEO.calice, MAT.calice, gl, g);
+  instanced(new THREE.CylinderGeometry(0.04, 0.035, 0.12, 18).translate(0, 0.06, 0), MAT.ceramica, cups, g);
+  instanced(new THREE.BoxGeometry(0.018, 0.004, 0.19), MAT.posate, forks, g); instanced(new THREE.BoxGeometry(0.014, 0.004, 0.21), MAT.posate, knv, g);
+  if (mb.tipo !== 'credenza_vetrina') return;
+  // vetrina a giorno sopra la credenza: bicchieri, piatti in piedi, caraffe, luce sotto i ripiani
+  const vd = 0.3, h0 = 1.3, h1 = 2.38;
+  lb(-W / 2, -W / 2 + 0.025, h0, h1, 0, vd, MAT.noce); lb(W / 2 - 0.025, W / 2, h0, h1, 0, vd, MAT.noce); lb(-W / 2, W / 2, h1 - 0.03, h1, 0, vd, MAT.noce);
+  const bk = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.05, h1 - h0), key === 'PT' ? MAT.laccaVerde : MAT.noce); bk.position.set(0, (h0 + h1) / 2, 0.004); g.add(bk);
+  const sh = [h0, 1.66, 2.02];
+  const vg = [], vp = [], vc = [];
+  sh.forEach((h, i) => {
+    lb(-W / 2 + 0.025, W / 2 - 0.025, h, h + 0.025, 0, vd, MAT.noce);
+    const led = new THREE.Mesh(new THREE.BoxGeometry(W - 0.08, 0.006, 0.012), MAT.lampadina); led.position.set(0, h - 0.004, vd - 0.03); if (i) g.add(led);
+    for (let a = -W / 2 + 0.07; a < W / 2 - 0.05; a += i === 1 ? 0.035 : 0.09) {
+      if (i === 0) vg.push([a, 0.15, h + 0.025 + 0.216, 0, 1, Math.PI, 0]);
+      else if (i === 1) vp.push([a, 0.15, h + 0.165, 0, 1, 0, Math.PI / 2]);
+      else vc.push([a, 0.15, h + 0.025, 0, 0.8]);
+    }
+  });
+  instanced(GEO.calice, MAT.calice, vg, g); instanced(GEO.piatto, MAT.piatto, vp, g); instanced(GEO.bottiglia, MAT.calice, vc, g);
+  const wash = new THREE.Mesh(new THREE.PlaneGeometry(W, h1 - h0), M_WASH); wash.position.set(0, (h0 + h1) / 2, 0.01); g.add(wash);
 }
 
 // ------------------------------------------------------------------ esterno: via Rovello
