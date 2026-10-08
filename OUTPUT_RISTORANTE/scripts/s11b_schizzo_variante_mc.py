@@ -9,6 +9,7 @@ import s06_export
 from s06_export import T, poly, rect_pts, text, draw_plan
 from progetto import Montacarichi, NEW_SERVICE
 import s11_schizzo as S
+FINAL = '--finale' in sys.argv   # versione finale pulita (senza tavoli rimossi e posizione precedente MC)
 
 OUT = S.OUT
 MCV = Montacarichi(L=80, P=80, x0=2075, y0=385)
@@ -28,6 +29,7 @@ def draw_mc(ax, floor):
     poly(ax, rect_pts(x1, y0, x1+90, y1), fc='#fed7e2', alpha=0.5, ec=c, lw=0.6, ls=':', zorder=3)
     text(ax, (x1+45, (y0+y1)/2), 'carico' if floor == 'terra' else 'scarico\n+mensola', ha='center', va='center',
          fontsize=5, color=c, zorder=8)
+    if FINAL: return
     # posizione attuale (tratteggio)
     poly(ax, rect_pts(2075, 120, 2155, 200), fc='none', ec=c, lw=0.8, ls='--', zorder=7)
     text(ax, (2115, 160), 'pos.\nattuale', ha='center', va='center', fontsize=4.5, color=c, zorder=8)
@@ -45,16 +47,19 @@ def sheet(floor, rooms, rem, dims, title, fname):
     fig, ax = plt.subplots(figsize=(11, 11))
     draw_plan(ax, floor, L, show_keep=False, fs_t=6)
     draw_mc(ax, floor)
-    for g, lab in rem: removed(ax, g, lab)
+    if not FINAL:
+        for g, lab in rem: removed(ax, g, lab)
     for a, b, s in dims: S.dim(ax, a, b, s)
     P = T(rect_pts(1950, -80, 2720, 1340)); ax.set_xlim(P[:, 0].min(), P[:, 0].max()); ax.set_ylim(P[:, 1].max(), P[:, 1].min())
     ax.set_aspect('equal'); ax.axis('off')
     n = sum(len(g) for g in rooms.values())
     sub = ' | '.join(f'{k}: {2*len(g)} coperti' for k, g in rooms.items())
-    ax.set_title(f'{title}\n{sub}  -  TOTALE {2*n} coperti\nSCHIZZO VARIANTE MONTACARICHI - quote in cm (rosso)', fontsize=10)
+    tag = 'VERSIONE FINALE DA CONFERMARE' if FINAL else 'SCHIZZO VARIANTE MONTACARICHI'
+    ax.set_title(f'{title}\n{sub}  -  TOTALE {2*n} coperti al piano  (totale PT + S1: 70)\n{tag} - quote in cm (rosso)', fontsize=10)
     for t in list(ax.texts):
         if t.get_text().startswith(('MC\n', 'sbarco', 'carico', 'mensola')) and t.get_position()[1] > 1000: t.remove()
     fig.subplots_adjust(0.01, 0.01, 0.99, 0.92)
+    if FINAL: fname = fname.replace('schizzo_', 'FINALE_').replace('_variante_MC', '')
     fig.savefig(OUT / fname, dpi=130); plt.close(fig)
 
 # ---- PT: T10 (primo tavolo della fila contro il setto) tolto
@@ -64,7 +69,7 @@ PT = {'Sala davanti alla cucina (13 tavoli)': S.nord_1 + S.nord_2 + S.nord_3[1:]
 sheet('terra', PT, [(t10, 'T10 tolto')], [
     ((2155, 425), (2257, 425), '102'),            # MC -> T11
     ((2155, 300), (2245, 300), '90'),             # corridoio verso fila 2
-], 'PIANO TERRA - VARIANTE: montacarichi vicino a T10', 'schizzo_PT_variante_MC.png')
+], 'PIANO TERRA - tavoli da 2, montacarichi vicino al varco' if FINAL else 'PIANO TERRA - VARIANTE: montacarichi vicino a T10', 'schizzo_PT_variante_MC.png')
 
 # ---- S1: T109 spostato nell'angolo NW (dove era il montacarichi), T110 eliminato (richiesta cliente)
 t109, t110 = S.s_ovest
@@ -76,5 +81,5 @@ sheet('int', S1, [(t109, 'ex T109 spostato'), (t110, 'ex T110 eliminato')], [
     ((2245, 425), (2353, 425), '108'),
     ((2110, 899), (2110, 978), '79 davanti alla scala'),
     ((2058, 810), (2090, 810), '32'),
-], "PIANO INTERRATO - VARIANTE: montacarichi vicino a T10 (sopra)", 'schizzo_S1_variante_MC.png')
+], ("PIANO INTERRATO - tavoli verso le pareti, passaggio al centro" if FINAL else "PIANO INTERRATO - VARIANTE: montacarichi vicino a T10 (sopra)"), 'schizzo_S1_variante_MC.png')
 print('ok')
