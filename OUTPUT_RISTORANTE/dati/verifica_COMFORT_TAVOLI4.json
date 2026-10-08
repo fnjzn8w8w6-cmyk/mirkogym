@@ -1,0 +1,206 @@
+{
+ "versione": "comfort con tavoli da 4",
+ "piani": {
+  "terra": {
+   "tavoli": 9,
+   "coperti": 24,
+   "da_2": 6,
+   "da_4": 3,
+   "tavoli_dettaglio": [
+    {
+     "T": "T1",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 8.9
+    },
+    {
+     "T": "T2",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 10.8
+    },
+    {
+     "T": "T3",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 13.8
+    },
+    {
+     "T": "T4",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 161.0
+    },
+    {
+     "T": "T5",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 6.9
+    },
+    {
+     "T": "T6",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 11.5
+    },
+    {
+     "T": "T7",
+     "sala": "PT - sala davanti alla cucina",
+     "dist_min_da_muri_cm": 11.1
+    },
+    {
+     "T": "T8",
+     "sala": "PT - sala dell'ingresso",
+     "dist_min_da_muri_cm": 11.1
+    },
+    {
+     "T": "T9",
+     "sala": "PT - sala dell'ingresso",
+     "dist_min_da_muri_cm": 9.1
+    }
+   ],
+   "distanza_tra_tavoli_stessa_fila_cm": [
+    40.0,
+    40.0
+   ],
+   "passaggio_minimo_tra_schienali_cm": {
+    "valore": 78.5,
+    "tra": "T8-T9"
+   },
+   "percorsi": {
+    "porta cucina -> varco sala ingresso (camerieri)": {
+     "larghezza_utile_cm": 100,
+     "richiesta_cm": 90,
+     "esito": "OK"
+    },
+    "porta cucina -> carico montacarichi": {
+     "larghezza_utile_cm": 123,
+     "richiesta_cm": 80,
+     "esito": "OK"
+    },
+    "ingresso -> varco sala cucina (clienti)": {
+     "larghezza_utile_cm": 115,
+     "richiesta_cm": 90,
+     "esito": "OK"
+    },
+    "ingresso -> scala per interrato": {
+     "larghezza_utile_cm": 99,
+     "richiesta_cm": 90,
+     "esito": "OK"
+    },
+    "ingresso -> porta disimpegno WC": {
+     "larghezza_utile_cm": 115,
+     "richiesta_cm": 90,
+     "esito": "OK"
+    }
+   },
+   "accesso_sedie_cm": {
+    "minimo": 40,
+    "tavolo": "T2",
+    "sotto_40cm": [
+     "T2",
+     "T7"
+    ]
+   }
+  },
+  "int": {
+   "tavoli": 8,
+   "coperti": 26,
+   "da_2": 3,
+   "da_4": 5,
+   "tavoli_dettaglio": [
+    {
+     "T": "T101",
+     "sala": "S1 - sala interrata",
+     "dist_min_da_muri_cm": 8.4
+    },
+    {
+     "T": "T102",
+     "sala": "S1 - sala interrata",
+     "dist_min_da_muri_cm": 11.3
+    },
+    {
+     "T": "T103",
+     "sala": "S1 - sala interrata",
+     "dist_min_da_muri_cm": 12.6
+    },
+    {
+     "T": "T104",
+     "sala": "S1 - sala interrata",
+     "dist_min_da_muri_cm": 119.0
+    },
+    {
+     "T": "T105",
+     "sala": "S1 - sala interrata",
+     "dist_min_da_muri_cm": 27.1
+    },
+    {
+     "T": "T106",
+     "sala": "S1 - ex area bar",
+     "dist_min_da_muri_cm": 4.4
+    },
+    {
+     "T": "T107",
+     "sala": "S1 - ex area bar",
+     "dist_min_da_muri_cm": 6.8
+    },
+    {
+     "T": "T108",
+     "sala": "S1 - ex area bar",
+     "dist_min_da_muri_cm": 3.2
+    }
+   ],
+   "distanza_tra_tavoli_stessa_fila_cm": [
+    15.0,
+    40.0
+   ],
+   "passaggio_minimo_tra_schienali_cm": {
+    "valore": 70.0,
+    "tra": "T103-T104"
+   },
+   "percorsi": {
+    "piede scala -> varco verso sala (clienti)": {
+     "larghezza_utile_cm": 91,
+     "richiesta_cm": 90,
+     "esito": "OK"
+    },
+    "varco -> sala interrata (clienti)": {
+     "larghezza_utile_cm": 120,
+     "richiesta_cm": 90,
+     "esito": "OK"
+    },
+    "varco -> scarico montacarichi (personale)": {
+     "larghezza_utile_cm": 120,
+     "richiesta_cm": 80,
+     "esito": "OK"
+    },
+    "scarico MC -> varco WC personale/spogliatoio": {
+     "larghezza_utile_cm": 145,
+     "richiesta_cm": 80,
+     "esito": "OK"
+    }
+   },
+   "accesso_sedie_cm": {
+    "minimo": 40,
+    "tavolo": "T102",
+    "sotto_40cm": [
+     "T102",
+     "T103",
+     "T107",
+     "T108"
+    ]
+   }
+  }
+ },
+ "problemi": [],
+ "avvisi": [],
+ "montacarichi": {
+  "vano_cm": [
+   2075.0,
+   385.0,
+   2155.0,
+   465.0
+  ],
+  "stessa_impronta_PT_S1": true,
+  "linee_attraversate_PT": [],
+  "linee_attraversate_S1": [],
+  "dentro_pavimento_PT": true,
+  "dentro_pavimento_S1": true
+ },
+ "coperti_totali": 50,
+ "esito": "TUTTO OK"
+}

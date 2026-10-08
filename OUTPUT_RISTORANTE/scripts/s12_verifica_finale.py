@@ -140,12 +140,13 @@ def verify():
         n = numbering[floor]
         for rn, groups in rooms.items():
             for g in groups:
-                t = box(g['x'], g['y'], g['x'] + 80, g['y'] + 80)
+                t = box(g['x'], g['y'], g['x'] + 80 * g.get('nx', 1), g['y'] + 80 * g.get('ny', 1))
                 ch = [box(*c[:4]) for c in chairs_of(g)]
-                info.append(dict(T=f'T{n}', sala=rn, x=g['x'], y=g['y'], tavolo=t, sedie=ch))
+                info.append(dict(T=f'T{n}', sala=rn, x=g['x'], y=g['y'], tavolo=t, sedie=ch, posti=g['seats']))
                 items += [t] + ch
                 n += 1
-        F = {'tavoli': len(info), 'coperti': 2*len(info), 'tavoli_dettaglio': []}
+        F = {'tavoli': len(info), 'coperti': sum(i['posti'] for i in info), 'da_2': sum(i['posti'] == 2 for i in info),
+             'da_4': sum(i['posti'] == 4 for i in info), 'tavoli_dettaglio': []}
         # 1-2 collisioni
         for it in info:
             parts = [('tavolo', it['tavolo'])] + [(f'sedia {i+1}', c) for i, c in enumerate(it['sedie'])]

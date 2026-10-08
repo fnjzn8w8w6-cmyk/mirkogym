@@ -96,10 +96,10 @@ def main():
         n = 1 if floor == 'terra' else 101
         for rn, groups in L[key].items():
             for g in groups:
-                tables.append([m(g['x']), m(g['y']), m(g['x'] + 80), m(g['y'] + 80)])
+                tables.append([m(g['x']), m(g['y']), m(g['x'] + 80 * g.get('nx', 1)), m(g['y'] + 80 * g.get('ny', 1))])
                 for c in chairs_of(g):
                     chairs.append([m(c[0]), m(c[1]), m(c[2]), m(c[3]), c[4]])
-                labels.append([f'T{n}', m(g['x'] + 40), m(g['y'] + 40)])
+                labels.append([f'T{n}', m(g['x'] + 40 * g.get('nx', 1)), m(g['y'] + 40 * g.get('ny', 1))])
                 n += 1
         bar = []
         if floor == 'int':
