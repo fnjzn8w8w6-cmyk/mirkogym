@@ -38,10 +38,11 @@ if prof:
     ctrl.append(Image.open(prof).convert('RGB').resize((W, H), Image.BILINEAR)); scale = [0.55, 0.9]
 
 prompt = ('RAW photo, ' + scena + ', interior of an Italian trattoria in Milan in the evening, photographed with a full frame camera, '
+          'bentwood chairs with natural woven cane seats, dark green enamel pendant lamps, dark green wainscoting, '
           'clear empty crystal wine glasses, white porcelain plates, warm tungsten light from the pendant lamps, light falloff, soft shadows, real wood grain, worn surfaces, subtle dust and '
           'imperfections, slightly uneven plaster, natural color, film grain, Canon EOS R5, 24mm, f/4, ISO 1600, editorial interior photography')
 neg = ('cartoon, 3d render, cgi, render, unreal engine, octane, videogame, painting, illustration, drawing, anime, plastic, glossy, '
-       'perfect, clean, symmetrical, green glass, tinted glass, colored glasses, low quality, blurry, deformed, distorted, text, watermark, logo, people, person, oversaturated, orange tint')
+       'perfect, clean, symmetrical, upholstered seats, cushions, white seats, black lamps, green glass, tinted glass, colored glasses, low quality, blurry, deformed, distorted, text, watermark, logo, people, person, oversaturated, orange tint')
 t = time.time()
 out = pipe(prompt=prompt, negative_prompt=neg, image=img, control_image=ctrl if prof else ctrl[0], strength=forza, num_inference_steps=30,
            guidance_scale=5.5, controlnet_conditioning_scale=scale if prof else scale[0], generator=torch.Generator().manual_seed(seme)).images[0]

@@ -13,12 +13,15 @@ sc = bpy.context.scene; dg = bpy.context.evaluated_depsgraph_get()
 
 
 def is_quadro(o):
+    """stampe d'arte e insegna "Dvca": immagini piane che l'IA storpierebbe (scritte, disegni)"""
     m = o.active_material
-    if not m or not m.name.startswith('misc') or not m.node_tree or len(o.data.polygons) > 4: return False
+    if m and m.name.split('.')[0] == 'bronzo': return True   # sportello del montacarichi: l'IA lo scambierebbe per una vetrinetta
+    if not m or not m.name.startswith(('misc', 'basic')) or not m.node_tree or len(o.data.polygons) > 4: return False
     return any(n.type == 'TEX_IMAGE' for n in m.node_tree.nodes)
 
 
 quadri = {o.name for o in bpy.data.objects if o.type == 'MESH' and is_quadro(o)}
+VETRI = {'vetro'}
 for k in shots:
     x, y, z = k['p']; P = Vector((x, -y, z + k.get('occhio', 1.6))); L = Vector((k['look'][0], -k['look'][1], k['look'][2]))
     f = (L - P).normalized(); r = f.cross(Vector((0, 0, 1))).normalized(); u = r.cross(f); lens = k.get('lente', 24)
@@ -26,7 +29,11 @@ for k in shots:
     for py in range(H):
         for px in range(W):
             d = (f * lens + r * ((px + 0.5) / W - 0.5) * 36 + u * (0.5 - (py + 0.5) / H) * 36 * H / W).normalized()
-            h = sc.ray_cast(dg, P, d, distance=60)
+            o0 = P
+            for _ in range(6):   # vetrine e porte a vetri: si guarda attraverso (profondita' e quadri di cio' che sta dietro)
+                h = sc.ray_cast(dg, o0, d, distance=60)
+                if not (h[0] and h[4] is not None and h[4].active_material and h[4].active_material.name.split('.')[0] in VETRI): break
+                o0 = h[1] + d * 0.002
             if h[0]:
                 dist[py, px] = (h[1] - P).length
                 if h[4] is not None and h[4].name in quadri: mask[py, px] = 255
