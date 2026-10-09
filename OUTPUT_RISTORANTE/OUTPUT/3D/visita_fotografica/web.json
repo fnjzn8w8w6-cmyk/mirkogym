@@ -1,0 +1,1145 @@
+{
+ "S_LM": 8.0,
+ "gruppi": {
+  "Wlm_boiserie_PT": {
+   "materiale": "boiserie",
+   "piano": "PT",
+   "area": 34.13,
+   "colore": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "rugosita": 0.45,
+   "metallo": 0.0,
+   "immagine": "tx/img_boiserie_PT.jpg",
+   "luce": "lm/boiserie_PT.jpg",
+   "res": 512
+  },
+  "Wlm_cannettato_PT": {
+   "materiale": "cannettato",
+   "piano": "PT",
+   "area": 6.04,
+   "colore": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "rugosita": 0.45,
+   "metallo": 0.0,
+   "immagine": "tx/img_cannettato_PT.jpg",
+   "luce": "lm/cannettato_PT.jpg",
+   "res": 256
+  },
+  "Wlm_cemento_S1": {
+   "materiale": "cemento",
+   "piano": "S1",
+   "area": 162.89,
+   "colore": [
+    0.7,
+    0.7,
+    0.7
+   ],
+   "rugosita": 0.6,
+   "metallo": 0,
+   "luce": "lm/cemento_S1.jpg",
+   "res": 1024
+  },
+  "Wlm_ceramica_PT": {
+   "materiale": "ceramica",
+   "piano": "PT",
+   "area": 8.01,
+   "colore": [
+    0.9647,
+    0.9569,
+    0.9373
+   ],
+   "rugosita": 0.15,
+   "metallo": 0.0,
+   "luce": "lm/ceramica_PT.jpg",
+   "res": 256
+  },
+  "Wlm_ceramica_S1": {
+   "materiale": "ceramica",
+   "piano": "S1",
+   "area": 5.43,
+   "colore": [
+    0.9647,
+    0.9569,
+    0.9373
+   ],
+   "rugosita": 0.15,
+   "metallo": 0.0,
+   "luce": "lm/ceramica_S1.jpg",
+   "res": 256
+  },
+  "Wlm_cotto_S1": {
+   "materiale": "cotto",
+   "piano": "S1",
+   "area": 54.58,
+   "colore": [
+    0.0757,
+    0.0151,
+    0.0057
+   ],
+   "rugosita": 0.92,
+   "metallo": 0.0,
+   "tex": "terracotta_floor_tiles",
+   "lato": 2.08,
+   "tinta": [
+    1.05,
+    0.95,
+    0.88
+   ],
+   "normale": 1.0,
+   "luce": "lm/cotto_S1.jpg",
+   "res": 512
+  },
+  "Wlm_cucina_PT": {
+   "materiale": "cucina",
+   "piano": "PT",
+   "area": 26.2,
+   "colore": [
+    0.1643,
+    0.1359,
+    0.124
+   ],
+   "rugosita": 0.7,
+   "metallo": 0.0,
+   "tex": "floor_tiles_06",
+   "lato": 3.0,
+   "tinta": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "normale": 0.6,
+   "luce": "lm/cucina_PT.jpg",
+   "res": 512
+  },
+  "Wlm_doghe_PT": {
+   "materiale": "doghe",
+   "piano": "PT",
+   "area": 10.56,
+   "colore": [
+    0.1611,
+    0.0645,
+    0.0271
+   ],
+   "rugosita": 0.45,
+   "metallo": 0.0,
+   "tex": "walnut_veneer",
+   "lato": 1.8,
+   "tinta": [
+    0.62,
+    0.45,
+    0.34
+   ],
+   "normale": 0.6,
+   "luce": "lm/doghe_PT.jpg",
+   "res": 256
+  },
+  "Wlm_doghe_S1": {
+   "materiale": "doghe",
+   "piano": "S1",
+   "area": 9.92,
+   "colore": [
+    0.1611,
+    0.0645,
+    0.0271
+   ],
+   "rugosita": 0.45,
+   "metallo": 0.0,
+   "tex": "walnut_veneer",
+   "lato": 1.8,
+   "tinta": [
+    0.62,
+    0.45,
+    0.34
+   ],
+   "normale": 0.6,
+   "luce": "lm/doghe_S1.jpg",
+   "res": 256
+  },
+  "Wlm_facciata_PT": {
+   "materiale": "facciata",
+   "piano": "PT",
+   "area": 25.4,
+   "colore": [
+    0.5412,
+    0.4902,
+    0.4235
+   ],
+   "rugosita": 0.95,
+   "metallo": 0.0,
+   "luce": "lm/facciata_PT.jpg",
+   "res": 512
+  },
+  "Wvc_ferro_PT": {
+   "materiale": "ferro",
+   "piano": "PT",
+   "area": 63.22,
+   "colore": [
+    0.0824,
+    0.0824,
+    0.0824
+   ],
+   "rugosita": 0.4,
+   "metallo": 0.7,
+   "luce": "vertici"
+  },
+  "Wvc_ferro_S1": {
+   "materiale": "ferro",
+   "piano": "S1",
+   "area": 13.89,
+   "colore": [
+    0.0824,
+    0.0824,
+    0.0824
+   ],
+   "rugosita": 0.4,
+   "metallo": 0.0,
+   "luce": "vertici"
+  },
+  "Wvc_ghisa_PT": {
+   "materiale": "ghisa",
+   "piano": "PT",
+   "area": 0.52,
+   "colore": [
+    0.1098,
+    0.1059,
+    0.102
+   ],
+   "rugosita": 0.45,
+   "metallo": 0.6,
+   "luce": "vertici"
+  },
+  "Wvc_ghisa_vera_PT": {
+   "materiale": "ghisa_vera",
+   "piano": "PT",
+   "area": 8.37,
+   "colore": [
+    0.035,
+    0.033,
+    0.03
+   ],
+   "rugosita": 0.55,
+   "metallo": 0.7,
+   "luce": "vertici"
+  },
+  "Wvc_ghisa_vera_S1": {
+   "materiale": "ghisa_vera",
+   "piano": "S1",
+   "area": 8.33,
+   "colore": [
+    0.035,
+    0.033,
+    0.03
+   ],
+   "rugosita": 0.55,
+   "metallo": 0.0,
+   "luce": "vertici"
+  },
+  "Wlm_gradino_PT": {
+   "materiale": "gradino",
+   "piano": "PT",
+   "area": 1.7,
+   "colore": [
+    0.3106,
+    0.1533,
+    0.0553
+   ],
+   "rugosita": 0.4,
+   "metallo": 0.0,
+   "tex": "oak_veneer_01",
+   "lato": 1.83,
+   "tinta": [
+    0.85,
+    0.72,
+    0.58
+   ],
+   "normale": 0.6,
+   "luce": "lm/gradino_PT.jpg",
+   "res": 128
+  },
+  "Wlm_gradino_S1": {
+   "materiale": "gradino",
+   "piano": "S1",
+   "area": 13.82,
+   "colore": [
+    0.3106,
+    0.1533,
+    0.0553
+   ],
+   "rugosita": 0.4,
+   "metallo": 0.0,
+   "tex": "oak_veneer_01",
+   "lato": 1.83,
+   "tinta": [
+    0.85,
+    0.72,
+    0.58
+   ],
+   "normale": 0.6,
+   "luce": "lm/gradino_S1.jpg",
+   "res": 256
+  },
+  "Wlm_gres_PT": {
+   "materiale": "gres",
+   "piano": "PT",
+   "area": 145.86,
+   "colore": [
+    0.1952,
+    0.1614,
+    0.1473
+   ],
+   "rugosita": 0.6,
+   "metallo": 0.0,
+   "tex": "floor_tiles_06",
+   "lato": 3.0,
+   "tinta": [
+    0.95,
+    0.95,
+    0.95
+   ],
+   "normale": 0.6,
+   "luce": "lm/gres_PT.jpg",
+   "res": 1024
+  },
+  "Wlm_gres_S1": {
+   "materiale": "gres",
+   "piano": "S1",
+   "area": 150.52,
+   "colore": [
+    0.1952,
+    0.1614,
+    0.1473
+   ],
+   "rugosita": 0.6,
+   "metallo": 0.0,
+   "tex": "floor_tiles_06",
+   "lato": 3.0,
+   "tinta": [
+    0.95,
+    0.95,
+    0.95
+   ],
+   "normale": 0.6,
+   "luce": "lm/gres_S1.jpg",
+   "res": 1024
+  },
+  "Wlm_intonaco_PT": {
+   "materiale": "intonaco",
+   "piano": "PT",
+   "area": 879.14,
+   "colore": [
+    0.4146,
+    0.3617,
+    0.3287
+   ],
+   "rugosita": 0.92,
+   "metallo": 0.0,
+   "tex": "painted_plaster_wall",
+   "lato": 2.0,
+   "tinta": [
+    1.0,
+    0.97,
+    0.92
+   ],
+   "normale": 0.5,
+   "luce": "lm/intonaco_PT.jpg",
+   "res": 2048
+  },
+  "Wlm_intonaco_S1": {
+   "materiale": "intonaco",
+   "piano": "S1",
+   "area": 1010.37,
+   "colore": [
+    0.4146,
+    0.3617,
+    0.3287
+   ],
+   "rugosita": 0.92,
+   "metallo": 0.0,
+   "tex": "painted_plaster_wall",
+   "lato": 2.0,
+   "tinta": [
+    1.0,
+    0.97,
+    0.92
+   ],
+   "normale": 0.5,
+   "luce": "lm/intonaco_S1.jpg",
+   "res": 2048
+  },
+  "Wlm_intonacoPT_PT": {
+   "materiale": "intonacoPT",
+   "piano": "PT",
+   "area": 60.93,
+   "colore": [
+    0.4146,
+    0.3356,
+    0.2716
+   ],
+   "rugosita": 0.92,
+   "metallo": 0.0,
+   "tex": "painted_plaster_wall",
+   "lato": 2.0,
+   "tinta": [
+    1.0,
+    0.9,
+    0.76
+   ],
+   "normale": 0.5,
+   "luce": "lm/intonacoPT_PT.jpg",
+   "res": 512
+  },
+  "Wlm_laccaVerde_PT": {
+   "materiale": "laccaVerde",
+   "piano": "PT",
+   "area": 10.02,
+   "colore": [
+    0.1725,
+    0.2706,
+    0.2157
+   ],
+   "rugosita": 0.35,
+   "metallo": 0.0,
+   "luce": "lm/laccaVerde_PT.jpg",
+   "res": 256
+  },
+  "Wlm_laccato_PT": {
+   "materiale": "laccato",
+   "piano": "PT",
+   "area": 82.87,
+   "colore": [
+    0.8471,
+    0.8235,
+    0.7843
+   ],
+   "rugosita": 0.5,
+   "metallo": 0.0,
+   "luce": "lm/laccato_PT.jpg",
+   "res": 512
+  },
+  "Wlm_laccato_S1": {
+   "materiale": "laccato",
+   "piano": "S1",
+   "area": 20.74,
+   "colore": [
+    0.8471,
+    0.8235,
+    0.7843
+   ],
+   "rugosita": 0.5,
+   "metallo": 0.0,
+   "luce": "lm/laccato_S1.jpg",
+   "res": 256
+  },
+  "Wvc_legnoSedia_PT": {
+   "materiale": "legnoSedia",
+   "piano": "PT",
+   "area": 14.41,
+   "colore": [
+    0.1096,
+    0.0405,
+    0.0114
+   ],
+   "rugosita": 0.55,
+   "metallo": 0.0,
+   "tex": "oak_veneer_01",
+   "lato": 0.9,
+   "tinta": [
+    0.3,
+    0.19,
+    0.12
+   ],
+   "normale": 0.4,
+   "luce": "vertici"
+  },
+  "Wvc_legnoSedia_S1": {
+   "materiale": "legnoSedia",
+   "piano": "S1",
+   "area": 14.41,
+   "colore": [
+    0.1096,
+    0.0405,
+    0.0114
+   ],
+   "rugosita": 0.55,
+   "metallo": 0.0,
+   "tex": "oak_veneer_01",
+   "lato": 0.9,
+   "tinta": [
+    0.3,
+    0.19,
+    0.12
+   ],
+   "normale": 0.4,
+   "luce": "vertici"
+  },
+  "Wlm_marmo_PT": {
+   "materiale": "marmo",
+   "piano": "PT",
+   "area": 34.42,
+   "colore": [
+    0.9035,
+    0.8927,
+    0.8785
+   ],
+   "rugosita": 0.18,
+   "metallo": 0.0,
+   "tex": "marble021",
+   "lato": 2.0,
+   "tinta": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "normale": 0.4,
+   "luce": "lm/marmo_PT.jpg",
+   "res": 512
+  },
+  "Wlm_marmo_S1": {
+   "materiale": "marmo",
+   "piano": "S1",
+   "area": 6.67,
+   "colore": [
+    0.9035,
+    0.8927,
+    0.8785
+   ],
+   "rugosita": 0.18,
+   "metallo": 0.0,
+   "tex": "marble021",
+   "lato": 2.0,
+   "tinta": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "normale": 0.4,
+   "luce": "lm/marmo_S1.jpg",
+   "res": 256
+  },
+  "Wlm_mattoni_S1": {
+   "materiale": "mattoni",
+   "piano": "S1",
+   "area": 94.49,
+   "colore": [
+    0.3843,
+    0.2814,
+    0.1785
+   ],
+   "rugosita": 0.92,
+   "metallo": 0.0,
+   "tex": "brick_wall_02",
+   "lato": 1.45,
+   "tinta": [
+    1.0,
+    0.95,
+    0.9
+   ],
+   "normale": 1.2,
+   "luce": "lm/mattoni_S1.jpg",
+   "res": 1024
+  },
+  "Wlm_metro_PT": {
+   "materiale": "metro",
+   "piano": "PT",
+   "area": 91.05,
+   "colore": [
+    0.6206,
+    0.576,
+    0.4772
+   ],
+   "rugosita": 0.18,
+   "metallo": 0.0,
+   "tex": "long_white_tiles",
+   "lato": 1.27,
+   "tinta": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "normale": 0.8,
+   "luce": "lm/metro_PT.jpg",
+   "res": 1024
+  },
+  "Wlm_noce_PT": {
+   "materiale": "noce",
+   "piano": "PT",
+   "area": 39.94,
+   "colore": [
+    0.1611,
+    0.0645,
+    0.0271
+   ],
+   "rugosita": 0.38,
+   "metallo": 0.0,
+   "tex": "walnut_veneer",
+   "lato": 1.8,
+   "tinta": [
+    0.62,
+    0.45,
+    0.34
+   ],
+   "normale": 0.6,
+   "luce": "lm/noce_PT.jpg",
+   "res": 512
+  },
+  "Wlm_noce_S1": {
+   "materiale": "noce",
+   "piano": "S1",
+   "area": 22.5,
+   "colore": [
+    0.1611,
+    0.0645,
+    0.0271
+   ],
+   "rugosita": 0.38,
+   "metallo": 0.0,
+   "tex": "walnut_veneer",
+   "lato": 1.8,
+   "tinta": [
+    0.62,
+    0.45,
+    0.34
+   ],
+   "normale": 0.6,
+   "luce": "lm/noce_S1.jpg",
+   "res": 512
+  },
+  "Wlm_noceTavolo_PT": {
+   "materiale": "noceTavolo",
+   "piano": "PT",
+   "area": 24.47,
+   "colore": [
+    0.1663,
+    0.0673,
+    0.0279
+   ],
+   "rugosita": 0.32,
+   "metallo": 0.0,
+   "tex": "walnut_veneer",
+   "lato": 1.8,
+   "tinta": [
+    0.64,
+    0.47,
+    0.35
+   ],
+   "normale": 0.6,
+   "luce": "lm/noceTavolo_PT.jpg",
+   "res": 512
+  },
+  "Wlm_noceTavolo_S1": {
+   "materiale": "noceTavolo",
+   "piano": "S1",
+   "area": 23.73,
+   "colore": [
+    0.1663,
+    0.0673,
+    0.0279
+   ],
+   "rugosita": 0.32,
+   "metallo": 0.0,
+   "tex": "walnut_veneer",
+   "lato": 1.8,
+   "tinta": [
+    0.64,
+    0.47,
+    0.35
+   ],
+   "normale": 0.6,
+   "luce": "lm/noceTavolo_S1.jpg",
+   "res": 512
+  },
+  "Wvc_paglia_PT": {
+   "materiale": "paglia",
+   "piano": "PT",
+   "area": 7.02,
+   "colore": [
+    0.4183,
+    0.1891,
+    0.052
+   ],
+   "rugosita": 0.8,
+   "metallo": 0.0,
+   "tex": "wicker009a",
+   "lato": 0.22,
+   "tinta": [
+    1.0,
+    0.95,
+    0.85
+   ],
+   "normale": 1.0,
+   "luce": "vertici"
+  },
+  "Wvc_paglia_S1": {
+   "materiale": "paglia",
+   "piano": "S1",
+   "area": 7.02,
+   "colore": [
+    0.4183,
+    0.1891,
+    0.052
+   ],
+   "rugosita": 0.8,
+   "metallo": 0.0,
+   "tex": "wicker009a",
+   "lato": 0.22,
+   "tinta": [
+    1.0,
+    0.95,
+    0.85
+   ],
+   "normale": 1.0,
+   "luce": "vertici"
+  },
+  "Wvc_quadro_misc_344_PT": {
+   "materiale": "quadro_misc_344",
+   "piano": "PT",
+   "area": 0.48,
+   "colore": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "rugosita": 0.85,
+   "metallo": 0.0,
+   "immagine": "tx/img_quadro_misc_344_PT.jpg",
+   "luce": "vertici"
+  },
+  "Wvc_quadro_misc_347_PT": {
+   "materiale": "quadro_misc_347",
+   "piano": "PT",
+   "area": 0.48,
+   "colore": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "rugosita": 0.85,
+   "metallo": 0.0,
+   "immagine": "tx/img_quadro_misc_347_PT.jpg",
+   "luce": "vertici"
+  },
+  "Wvc_quadro_misc_350_PT": {
+   "materiale": "quadro_misc_350",
+   "piano": "PT",
+   "area": 0.48,
+   "colore": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "rugosita": 0.85,
+   "metallo": 0.0,
+   "immagine": "tx/img_quadro_misc_350_PT.jpg",
+   "luce": "vertici"
+  },
+  "Wvc_quadro_misc_353_PT": {
+   "materiale": "quadro_misc_353",
+   "piano": "PT",
+   "area": 0.48,
+   "colore": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "rugosita": 0.85,
+   "metallo": 0.0,
+   "immagine": "tx/img_quadro_misc_353_PT.jpg",
+   "luce": "vertici"
+  },
+  "Wvc_quadro_misc_356_PT": {
+   "materiale": "quadro_misc_356",
+   "piano": "PT",
+   "area": 0.48,
+   "colore": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "rugosita": 0.85,
+   "metallo": 0.0,
+   "immagine": "tx/img_quadro_misc_356_PT.jpg",
+   "luce": "vertici"
+  },
+  "Wvc_quadro_misc_359_PT": {
+   "materiale": "quadro_misc_359",
+   "piano": "PT",
+   "area": 0.48,
+   "colore": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "rugosita": 0.85,
+   "metallo": 0.0,
+   "immagine": "tx/img_quadro_misc_359_PT.jpg",
+   "luce": "vertici"
+  },
+  "Wvc_quadro_misc_362_PT": {
+   "materiale": "quadro_misc_362",
+   "piano": "PT",
+   "area": 0.48,
+   "colore": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "rugosita": 0.85,
+   "metallo": 0.0,
+   "immagine": "tx/img_quadro_misc_362_PT.jpg",
+   "luce": "vertici"
+  },
+  "Wvc_quadro_misc_365_PT": {
+   "materiale": "quadro_misc_365",
+   "piano": "PT",
+   "area": 0.48,
+   "colore": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "rugosita": 0.85,
+   "metallo": 0.0,
+   "immagine": "tx/img_quadro_misc_365_PT.jpg",
+   "luce": "vertici"
+  },
+  "Wvc_quadro_misc_368_PT": {
+   "materiale": "quadro_misc_368",
+   "piano": "PT",
+   "area": 0.48,
+   "colore": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "rugosita": 0.85,
+   "metallo": 0.0,
+   "immagine": "tx/img_quadro_misc_368_PT.jpg",
+   "luce": "vertici"
+  },
+  "Wvc_quadro_misc_589_S1": {
+   "materiale": "quadro_misc_589",
+   "piano": "S1",
+   "area": 0.48,
+   "colore": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "rugosita": 0.85,
+   "metallo": 0.0,
+   "immagine": "tx/img_quadro_misc_589_S1.jpg",
+   "luce": "vertici"
+  },
+  "Wvc_quadro_misc_592_S1": {
+   "materiale": "quadro_misc_592",
+   "piano": "S1",
+   "area": 0.48,
+   "colore": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "rugosita": 0.85,
+   "metallo": 0.0,
+   "immagine": "tx/img_quadro_misc_592_S1.jpg",
+   "luce": "vertici"
+  },
+  "Wvc_quadro_misc_595_S1": {
+   "materiale": "quadro_misc_595",
+   "piano": "S1",
+   "area": 0.48,
+   "colore": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "rugosita": 0.85,
+   "metallo": 0.0,
+   "immagine": "tx/img_quadro_misc_595_S1.jpg",
+   "luce": "vertici"
+  },
+  "Wvc_quadro_misc_598_S1": {
+   "materiale": "quadro_misc_598",
+   "piano": "S1",
+   "area": 0.48,
+   "colore": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "rugosita": 0.85,
+   "metallo": 0.0,
+   "immagine": "tx/img_quadro_misc_598_S1.jpg",
+   "luce": "vertici"
+  },
+  "Wvc_quadro_misc_601_S1": {
+   "materiale": "quadro_misc_601",
+   "piano": "S1",
+   "area": 0.48,
+   "colore": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "rugosita": 0.85,
+   "metallo": 0.0,
+   "immagine": "tx/img_quadro_misc_601_S1.jpg",
+   "luce": "vertici"
+  },
+  "Wvc_quadro_misc_604_S1": {
+   "materiale": "quadro_misc_604",
+   "piano": "S1",
+   "area": 0.48,
+   "colore": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "rugosita": 0.85,
+   "metallo": 0.0,
+   "immagine": "tx/img_quadro_misc_604_S1.jpg",
+   "luce": "vertici"
+  },
+  "Wvc_quadro_misc_607_S1": {
+   "materiale": "quadro_misc_607",
+   "piano": "S1",
+   "area": 0.48,
+   "colore": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "rugosita": 0.85,
+   "metallo": 0.0,
+   "immagine": "tx/img_quadro_misc_607_S1.jpg",
+   "luce": "vertici"
+  },
+  "Wlm_scaffale_PT": {
+   "materiale": "scaffale",
+   "piano": "PT",
+   "area": 10.38,
+   "colore": [
+    0.1559,
+    0.063,
+    0.0263
+   ],
+   "rugosita": 0.5,
+   "metallo": 0.0,
+   "tex": "walnut_veneer",
+   "lato": 1.8,
+   "tinta": [
+    0.6,
+    0.44,
+    0.33
+   ],
+   "normale": 0.6,
+   "luce": "lm/scaffale_PT.jpg",
+   "res": 256
+  },
+  "Wlm_scaffale_S1": {
+   "materiale": "scaffale",
+   "piano": "S1",
+   "area": 2.44,
+   "colore": [
+    0.1559,
+    0.063,
+    0.0263
+   ],
+   "rugosita": 0.5,
+   "metallo": 0.0,
+   "tex": "walnut_veneer",
+   "lato": 1.8,
+   "tinta": [
+    0.6,
+    0.44,
+    0.33
+   ],
+   "normale": 0.6,
+   "luce": "lm/scaffale_S1.jpg",
+   "res": 128
+  },
+  "Wlm_scalaCorpo_S1": {
+   "materiale": "scalaCorpo",
+   "piano": "S1",
+   "area": 94.91,
+   "colore": [
+    0.9098,
+    0.8863,
+    0.8471
+   ],
+   "rugosita": 0.9,
+   "metallo": 0.0,
+   "luce": "lm/scalaCorpo_S1.jpg",
+   "res": 1024
+  },
+  "Wlm_soffitto_PT": {
+   "materiale": "soffitto",
+   "piano": "PT",
+   "area": 296.38,
+   "colore": [
+    0.4229,
+    0.3729,
+    0.343
+   ],
+   "rugosita": 0.92,
+   "metallo": 0.0,
+   "tex": "painted_plaster_wall",
+   "lato": 2.0,
+   "tinta": [
+    1.02,
+    1.0,
+    0.96
+   ],
+   "normale": 0.3,
+   "luce": "lm/soffitto_PT.jpg",
+   "res": 1024
+  },
+  "Wlm_spina_PT": {
+   "materiale": "spina",
+   "piano": "PT",
+   "area": 59.19,
+   "colore": [
+    0.2984,
+    0.1508,
+    0.0592
+   ],
+   "rugosita": 0.42,
+   "metallo": 0.0,
+   "tex": "herringbone_parquet",
+   "lato": 3.4,
+   "tinta": [
+    1.0,
+    0.92,
+    0.82
+   ],
+   "normale": 1.0,
+   "luce": "lm/spina_PT.jpg",
+   "res": 512
+  },
+  "Wvc_tenda_lino_PT": {
+   "materiale": "tenda_lino",
+   "piano": "PT",
+   "area": 7.36,
+   "colore": [
+    0.86,
+    0.82,
+    0.74
+   ],
+   "rugosita": 0.9,
+   "metallo": 0.0,
+   "luce": "vertici"
+  },
+  "Wlm_trave_PT": {
+   "materiale": "trave",
+   "piano": "PT",
+   "area": 32.85,
+   "colore": [
+    0.1092,
+    0.043,
+    0.0175
+   ],
+   "rugosita": 0.7,
+   "metallo": 0.0,
+   "tex": "walnut_veneer",
+   "lato": 1.8,
+   "tinta": [
+    0.42,
+    0.3,
+    0.22
+   ],
+   "normale": 0.8,
+   "luce": "lm/trave_PT.jpg",
+   "res": 512
+  },
+  "Wlm_zerbino_PT": {
+   "materiale": "zerbino",
+   "piano": "PT",
+   "area": 1.09,
+   "colore": [
+    0.1686,
+    0.149,
+    0.1333
+   ],
+   "rugosita": 1.0,
+   "metallo": 0.0,
+   "luce": "lm/zerbino_PT.jpg",
+   "res": 128
+  }
+ },
+ "emissivi": {
+  "est_palazzo": {
+   "colore": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "forza": 0.9,
+   "immagine": "tx/emit_est_palazzo.jpg"
+  },
+  "est_strada": {
+   "colore": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "forza": 0.35,
+   "immagine": "tx/emit_est_strada.jpg"
+  },
+  "fiamma": {
+   "colore": [
+    1.0,
+    0.55,
+    0.18
+   ],
+   "forza": 25.0
+  },
+  "fiamma.001": {
+   "colore": [
+    1.0,
+    0.55,
+    0.18
+   ],
+   "forza": 25.0
+  },
+  "globo_lampadina": {
+   "colore": [
+    1.0,
+    0.8,
+    0.55
+   ],
+   "forza": 18.0
+  },
+  "globo_lampadina.001": {
+   "colore": [
+    1.0,
+    0.8,
+    0.55
+   ],
+   "forza": 18.0
+  },
+  "lampadina": {
+   "colore": [
+    1.0,
+    0.6391,
+    0.3098
+   ],
+   "forza": 40.0
+  },
+  "opale": {
+   "colore": [
+    1.0,
+    0.668,
+    0.3738
+   ],
+   "forza": 9.0
+  }
+ },
+ "vertici": {},
+ "S_ENV": 8.0
+}

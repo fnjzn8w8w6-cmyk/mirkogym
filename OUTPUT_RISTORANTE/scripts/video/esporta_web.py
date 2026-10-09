@@ -23,7 +23,7 @@ def bn(m): return m.name.split('.')[0] if m else ''
 LIGHTMAP = {'spina', 'cotto', 'gres', 'cucina', 'intonacoPT', 'intonaco', 'soffitto', 'mattoni', 'metro', 'boiserie', 'facciata', 'cemento',
             'noce', 'noceTavolo', 'scaffale', 'doghe', 'trave', 'gradino', 'scalaCorpo', 'marmo', 'laccato', 'laccaVerde', 'ceramica',
             'cannettato', 'tavolo_servizio', 'zerbino', 'davanzale'}
-VERTICI = {'legnoSedia', 'paglia', 'ghisa_vera', 'ghisa', 'ferro', 'tenda_lino', 'bronzo'}
+VERTICI = {'legnoSedia', 'paglia', 'ghisa_vera', 'ghisa', 'ferro', 'tenda_lino'}
 
 
 def is_quadro(o):
@@ -48,6 +48,8 @@ def unisci(objs, nome):
             try: me.attributes.remove(me.attributes[a])
             except Exception: pass
         bm.from_mesh(me); bpy.data.meshes.remove(me)
+    # i triangoli arrivano dal glTF con i vertici duplicati: uniti, ogni parete diventa un'unica isola di luce (niente giunture diagonali)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.0005)
     me = bpy.data.meshes.new(nome); bm.to_mesh(me); bm.free()
     ob = bpy.data.objects.new(nome, me); sc.collection.objects.link(ob)
     for o in objs: bpy.data.objects.remove(o)
