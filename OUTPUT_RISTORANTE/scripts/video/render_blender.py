@@ -91,6 +91,63 @@ for m in bpy.data.materials:
         if n in ('mattoni', 'cotto', 'intonacoPT', 'intonaco', 'soffitto'): P.inputs['Roughness'].default_value = 0.92
     # i materiali "unlit" di glTF (MeshBasicMaterial) senza nome riconosciuto restano come importati
 
+# ---- materiali fotografati (Poly Haven / ambientCG, CC0): proiezione a cubo in coordinate mondo, normali e rugosita' reali
+PBR = os.environ.get('PBR')
+PBRMAP = {   # materiale della scena: (texture, lato in metri, tinta moltiplicativa, forza normale, smusso spigoli m)
+    'spina': ('herringbone_parquet', 3.4, (1.0, 0.92, 0.82), 1.0, 0),
+    'cotto': ('terracotta_floor_tiles', 2.08, (1.05, 0.95, 0.88), 1.0, 0),
+    'gres': ('floor_tiles_06', 3.0, (0.95, 0.95, 0.95), 0.6, 0),
+    'cucina': ('floor_tiles_06', 3.0, (0.8, 0.8, 0.8), 0.6, 0),
+    'intonacoPT': ('painted_plaster_wall', 2.0, (1.0, 0.9, 0.76), 0.5, 0),
+    'intonaco': ('painted_plaster_wall', 2.0, (1.0, 0.97, 0.92), 0.5, 0),
+    'soffitto': ('painted_plaster_wall', 2.0, (1.02, 1.0, 0.96), 0.3, 0),
+    'mattoni': ('brick_wall_02', 2.0, (1.0, 0.95, 0.9), 1.2, 0),
+    'metro': ('long_white_tiles', 1.27, (1.0, 1.0, 1.0), 0.8, 0),
+    'noce': ('walnut_veneer', 1.8, (0.62, 0.45, 0.34), 0.6, 0.004),
+    'noceTavolo': ('walnut_veneer', 1.8, (0.8, 0.6, 0.45), 0.6, 0.005),
+    'scaffale': ('walnut_veneer', 1.8, (0.6, 0.44, 0.33), 0.6, 0.003),
+    'doghe': ('walnut_veneer', 1.8, (0.62, 0.45, 0.34), 0.6, 0.003),
+    'trave': ('walnut_veneer', 1.8, (0.42, 0.3, 0.22), 0.8, 0.01),
+    'tavolo_servizio': ('walnut_veneer', 1.8, (0.7, 0.52, 0.4), 0.6, 0.004),
+    'gradino': ('oak_veneer_01', 1.83, (0.85, 0.72, 0.58), 0.6, 0.004),
+    'legnoSedia': ('oak_veneer_01', 0.9, (0.5, 0.34, 0.22), 0.4, 0.0),
+    'marmo': ('marble021', 2.0, (1.0, 1.0, 1.0), 0.4, 0.003),
+    'lino': ('rough_linen', 0.27, (0.62, 0.68, 0.56), 1.0, 0.002),
+    'paglia': ('wicker009a', 0.5, (1.0, 0.95, 0.85), 1.0, 0.0),
+}
+if PBR:
+    for m in bpy.data.materials:
+        n = base(m.name)
+        if n not in PBRMAP or not m.node_tree: continue
+        tex, size, tint, nstr, bev = PBRMAP[n]
+        nt = m.node_tree; P = principled(m)
+        if P is None: continue
+        for l in list(nt.links):
+            if l.to_node.name == P.name and l.to_socket.name in ('Base Color', 'Roughness', 'Normal', 'Metallic'): nt.links.remove(l)
+        tc = nt.nodes.new('ShaderNodeTexCoord'); mp = nt.nodes.new('ShaderNodeMapping')
+        mp.inputs['Scale'].default_value = (1 / size, 1 / size, 1 / size)
+        nt.links.new(tc.outputs['Object'], mp.inputs['Vector'])
+        def img(kind, color):
+            t = nt.nodes.new('ShaderNodeTexImage'); t.image = bpy.data.images.load(os.path.join(PBR, f'{tex}_{kind}.jpg'), check_existing=True)
+            t.image.colorspace_settings.name = 'sRGB' if color else 'Non-Color'
+            t.projection = 'BOX'; t.projection_blend = 0.25
+            nt.links.new(mp.outputs['Vector'], t.inputs['Vector']); return t
+        d, r, nm = img('diff', True), img('rough', False), img('nor', False)
+        mix = nt.nodes.new('ShaderNodeMix'); mix.data_type = 'RGBA'; mix.blend_type = 'MULTIPLY'; mix.inputs['Factor'].default_value = 1.0
+        nt.links.new(d.outputs[0], mix.inputs['A']); mix.inputs['B'].default_value = (*tint, 1)
+        nt.links.new(mix.outputs['Result'], P.inputs['Base Color'])
+        nt.links.new(r.outputs[0], P.inputs['Roughness'])
+        nmap = nt.nodes.new('ShaderNodeNormalMap'); nmap.inputs['Strength'].default_value = nstr
+        nt.links.new(nm.outputs[0], nmap.inputs['Color'])
+        if bev:
+            bv = nt.nodes.new('ShaderNodeBevel'); bv.inputs['Radius'].default_value = bev; bv.samples = 6
+            nt.links.new(nmap.outputs[0], bv.inputs['Normal']); nt.links.new(bv.outputs[0], P.inputs['Normal'])
+        else:
+            nt.links.new(nmap.outputs[0], P.inputs['Normal'])
+        P.inputs['Metallic'].default_value = 0.0
+        if n in ('noceTavolo', 'marmo', 'noce'): P.inputs['Coat Weight'].default_value = 0.25; P.inputs['Coat Roughness'].default_value = 0.12
+    print('materiali fotografati applicati', flush=True)
+
 # lampadine e globi: non fanno ombra alla luce puntiforme posta al loro interno
 for o in bpy.data.objects:
     if o.type == 'MESH' and o.active_material and base(o.active_material.name) in ('lampadina', 'opale', 'vetro', 'calice'):
@@ -98,13 +155,13 @@ for o in bpy.data.objects:
         if base(o.active_material.name) in ('lampadina', 'opale'): o.visible_shadow = False
 
 luci = json.load(open(os.path.join(src, 'luci.json')))
-POW = {'sospensione': (22, 2700, 0.035), 'globo': (30, 2800, 0.09), 'applique': (14, 2700, 0.06), 'candela': (0.35, 1900, 0.008)}
+POW = {'sospensione': (22, 3000, 0.035), 'globo': (30, 3000, 0.09), 'applique': (14, 2900, 0.06), 'candela': (0.35, 1900, 0.008)}
 for i, l in enumerate(luci):
     p = B(l['p'])
     if l['tipo'] == 'ambiente':
         cucina = l.get('col', 0) == 0xf4f1ea
         d = bpy.data.lights.new(f'amb{i}', 'AREA'); d.shape = 'DISK'; d.size = 0.8
-        d.energy = 90 if cucina else 35; d.color = kelvin(4000 if cucina else 2800)
+        d.energy = 90 if cucina else 35; d.color = kelvin(4000 if cucina else 3300)
         ob = bpy.data.objects.new(f'amb{i}', d); ob.location = p + Vector((0, 0, 0.42)); sc.collection.objects.link(ob)
         continue
     pw, k, r = POW[l['tipo']]
@@ -143,8 +200,7 @@ if FOTO:
         P = Vector((x, -y, z + e)); L = Vector((k['look'][0], -k['look'][1], k['look'][2]))
         cam.location = P; cam.rotation_mode = 'QUATERNION'; cam.rotation_quaternion = (L - P).to_track_quat('-Z', 'Y')
         cd.lens = k.get('lente', 24)
-        cd.dof.use_dof = 'fuoco' in k
-        if cd.dof.use_dof: cd.dof.focus_distance = (L - P).length; cd.dof.aperture_fstop = k['fuoco']
+        cd.dof.use_dof = True; cd.dof.focus_distance = (L - P).length; cd.dof.aperture_fstop = k.get('fuoco', 5.6)
         sc.view_settings.exposure = k.get('esposizione', 0.6)
         t = time.time(); sc.render.filepath = out
         bpy.ops.render.render(write_still=True)

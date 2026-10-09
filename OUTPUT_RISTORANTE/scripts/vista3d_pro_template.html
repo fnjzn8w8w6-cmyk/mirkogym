@@ -596,8 +596,8 @@ function textSprite(txt, color, size) {
 // ------------------------------------------------------------------ componenti d'arredo (geometrie riusate)
 function lathe(pts, seg = 28) { return new THREE.LatheGeometry(pts.map(([r, h]) => new THREE.Vector2(r, h)), seg); }
 const GEO = {};
-GEO.piatto = lathe([[0, 0], [0.085, 0], [0.095, 0.004], [0.128, 0.013], [0.136, 0.016], [0.134, 0.018], [0.12, 0.012], [0.09, 0.006], [0, 0.006]]);
-GEO.calice = lathe([[0, 0], [0.034, 0], [0.034, 0.003], [0.005, 0.006], [0.0035, 0.085], [0.02, 0.1], [0.041, 0.135], [0.043, 0.175], [0.038, 0.215], [0.036, 0.215], [0.04, 0.175], [0.038, 0.135], [0.003, 0.095]], 20);
+GEO.piatto = lathe([[0, 0], [0.085, 0], [0.095, 0.004], [0.128, 0.013], [0.136, 0.016], [0.134, 0.018], [0.12, 0.012], [0.09, 0.006], [0, 0.006]], 72);
+GEO.calice = lathe([[0, 0], [0.034, 0], [0.034, 0.003], [0.005, 0.006], [0.0035, 0.085], [0.02, 0.1], [0.041, 0.135], [0.043, 0.175], [0.038, 0.215], [0.036, 0.215], [0.04, 0.175], [0.038, 0.135], [0.003, 0.095]], 48);
 GEO.bottiglia = lathe([[0, 0], [0.036, 0], [0.037, 0.005], [0.037, 0.2], [0.03, 0.235], [0.014, 0.26], [0.0135, 0.31], [0.016, 0.315], [0, 0.315]], 14);
 GEO.vasetto = lathe([[0, 0], [0.028, 0], [0.03, 0.03], [0.018, 0.09], [0.012, 0.12], [0.016, 0.13], [0, 0.13]], 16);
 GEO.portacandela = lathe([[0, 0], [0.032, 0], [0.033, 0.075], [0.03, 0.075], [0.029, 0.006], [0, 0.006]], 20);
@@ -813,7 +813,7 @@ for (const [key, fl] of Object.entries(DATA.floors)) {
   instanced(GEO.sedia.wood, MAT.legnoSedia, chairsW, grp);
   instanced(GEO.sedia.seat, MAT.paglia, chairsW, grp);
   instanced(GEO.piatto, MAT.piatto, plates, grp);
-  instanced(new THREE.BoxGeometry(0.11, 0.012, 0.11), MAT.lino, napkins, grp);
+  instanced(new THREE.BoxGeometry(0.1, 0.006, 0.17), MAT.lino, napkins, grp);
   instanced(new THREE.BoxGeometry(0.018, 0.004, 0.19), MAT.posate, forks, grp);
   instanced(new THREE.BoxGeometry(0.014, 0.004, 0.21), MAT.posate, knives, grp);
   instanced(GEO.calice, MAT.calice, glasses, grp);
