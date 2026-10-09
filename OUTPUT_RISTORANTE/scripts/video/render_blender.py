@@ -4,7 +4,7 @@ Uso: python render_blender.py <cartella_dati> <cartella_frame> <da> <a> [passo] 
 (python = interprete con il modulo bpy di Blender 5.x)"""
 import sys, json, math, os, time
 import bpy
-from mathutils import Vector
+from mathutils import Vector, Matrix
 
 src, dst = sys.argv[1], sys.argv[2]
 FOTO = sys.argv[3] == 'foto'          # modalita' foto: python render_blender.py <dati> <uscita> foto <scatti.json> <larghezza> <campioni>
@@ -170,6 +170,13 @@ if os.environ.get('OGGETTI') and PBR:
             me.shade_flat()
             if base(o.active_material.name) in ('inox', 'laccato', 'ceramica'):   # piani sovrapposti alla stessa quota: sfalsati di frazioni di mm
                 o.location.z += (sum(map(ord, o.name)) % 9) * 0.0004
+
+if os.environ.get('CONTROLLO'):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import controllo_scena as CS
+    _C = Matrix(((1, 0, 0, 0), (0, 0, -1, 0), (0, 1, 0, 0), (0, 0, 0, 1)))
+    CS.run(src, os.environ['CONTROLLO'], _C, _C.inverted())
+    sys.exit(0)
 
 # lampadine e globi: non fanno ombra alla luce puntiforme posta al loro interno
 for o in bpy.data.objects:

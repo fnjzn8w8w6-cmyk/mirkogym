@@ -24,14 +24,19 @@ const fs = require('fs');
         if (Array.isArray(mat) || skip.has(mat) || mat.blending === THREE.AdditiveBlending) return;
         if (!mat.name) mat.name = mat.isMeshBasicMaterial ? 'basic' : 'misc';
         // oggetti ripetuti sostituiti in Blender da modelli dettagliati: si esportano solo le posizioni
-        const tag = o.isInstancedMesh ? (o.geometry === GEO.piatto ? 'piatto' : o.geometry === GEO.calice ? 'calice'
+        let tag = o.isInstancedMesh ? (o.geometry === GEO.piatto ? 'piatto' : o.geometry === GEO.calice ? 'calice'
           : o.geometry === GEO.bottiglia ? (mat === MAT.bottiglia ? 'bottiglia' : 'caraffa') : o.geometry === GEO.vasetto ? 'vasetto'
           : o.geometry === GEO.portacandela ? 'portacandela' : mat === MAT.candela ? 'candela' : mat === MAT.fiori ? 'fiore'
           : mat === MAT.lino ? 'tovagliolo' : mat === MAT.posate ? (o.geometry.parameters && o.geometry.parameters.width > 0.016 ? 'forchetta' : 'coltello')
-          : o.geometry === GEO.base ? 'base' : o.geometry === GEO.paralume ? 'paralume' : o.geometry === GEO.vasino ? 'vasino'
+          : o.geometry === GEO.sedia.wood ? 'sedia_info' : o.geometry === GEO.base ? 'base' : o.geometry === GEO.paralume ? 'paralume' : o.geometry === GEO.vasino ? 'vasino'
           : (mat === MAT.paralumeIn || mat === MAT.lampadina && o.geometry.type === 'SphereGeometry' || mat === MAT.piantaChiara || mat === MAT.foglie) ? 'scarta'
           : null) : (o.geometry === GEO.vaso ? 'vaso_grande' : mat === MAT.tronco ? 'scarta' : null);
         if (tag === 'scarta') return;
+        if (tag === 'sedia_info') {   // le sedie restano nel GLB; si registrano anche le posizioni per i controlli
+          const mtx = new THREE.Matrix4();
+          for (let i = 0; i < o.count; i++) { o.getMatrixAt(i, mtx); (istanze.sedia = istanze.sedia || []).push({ m: new THREE.Matrix4().multiplyMatrices(o.matrixWorld, mtx).elements.map(v => +v.toFixed(5)) }); }
+        }
+        if (tag === 'sedia_info') tag = null;
         if (tag && !o.isInstancedMesh) { (istanze[tag] = istanze[tag] || []).push({ m: o.matrixWorld.elements.map(v => +v.toFixed(5)) }); return; }
         if (tag) {
           const mtx = new THREE.Matrix4(), col = new THREE.Color();

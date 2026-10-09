@@ -629,7 +629,9 @@ function sediaGeo() {   // sedia bistrot n.14 in faggio curvato, seduta in pagli
       [-0.147, 0.2, -0.179], [-0.19, 0.2, -0.02], [-0.1627, 0.2, 0.1423], [0, 0.2, 0.205]].map(p => new THREE.Vector3(...p)), true, 'centripetal'), 80, 0.0085, 8, true),
   ];
   const seat = tr(new THREE.CylinderGeometry(0.188, 0.188, 0.012, 40), 0, 0.458, -0.01);
-  return { wood: merge(wood), seat };
+  // ingombro reale 41 x 45 cm centrato sul rettangolo della pianta (schienale a 22,5 cm dal centro)
+  const W = merge(wood); W.translate(0, 0, 0.02); seat.translate(0, 0, 0.02);
+  return { wood: W, seat };
 }
 GEO.sedia = sediaGeo();
 function tavoloBaseGeo() {
@@ -744,13 +746,16 @@ for (const [key, fl] of Object.entries(DATA.floors)) {
   for (const s of fl.solids) {
     if (s.mat === 'scaffale') {
       for (const z of [0.05, 0.5, 0.95, 1.4, 1.85]) extrude(s.ring, z0 + z, z0 + z + 0.03, MAT.scaffale, grp);
+      const xs = s.ring.map(p => p[0]), ys = s.ring.map(p => p[1]);   // montanti agli angoli: i ripiani non sono sospesi
+      const ax = Math.min(...xs), bx2 = Math.max(...xs), ay = Math.min(...ys), by2 = Math.max(...ys);
+      for (const [px, py] of [[ax, ay], [bx2 - 0.03, ay], [ax, by2 - 0.03], [bx2 - 0.03, by2 - 0.03]]) boxXY(px, py, px + 0.03, py + 0.03, z0, z0 + 1.9, MAT.ferro, grp);
       continue;
     }
     const top = s.mat === 'inox' ? MAT.inox : s.mat === 'ceramica' ? MAT.ceramica : s.mat === 'tavolo_servizio' ? MAT.noce : MAT.marmo;
     const body = s.mat === 'inox' ? MAT.inox : s.mat === 'ceramica' ? MAT.ceramica : s.mat === 'tavolo_servizio' ? MAT.noce : MAT.laccato;
     if (s.mat === 'tavolo_servizio') { extrude(s.ring, z0 + s.zt - 0.04, z0 + s.zt, top, grp); continue; }
     extrude(s.ring, z0 + 0.1, z0 + s.zt - 0.03, body, grp);
-    extrude(s.ring, z0, z0 + 0.1, MAT.ferro, grp).scale.set(0.98, 0.98, 1);
+    extrude(s.ring, z0, z0 + 0.1, MAT.ferro, grp);   // zoccolo sotto tutto il mobile
     extrude(s.ring, z0 + s.zt - 0.03, z0 + s.zt, top, grp);
   }
   for (const [x, y, r] of fl.burners) {
@@ -799,8 +804,19 @@ for (const [key, fl] of Object.entries(DATA.floors)) {
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
     const [fx, fy] = { N: [0, 1], S: [0, -1], W: [1, 0], E: [-1, 0] }[s];
     const ry = Math.atan2(fx, fy);
-    const RJ = rng(Math.round((cx * 7 + cy * 13) * 100)); const pull = 0.02 + RJ() * 0.07;
-    chairsW.push([cx - fx * pull, cy - fy * pull, z0, ry + (RJ() - 0.5) * 0.16]);
+    // spazio libero dietro la sedia (fino al muro piu' vicino): la sedia arretra o ruota solo se c'e' posto
+    const RJ = rng(Math.round((cx * 7 + cy * 13) * 100));
+    const bx = cx - fx * 0.25, by = cy - fy * 0.25; let free = 1;
+    for (const [x1, y1, x2, y2, zb] of fl.walls) {
+      if (zb > 0.3) continue;
+      const L2 = (x2 - x1) ** 2 + (y2 - y1) ** 2 || 1e-9; const t = Math.max(0, Math.min(1, ((bx - x1) * (x2 - x1) + (by - y1) * (y2 - y1)) / L2));
+      const d = Math.hypot(bx - x1 - t * (x2 - x1), by - y1 - t * (y2 - y1));
+      const dot = ((x1 + t * (x2 - x1)) - cx) * -fx + ((y1 + t * (y2 - y1)) - cy) * -fy;   // solo muri alle spalle
+      if (dot > 0 && d < free) free = d;
+    }
+    const pull = Math.max(0, Math.min(0.02 + RJ() * 0.07, free - 0.03));
+    const rot = free > 0.12 ? (RJ() - 0.5) * 0.16 : 0;
+    chairsW.push([cx - fx * pull, cy - fy * pull, z0, ry + rot]);
     decal(cx, cy, z0 + 0.006, 0.32, M_SHADOW, grp);
     // coperto: piatto davanti alla sedia, posate ai lati, calice a destra
     const e0 = 0.275;   // dal centro della sedia al bordo del tavolo (sedia 45 cm a 5 cm dal tavolo)
@@ -930,7 +946,7 @@ for (const [key, fl] of Object.entries(DATA.floors)) {
 const CA = DATA.floors.PT.cassa;
 if (CA) {
   const g = G.PT;
-  extrude(CA.pill, 0.1, 1.06, MAT.cannettato, g); extrude(CA.pill, 0, 0.1, MAT.ferro, g).scale.set(0.99, 0.99, 1);
+  extrude(CA.pill, 0.1, 1.06, MAT.cannettato, g); extrude(CA.pill, 0, 0.1, MAT.ferro, g);
   extrude(CA.pill_top, 1.06, 1.1, MAT.marmo, g);
   extrude(CA.back, 0.1, 0.92, MAT.noce, g); extrude(CA.back, 0.92, 0.95, MAT.marmo, g); extrude(CA.desk, 0.72, 0.76, MAT.noce, g);
   const xs = CA.pill.map(p => p[0]), ys = CA.pill.map(p => p[1]);

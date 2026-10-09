@@ -51,6 +51,13 @@ def normali_fuori(me):
     bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.recalc_face_normals(bm, faces=bm.faces); bm.to_mesh(me); bm.free()
 
 
+def a_terra(me):
+    """sposta la mesh in modo che il punto piu' basso tocchi z = 0 (appoggio esatto, niente oggetti sospesi)"""
+    z = min(v.co.z for v in me.vertices)
+    for v in me.vertices: v.co.z -= z
+    return me
+
+
 def mat_principled(name, **kw):
     m = bpy.data.materials.new(name); m.use_nodes = True
     P = m.node_tree.nodes['Principled BSDF']
@@ -139,20 +146,20 @@ def prototipi(M, pbr):
     # calice da vino: vetro sottile 1,2 mm
     prof = [(0.0001, 0.0), (0.034, 0.0), (0.036, 0.002), (0.012, 0.006), (0.0035, 0.012), (0.003, 0.085), (0.008, 0.096),
             (0.03, 0.115), (0.042, 0.145), (0.043, 0.175), (0.039, 0.21), (0.037, 0.218)]
-    P['calice'] = [(evaluated(lathe('calice', prof, 64), [('SOLIDIFY', dict(thickness=0.0012, offset=-1))]), M['vetro'])]
+    P['calice'] = [(a_terra(evaluated(lathe('calice', prof, 64), [('SOLIDIFY', dict(thickness=0.0012, offset=-1))])), M['vetro'])]
     # bicchiere / portacandela
     prof = [(0.0001, 0.0), (0.031, 0.0), (0.033, 0.004), (0.033, 0.075)]
-    P['portacandela'] = [(evaluated(lathe('bicchiere', prof, 48), [('SOLIDIFY', dict(thickness=0.002, offset=-1))]), M['votivo'])]
+    P['portacandela'] = [(a_terra(evaluated(lathe('bicchiere', prof, 48), [('SOLIDIFY', dict(thickness=0.002, offset=-1))])), M['votivo'])]
     # piatto piano: fondo, tesa, bordo arrotondato
     prof = [(0.0001, 0.004), (0.07, 0.004), (0.075, 0.0), (0.082, 0.001), (0.095, 0.007), (0.12, 0.012), (0.133, 0.016), (0.137, 0.018)]
-    P['piatto'] = [(evaluated(lathe('piatto', prof, 96), [('SOLIDIFY', dict(thickness=0.004, offset=1)), ('SUBSURF', dict(levels=1, render_levels=1))]), M['porcellana'])]
+    P['piatto'] = [(a_terra(evaluated(lathe('piatto', prof, 96), [('SOLIDIFY', dict(thickness=0.004, offset=1)), ('SUBSURF', dict(levels=1, render_levels=1))])), M['porcellana'])]
     # candela con stoppino e fiamma
     wax = lathe('cera', [(0.0001, 0.0), (0.0185, 0.0), (0.0185, 0.052), (0.016, 0.055), (0.004, 0.053), (0.0001, 0.054)], 40)
     flame = lathe('fiamma', [(0.0001, 0.06), (0.004, 0.066), (0.0045, 0.072), (0.002, 0.082), (0.0001, 0.088)], 16)
     P['candela'] = [(wax, M['cera']), (flame, M['fiamma'])]
     # vasetto in vetro con acqua e rametto
     vprof = [(0.0001, 0.0), (0.026, 0.0), (0.03, 0.03), (0.022, 0.08), (0.011, 0.11), (0.013, 0.125)]
-    vas = evaluated(lathe('vasetto', vprof, 48), [('SOLIDIFY', dict(thickness=0.0025, offset=-1))])
+    vas = a_terra(evaluated(lathe('vasetto', vprof, 48), [('SOLIDIFY', dict(thickness=0.0025, offset=-1))]))
     acq = lathe('acqua_vaso', [(0.0001, 0.003), (0.023, 0.003), (0.026, 0.03), (0.02, 0.07), (0.0001, 0.07)], 32)
     P['vasetto'] = [(vas, M['vetro']), (acq, M['acqua'])]
     # rametto: stelo + foglie lanceolate (tipo ulivo / rosmarino)
@@ -239,8 +246,8 @@ def prototipi(M, pbr):
     P['forchetta'] = [(fk, M['acciaio'])]
     # basamento del tavolo in ghisa tornita
     P['base'] = [(lathe('base_tavolo', [(0.0001, 0.0), (0.215, 0.0), (0.222, 0.004), (0.22, 0.012), (0.2, 0.018), (0.12, 0.03), (0.07, 0.045),
-                                         (0.05, 0.07), (0.042, 0.1), (0.036, 0.12), (0.034, 0.62), (0.04, 0.66), (0.06, 0.69), (0.12, 0.7),
-                                         (0.12, 0.712), (0.0001, 0.712)], 64), M['ghisa'])]
+                                         (0.05, 0.07), (0.042, 0.1), (0.036, 0.12), (0.034, 0.62), (0.04, 0.66), (0.06, 0.69), (0.12, 0.708),
+                                         (0.12, 0.723), (0.0001, 0.723)], 64), M['ghisa'])]
     # lampada a sospensione: cupola smaltata verde fuori e bianca dentro, bordo arrotolato, cappuccio in ottone, lampadina a globo
     prof = [(0.025, 0.2), (0.04, 0.19), (0.1, 0.12), (0.16, 0.03), (0.175, 0.0)]
     out = evaluated(lathe('paralume_est', prof, 96), [('SOLIDIFY', dict(thickness=0.0012, offset=1))])
@@ -252,7 +259,7 @@ def prototipi(M, pbr):
     # bottiglia bordolese: vetro 3 mm, vino, etichetta, capsula
     bprof = [(0.0001, 0.012), (0.012, 0.004), (0.03, 0.0), (0.036, 0.004), (0.037, 0.02), (0.037, 0.2), (0.033, 0.225),
              (0.022, 0.245), (0.0145, 0.262), (0.0135, 0.3), (0.015, 0.302), (0.015, 0.31), (0.0125, 0.312)]
-    glass = evaluated(lathe('bottiglia', bprof, 64), [('SOLIDIFY', dict(thickness=0.003, offset=-1))])
+    glass = a_terra(evaluated(lathe('bottiglia', bprof, 64), [('SOLIDIFY', dict(thickness=0.003, offset=-1))]))
     vino = lathe('vino', [(0.0001, 0.015), (0.033, 0.006), (0.0335, 0.2), (0.03, 0.222), (0.0001, 0.222)], 40)
     caps = lathe('capsula', [(0.0001, 0.313), (0.0152, 0.313), (0.0152, 0.268), (0.0146, 0.262)], 40)
     lab = lathe('etichetta', [(0.0375, 0.055), (0.0375, 0.15)], 64)
@@ -362,7 +369,7 @@ def forme_bar(M, G):
     ]
     out = []
     for i, prof in enumerate(shapes):
-        g = evaluated(lathe(f'bar{i}', prof, 56), [('SOLIDIFY', dict(thickness=0.003, offset=-1))])
+        g = a_terra(evaluated(lathe(f'bar{i}', prof, 56), [('SOLIDIFY', dict(thickness=0.003, offset=-1))]))
         gm = [G[3], G[2], G[0]][i]; g.materials.append(gm)
         top = prof[-3][1] - 0.01
         l = lathe(f'bar_liq{i}', [(0.0001, 0.012), (prof[2][0] - 0.004, 0.006), (prof[2][0] - 0.004, top * 0.85), (0.0001, top * 0.85)], 40)
