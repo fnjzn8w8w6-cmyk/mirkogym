@@ -120,7 +120,7 @@ def materiali(pbr):
     M['ghisa'], _ = mat_principled('ghisa_vera', **{'Base Color': (0.035, 0.033, 0.03, 1), 'Metallic': 0.7, 'Roughness': 0.55})
     M['smalto_verde'], _ = mat_principled('smalto_verde', **{'Base Color': (0.05, 0.11, 0.075, 1), 'Roughness': 0.25, 'Coat Weight': 0.8, 'Coat Roughness': 0.1})
     M['smalto_bianco'], _ = mat_principled('smalto_bianco', **{'Base Color': (0.9, 0.88, 0.84, 1), 'Roughness': 0.2,
-                                                              'Emission Color': (1.0, 0.85, 0.65, 1), 'Emission Strength': 0.6})
+                                                              'Emission Color': (1.0, 0.85, 0.65, 1), 'Emission Strength': 0.12})
     M['globo'], _ = mat_principled('globo_lampadina', **{'Base Color': (1, 1, 1, 1), 'Roughness': 0.35, 'Transmission Weight': 1.0,
                                                          'Emission Color': (1.0, 0.8, 0.55, 1), 'Emission Strength': 18})
     M['ottone'], _ = mat_principled('ottone_vero', **{'Base Color': (0.8, 0.6, 0.32, 1), 'Metallic': 1.0, 'Roughness': 0.25})

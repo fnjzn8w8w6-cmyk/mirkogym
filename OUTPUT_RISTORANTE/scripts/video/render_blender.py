@@ -110,7 +110,7 @@ PBRMAP = {   # materiale della scena: (texture, lato in metri, tinta moltiplicat
     'trave': ('walnut_veneer', 1.8, (0.42, 0.3, 0.22), 0.8, 0.01),
     'tavolo_servizio': ('walnut_veneer', 1.8, (0.7, 0.52, 0.4), 0.6, 0.004),
     'gradino': ('oak_veneer_01', 1.83, (0.85, 0.72, 0.58), 0.6, 0.004),
-    'legnoSedia': ('oak_veneer_01', 0.9, (0.5, 0.34, 0.22), 0.4, 0.0),
+    'legnoSedia': ('oak_veneer_01', 0.9, (0.3, 0.19, 0.12), 0.4, 0.0),
     'marmo': ('marble021', 2.0, (1.0, 1.0, 1.0), 0.4, 0.003),
     'lino': ('rough_linen', 0.27, (0.62, 0.68, 0.56), 1.0, 0.002),
     'paglia': ('wicker009a', 0.22, (1.0, 0.95, 0.85), 1.0, 0.0),
@@ -135,7 +135,29 @@ if PBR:
         d, r, nm = img('diff', True), img('rough', False), img('nor', False)
         mix = nt.nodes.new('ShaderNodeMix'); mix.data_type = 'RGBA'; mix.blend_type = 'MULTIPLY'; mix.inputs['Factor'].default_value = 1.0
         nt.links.new(d.outputs[0], mix.inputs['A']); mix.inputs['B'].default_value = (*tint, 1)
-        nt.links.new(mix.outputs['Result'], P.inputs['Base Color'])
+        # imperfezioni: macchie ampie e irregolari (pareti mai uniformi, legni e pavimenti consumati in modo diverso)
+        LO, HI, SC = {'intonacoPT': (0.84, 1.05, 0.45), 'intonaco': (0.86, 1.05, 0.45), 'soffitto': (0.9, 1.03, 0.4),
+                      'mattoni': (0.85, 1.08, 0.6), 'spina': (0.88, 1.06, 0.7), 'cotto': (0.86, 1.06, 0.7)}.get(n, (0.92, 1.05, 1.2))
+        nz = nt.nodes.new('ShaderNodeTexNoise'); nz.inputs['Scale'].default_value = SC; nz.inputs['Detail'].default_value = 6
+        nz.inputs['Roughness'].default_value = 0.62; nt.links.new(tc.outputs['Object'], nz.inputs['Vector'])
+        mrg = nt.nodes.new('ShaderNodeMapRange'); mrg.inputs['From Min'].default_value = 0.32; mrg.inputs['From Max'].default_value = 0.68
+        mrg.inputs['To Min'].default_value = LO; mrg.inputs['To Max'].default_value = HI; nt.links.new(nz.outputs['Fac'], mrg.inputs['Value'])
+        mix2 = nt.nodes.new('ShaderNodeMix'); mix2.data_type = 'RGBA'; mix2.blend_type = 'MULTIPLY'; mix2.inputs['Factor'].default_value = 1.0
+        nt.links.new(mix.outputs['Result'], mix2.inputs['A']); nt.links.new(mrg.outputs['Result'], mix2.inputs['B'])
+        out_col = mix2.outputs['Result']
+        if n in ('noce', 'noceTavolo', 'legnoSedia', 'scaffale', 'doghe', 'trave', 'gradino', 'paglia', 'lino'):   # ogni pezzo di legno ha il suo tono
+            oi = nt.nodes.new('ShaderNodeObjectInfo'); mro = nt.nodes.new('ShaderNodeMapRange')
+            mro.inputs['To Min'].default_value = 0.9; mro.inputs['To Max'].default_value = 1.1; nt.links.new(oi.outputs['Random'], mro.inputs['Value'])
+            mix3 = nt.nodes.new('ShaderNodeMix'); mix3.data_type = 'RGBA'; mix3.blend_type = 'MULTIPLY'; mix3.inputs['Factor'].default_value = 1.0
+            nt.links.new(out_col, mix3.inputs['A']); nt.links.new(mro.outputs['Result'], mix3.inputs['B']); out_col = mix3.outputs['Result']
+        nt.links.new(out_col, P.inputs['Base Color'])
+        if n in ('noceTavolo', 'marmo', 'laccaVerde', 'spina', 'gradino', 'noce', 'cotto'):   # aloni d'uso: zone piu' opache e piu' lucide
+            nz2 = nt.nodes.new('ShaderNodeTexNoise'); nz2.inputs['Scale'].default_value = 4.0; nz2.inputs['Detail'].default_value = 3
+            nt.links.new(tc.outputs['Object'], nz2.inputs['Vector'])
+            mr2 = nt.nodes.new('ShaderNodeMapRange'); mr2.inputs['From Min'].default_value = 0.35; mr2.inputs['From Max'].default_value = 0.65
+            mr2.inputs['To Min'].default_value = 0.75; mr2.inputs['To Max'].default_value = 1.35; nt.links.new(nz2.outputs['Fac'], mr2.inputs['Value'])
+            rmul = nt.nodes.new('ShaderNodeMath'); rmul.operation = 'MULTIPLY'; nt.links.new(r.outputs[0], rmul.inputs[0]); nt.links.new(mr2.outputs['Result'], rmul.inputs[1])
+            r = rmul
         if n in ('spina', 'gradino', 'noceTavolo'):   # parquet e legni a cera: meno specchiati
             mr = nt.nodes.new('ShaderNodeMath'); mr.operation = 'MULTIPLY_ADD'; mr.inputs[1].default_value = 0.9; mr.inputs[2].default_value = 0.22
             nt.links.new(r.outputs[0], mr.inputs[0]); nt.links.new(mr.outputs[0], P.inputs['Roughness'])
@@ -189,13 +211,13 @@ for o in bpy.data.objects:
         if base(o.active_material.name) in ('lampadina', 'opale'): o.visible_shadow = False
 
 luci = json.load(open(os.path.join(src, 'luci.json')))
-POW = {'sospensione': (34, 3000, 0.03), 'globo': (30, 3000, 0.09), 'applique': (14, 2900, 0.06), 'candela': (0.35, 1900, 0.008)}
+POW = {'sospensione': (44, 2700, 0.03), 'globo': (30, 3000, 0.09), 'applique': (14, 2900, 0.06), 'candela': (0.35, 1900, 0.008)}
 for i, l in enumerate(luci):
     p = B(l['p'])
     if l['tipo'] == 'ambiente':
         cucina = l.get('col', 0) == 0xf4f1ea; servizio = l.get('col', 0) == 0xf6eee0
         d = bpy.data.lights.new(f'amb{i}', 'AREA'); d.shape = 'DISK'; d.size = 0.5 if servizio else 0.8
-        d.energy = 160 if cucina else 30 if servizio else 14; d.color = kelvin(4000 if cucina else 3500 if servizio else 3300)
+        d.energy = 160 if cucina else 30 if servizio else float(os.environ.get('RIEMPIMENTO', 5)); d.color = kelvin(4000 if cucina else 3500 if servizio else 3300)
         ob = bpy.data.objects.new(f'amb{i}', d); ob.location = p + Vector((0, 0, 0.42)); sc.collection.objects.link(ob)
         continue
     pw, k, r = POW[l['tipo']]
