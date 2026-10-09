@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Dvca Rovello 3D</title>
+<style>
+  :root { --bg: #0d0b0a; --fg: #f3ece2; --dim: #b9ad9c; --acc: #c9a46a; --panel: rgba(18, 15, 13, 0.72); }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #0d0b0a; --fg: #f3ece2; } }
+  :root[data-theme="dark"] { --bg: #0d0b0a; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+  canvas { display: block; touch-action: none; }
+  #carica { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: var(--bg); z-index: 10; padding: 16px; text-align: center; }
+  #carica h1 { font: 500 22px Georgia, serif; letter-spacing: .04em; margin: 0; }
+  #barra { width: min(320px, 80vw); height: 4px; background: #2a2420; border-radius: 2px; overflow: hidden; }
+  #barra i { display: block; height: 100%; width: 0; background: var(--acc); transition: width .2s; }
+  #stato { color: var(--dim); font-size: 13px; }
+  .ui { position: fixed; z-index: 5; }
+  #top { top: 12px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 8px; pointer-events: none; }
+  #top button, #top .titolo { pointer-events: auto; }
+  .titolo { font: 500 15px Georgia, serif; padding: 8px 12px; background: var(--panel); border-radius: 8px; backdrop-filter: blur(6px); }
+  button { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid rgba(255, 255, 255, .14); border-radius: 8px; padding: 8px 12px; cursor: pointer; backdrop-filter: blur(6px); }
+  button.on { border-color: var(--acc); color: var(--acc); }
+  #aiuto { bottom: 12px; right: 12px; max-width: 300px; padding: 10px 12px; background: var(--panel); border-radius: 8px; color: var(--dim); font-size: 12.5px; backdrop-filter: blur(6px); }
+  #didascalia { left: 50%; bottom: 64px; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); text-align: center; opacity: 0; transition: opacity .6s; pointer-events: none; }
+  #didascalia b { display: block; font: 500 20px Georgia, serif; margin-bottom: 4px; text-shadow: 0 1px 8px #000; }
+  #didascalia span { color: #e9dfd0; text-shadow: 0 1px 6px #000; }
+  #nero { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 4; }
+  #joy { left: 16px; bottom: 16px; width: 110px; height: 110px; border-radius: 50%; background: rgba(20, 16, 14, .45); border: 1px solid rgba(255, 255, 255, .15); display: none; touch-action: none; }
+  #joy i { position: absolute; left: 35px; top: 35px; width: 40px; height: 40px; border-radius: 50%; background: rgba(240, 230, 215, .55); }
+  @media (pointer: coarse) { #joy { display: block; } #aiuto { display: none; } }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+  "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.7.3/build/index.module.js"
+} }
+</script>
+</head>
+<body>
+<div id="carica"><h1>Dvca · via Rovello 18</h1><div id="barra"><i></i></div><div id="stato">Caricamento del locale…</div></div>
+<div id="nero"></div>
+<div class="ui" id="top">
+  <div class="titolo">Dvca · via Rovello 18</div>
+  <button id="bPT">Piano terra</button><button id="bS1">Interrato</button><button id="bTour">▶ Visita guidata</button>
+</div>
+<div class="ui" id="didascalia"><b></b><span></span></div>
+<div class="ui" id="aiuto">Trascina per guardarti intorno · W A S D o frecce per camminare · rotella per avanzare · Shift per andare più veloce</div>
+<div class="ui" id="joy"><i></i></div>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { computeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh';
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
+
+const $ = id => document.getElementById(id);
+const stato = t => { $('stato').textContent = t; };
+const progresso = f => { const b = $('barra'); if (b) b.firstChild.style.width = Math.round(f * 100) + '%'; };
+
+// ---------------------------------------------------------------- motore: stessa resa "fotografica" del render (AgX, esposizione, bagliore, grana)
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+const DPR = Math.min(window.devicePixelRatio, matchMedia('(pointer: coarse)').matches ? 1.5 : 2);
+renderer.setPixelRatio(DPR); renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.AgXToneMapping; renderer.toneMappingExposure = 1.4;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x05060a);
+const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.03, 120);
+camera.rotation.order = 'YXZ';
+
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }));
+composer.setSize(innerWidth, innerHeight);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.22, 0.5, 3.0); composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const lente = new ShaderPass({   // vignettatura, aberrazione cromatica ai bordi, contrasto, grana del sensore
+  uniforms: { tDiffuse: { value: null }, t: { value: 0 }, nero: { value: 0 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float t; uniform float nero; varying vec2 vUv;
+    float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233)) + t) * 43758.5453); }
+    void main(){ vec2 d = vUv - 0.5; float r2 = dot(d, d);
+      vec3 c; c.r = texture2D(tDiffuse, vUv - d * 0.0035 * r2 * 4.0).r; c.g = texture2D(tDiffuse, vUv).g; c.b = texture2D(tDiffuse, vUv + d * 0.0035 * r2 * 4.0).b;
+      c = mix(c, c * c * (3.0 - 2.0 * c), 0.32);
+      float g = dot(c, vec3(0.299, 0.587, 0.114)); c = max(vec3(0.0), mix(vec3(g), c, 1.18));
+      c *= 1.0 - 0.42 * smoothstep(0.08, 0.62, r2);
+      float l = dot(c, vec3(0.299, 0.587, 0.114));
+      c += (h(gl_FragCoord.xy) - 0.5) * (0.018 + 0.035 * (1.0 - l));
+      gl_FragColor = vec4(c * (1.0 - nero), 1.0); }` });
+composer.addPass(lente);
+
+// ---------------------------------------------------------------- caricamento
+const manager = new THREE.LoadingManager();
+manager.onProgress = (u, a, b) => progresso(a / b);
+const tl = new THREE.TextureLoader(manager);
+const cache = {};
+function tex(f, srgb = true) {
+  if (!cache[f]) { const t = tl.load(f); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; t.flipY = false; t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; cache[f] = t; }
+  return cache[f];
+}
+const draco = new DRACOLoader(manager); draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/');
+const gltfLoader = new GLTFLoader(manager); gltfLoader.setDRACOLoader(draco);
+const pmrem = new THREE.PMREMGenerator(renderer);
+const lin = c => new THREE.Color().setRGB(c[0], c[1], c[2], THREE.LinearSRGBColorSpace);
+
+// i materiali con la luce cotta non devono ricevere anche la luce diffusa del panorama (sarebbe contata due volte)
+const SENZA_IBL_DIFFUSA = THREE.ShaderChunk.lights_fragment_maps.replace(/iblIrradiance \+= getIBLIrradiance\( geometryNormal \);/, '');
+function soloRiflessi(m) { m.onBeforeCompile = s => { s.fragmentShader = s.fragmentShader.replace('#include <lights_fragment_maps>', SENZA_IBL_DIFFUSA); }; m.customProgramCacheKey = () => 'lm'; }
+
+const [spec, tour, envPT, envS1, gltf] = await Promise.all([
+  fetch('web.json').then(r => r.json()), fetch('tour.json').then(r => r.json()),
+  tl.loadAsync('env_PT.jpg'), tl.loadAsync('env_S1.jpg'),
+  new Promise((ok, ko) => gltfLoader.load('scena.glb', ok, undefined, ko))]);
+stato('Preparazione dei materiali…');
+for (const t of [envPT, envS1]) { t.mapping = THREE.EquirectangularReflectionMapping; t.colorSpace = THREE.SRGBColorSpace; }
+const ENV = { PT: pmrem.fromEquirectangular(envPT).texture, S1: pmrem.fromEquirectangular(envS1).texture };
+const SE = spec.S_ENV || 8;   // il panorama e' salvato diviso per SE (jpg): si rimoltiplica nell'intensita'
+const S = spec.S_LM;
+const colliders = [], pavimenti = [];
+const PAV = /^W(lm|vc)_(spina|cotto|gres|cucina|gradino|zerbino|scalaCorpo)_/;
+const NON_OSTACOLO = /^W(lm|vc)_(spina|cotto|gres|cucina|gradino|zerbino|soffitto|trave|tenda_lino|quadro_|facciata|cemento)/;
+const nuovi = new Map();
+function materiale(m, piano) {
+  const k = m.name + '|' + piano; if (nuovi.has(k)) return nuovi.get(k);
+  let out = m; const g = spec.gruppi[m.name], e = spec.emissivi[m.name];
+  if (g && g.luce && g.luce !== 'vertici') {
+    const lucido = /noceTavolo|marmo|laccaVerde|ceramica|laccato/.test(g.materiale);
+    out = new (lucido ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial)({ name: m.name, roughness: g.tex ? 1 : g.rugosita, metalness: 0 });
+    if (lucido) { out.clearcoat = 0.25; out.clearcoatRoughness = 0.14; }
+    if (g.tex) {
+      out.map = tex(`tx/${g.tex}_diff.jpg`); out.color = lin(g.tinta);
+      out.normalMap = tex(`tx/${g.tex}_nor.jpg`, false); out.normalScale.set(g.normale, -g.normale);
+      out.roughnessMap = tex(`tx/${g.tex}_rough.jpg`, false);
+      if (/spina|gradino|noceTavolo/.test(g.materiale)) out.roughness = 1.12;   // legni a cera: meno specchiati
+    } else if (g.immagine) { out.map = tex(g.immagine); out.color = new THREE.Color(1, 1, 1); }
+    else out.color = lin(g.colore);
+    out.lightMap = tex(g.luce); out.lightMap.channel = 1; out.lightMapIntensity = S * Math.PI;
+    out.envMap = ENV[piano]; out.envMapIntensity = 0.9 * SE; soloRiflessi(out);
+  } else if (g) {   // luce cotta sui vertici
+    const c = g.tex || !g.immagine ? lin(g.colore).multiplyScalar(S) : new THREE.Color(S, S, S);
+    out = new THREE.MeshBasicMaterial({ name: m.name, color: c, vertexColors: true, map: g.immagine ? tex(g.immagine) : null, side: THREE.DoubleSide });
+  } else if (e) {
+    out = new THREE.MeshBasicMaterial({ name: m.name, color: lin(e.colore).multiplyScalar(Math.max(1, e.forza * 0.6)), map: e.immagine ? tex(e.immagine) : null });
+  } else {
+    out = m.clone(); out.envMap = ENV[piano]; out.envMapIntensity = SE;
+    if (/bottiglia/.test(m.name) && out.transmission > 0) { out.transmission = 0; out.transparent = true; out.opacity = 0.86; out.roughness = 0.08; }
+    if (out.transmission > 0) { out.thickness = 0.002; out.roughness = Math.max(out.roughness, 0.02); }
+  }
+  nuovi.set(k, out); return out;
+}
+scene.add(gltf.scene);
+gltf.scene.updateMatrixWorld(true);
+const box = new THREE.Box3();
+gltf.scene.traverse(o => {
+  if (!o.isMesh) return;
+  box.setFromObject(o); const piano = (box.min.y + box.max.y) / 2 < -0.45 ? 'S1' : 'PT';
+  o.material = Array.isArray(o.material) ? o.material.map(m => materiale(m, piano)) : materiale(o.material, piano);
+  const n = (Array.isArray(o.material) ? o.material[0] : o.material).name;
+  if (/^W(lm|vc)_/.test(n) && !o.isInstancedMesh) {
+    o.geometry.computeBoundsTree();
+    if (PAV.test(n)) pavimenti.push(o);
+    else if (!NON_OSTACOLO.test(n)) colliders.push(o);
+  }
+});
+stato('Pronto'); $('carica').style.transition = 'opacity .8s'; $('carica').style.opacity = 0; setTimeout(() => $('carica').remove(), 900);
+
+// ---------------------------------------------------------------- movimento in prima persona
+const OCCHIO = 1.6, pos = new THREE.Vector3(), ray = new THREE.Raycaster();
+let yaw = 0, pitch = 0, quota = null;
+const PARTENZE = { PT: { p: [26.3, 10.7], yaw: Math.PI / 2 }, S1: { p: [23.6, 4.85], yaw: 1.33 } };
+function vai(k) {
+  const s = PARTENZE[k]; pos.set(s.p[0], k === 'PT' ? 0 : -3.1, s.p[1]); yaw = s.yaw; pitch = -0.05; quota = null; aggiornaPiano();
+  for (const b of ['bPT', 'bS1']) $(b).classList.toggle('on', b === 'b' + k);
+}
+function suolo(x, y, z) {   // pavimento o gradino sotto i piedi
+  ray.set(new THREE.Vector3(x, y + 1.0, z), new THREE.Vector3(0, -1, 0)); ray.far = 2.2;
+  const h = ray.intersectObjects(pavimenti, false)[0]; return h ? h.point.y : null;
+}
+function libero(from, dir, dist) {
+  for (const hgt of [0.45, 1.1]) {
+    ray.set(new THREE.Vector3(from.x, from.y + hgt, from.z), dir); ray.far = dist + 0.28;
+    if (ray.intersectObjects(colliders, false).length) return false;
+  }
+  return true;
+}
+function muovi(dx, dz, dt) {
+  const v = new THREE.Vector3(dx, 0, dz); if (v.lengthSq() === 0) return;
+  v.normalize().applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+  const passo = v.clone().multiplyScalar(dt);
+  for (const tent of [passo, new THREE.Vector3(passo.x, 0, 0), new THREE.Vector3(0, 0, passo.z)]) {
+    const L = tent.length(); if (L < 1e-5) continue;
+    if (!libero(pos, tent.clone().normalize(), L)) continue;
+    const n = pos.clone().add(tent); const y = suolo(n.x, pos.y, n.z);
+    if (y === null || Math.abs(y - pos.y) > 0.35) continue;
+    pos.copy(n); pos.y = y; return;
+  }
+}
+const tasti = new Set();
+addEventListener('keydown', e => { tasti.add(e.code); if (e.code.startsWith('Arrow')) e.preventDefault(); });
+addEventListener('keyup', e => tasti.delete(e.code));
+let trascina = null;
+renderer.domElement.addEventListener('pointerdown', e => { trascina = { x: e.clientX, y: e.clientY, id: e.pointerId }; renderer.domElement.setPointerCapture(e.pointerId); fermaTour(); });
+renderer.domElement.addEventListener('pointermove', e => {
+  if (!trascina || trascina.id !== e.pointerId) return;
+  yaw -= (e.clientX - trascina.x) * 0.0042; pitch = Math.max(-1.2, Math.min(1.2, pitch - (e.clientY - trascina.y) * 0.0042));
+  trascina.x = e.clientX; trascina.y = e.clientY;
+});
+renderer.domElement.addEventListener('pointerup', () => { trascina = null; });
+renderer.domElement.addEventListener('wheel', e => { fermaTour(); muovi(0, Math.sign(e.deltaY) * 1, 0.35); e.preventDefault(); }, { passive: false });
+// joystick per il telefono
+let joy = null; const J = $('joy');
+J.addEventListener('pointerdown', e => { joy = { id: e.pointerId, x: 0, y: 0 }; J.setPointerCapture(e.pointerId); fermaTour(); e.stopPropagation(); });
+J.addEventListener('pointermove', e => {
+  if (!joy || joy.id !== e.pointerId) return; const r = J.getBoundingClientRect();
+  let x = (e.clientX - r.left - 55) / 45, y = (e.clientY - r.top - 55) / 45; const l = Math.hypot(x, y); if (l > 1) { x /= l; y /= l; }
+  joy.x = x; joy.y = y; J.firstChild.style.transform = `translate(${x * 35}px, ${y * 35}px)`;
+});
+J.addEventListener('pointerup', () => { joy = null; J.firstChild.style.transform = ''; });
+
+// ---------------------------------------------------------------- visita guidata (stesso percorso del video)
+let tourT = null; const didas = $('didascalia');
+function fermaTour() { if (tourT === null) return; tourT = null; $('bTour').classList.remove('on'); $('bTour').textContent = '▶ Visita guidata'; didas.style.opacity = 0; lente.uniforms.nero.value = 0; quota = null; }
+$('bTour').onclick = () => { if (tourT !== null) return fermaTour(); tourT = 0; $('bTour').classList.add('on'); $('bTour').textContent = '■ Ferma visita'; };
+$('bPT').onclick = () => { fermaTour(); vai('PT'); };
+$('bS1').onclick = () => { fermaTour(); vai('S1'); };
+let ultimaDid = -1;
+function passoTour(dt) {
+  tourT += dt; const i = Math.min(tour.pos.length - 1, Math.floor(tourT * tour.fps));
+  const p = tour.pos[i], d = tour.dir[i];
+  camera.position.set(p[0], p[1], p[2]); camera.lookAt(p[0] + d[0], p[1] + d[1], p[2] + d[2]);
+  lente.uniforms.nero.value = tour.fade[i] || 0;
+  const c = tour.cap[i];
+  if (c !== ultimaDid) { ultimaDid = c; const D = c != null && tour.didascalie[c];
+    if (D) { didas.querySelector('b').textContent = D.t; didas.querySelector('span').textContent = D.c; didas.style.opacity = 1; } else didas.style.opacity = 0; }
+  if (i >= tour.pos.length - 1) { const e = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ'); yaw = e.y; pitch = e.x;
+    pos.set(p[0], p[1] - OCCHIO, p[2]); fermaTour(); }
+  aggiornaPiano(camera.position.y < -0.5 ? 'S1' : 'PT');
+}
+function aggiornaPiano(k) { k = k || (pos.y < -0.5 ? 'S1' : 'PT'); }
+
+// ---------------------------------------------------------------- ciclo
+window.vista = (x, y, z, yw, pt) => { fermaTour(); pos.set(x, y, z); yaw = yw; pitch = pt; quota = null; };   // per le verifiche automatiche
+window.pronto = true; window.passi = { bloom, lente, composer, renderer }; window.scena = scene; window.cam = camera; window.dbg = () => { const b = new THREE.Box3().setFromObject(gltf.scene); let n = 0, w = 0; gltf.scene.traverse(o => { if (o.isMesh) { n++; if (/^Wlm_/.test(o.material.name)) w++; } }); const rc = new THREE.Raycaster(); const hits = []; for (const [x, y] of [[0, 0], [-0.5, 0], [0.5, 0], [0, -0.5]]) { rc.setFromCamera(new THREE.Vector2(x, y), camera); const h = rc.intersectObjects(gltf.scene.children, true)[0]; hits.push(h ? [h.object.name, (Array.isArray(h.object.material) ? h.object.material[0] : h.object.material).name, +h.distance.toFixed(2), h.object.isInstancedMesh] : null); } return { hits, min: b.min.toArray().map(v => +v.toFixed(2)), max: b.max.toArray().map(v => +v.toFixed(2)), cam: camera.position.toArray().map(v => +v.toFixed(2)), n, w, pav: pavimenti.length, col: colliders.length }; };
+vai('PT');
+const clock = new THREE.Clock();
+function frame() {
+  const dt = Math.min(0.05, clock.getDelta());
+  if (tourT !== null) passoTour(dt);
+  else {
+    const v = (tasti.has('ShiftLeft') || tasti.has('ShiftRight') ? 2.6 : 1.3);
+    let fx = 0, fz = 0;
+    if (tasti.has('KeyW') || tasti.has('ArrowUp')) fz -= 1; if (tasti.has('KeyS') || tasti.has('ArrowDown')) fz += 1;
+    if (tasti.has('KeyA')) fx -= 1; if (tasti.has('KeyD')) fx += 1;
+    if (tasti.has('ArrowLeft')) yaw += 1.6 * dt; if (tasti.has('ArrowRight')) yaw -= 1.6 * dt;
+    if (joy) { fz += joy.y; yaw -= joy.x * 1.4 * dt; }
+    if (fx || fz) muovi(fx, fz, v * dt * Math.min(1, Math.hypot(fx, fz)));
+    if (quota === null) { const y = suolo(pos.x, pos.y + 0.5, pos.z); if (y !== null) pos.y = y; quota = pos.y; }
+    quota += (pos.y - quota) * Math.min(1, dt * 10);
+    camera.position.set(pos.x, quota + OCCHIO, pos.z); camera.rotation.set(pitch, yaw, 0);
+  }
+  lente.uniforms.t.value = (lente.uniforms.t.value + 0.37) % 100;
+  composer.render();
+  requestAnimationFrame(frame);
+}
+frame();
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>

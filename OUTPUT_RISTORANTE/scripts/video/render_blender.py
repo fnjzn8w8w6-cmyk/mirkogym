@@ -247,6 +247,10 @@ sc.render.threads_mode = 'AUTO'
 ENG = os.environ.get('ENGINE')
 if ENG: sc.render.engine = ENG
 
+if os.environ.get('WEBPY'):   # esportazione per il 3D navigabile: scena completa con luci, prima di qualsiasi render
+    exec(open(os.environ['WEBPY']).read(), dict(globals(), src=src))
+    sys.exit(0)
+
 if FOTO:
     sc.cycles.use_fast_gi = False; sc.cycles.diffuse_bounces = 4; sc.cycles.glossy_bounces = 6; sc.cycles.adaptive_threshold = 0.01
     sc.cycles.max_bounces = 16; sc.cycles.transmission_bounces = 14; sc.cycles.transparent_max_bounces = 16   # vetri spessi senza bordi neri
