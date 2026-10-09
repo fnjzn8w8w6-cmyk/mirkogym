@@ -101,7 +101,7 @@ PBRMAP = {   # materiale della scena: (texture, lato in metri, tinta moltiplicat
     'intonacoPT': ('painted_plaster_wall', 2.0, (1.0, 0.9, 0.76), 0.5, 0),
     'intonaco': ('painted_plaster_wall', 2.0, (1.0, 0.97, 0.92), 0.5, 0),
     'soffitto': ('painted_plaster_wall', 2.0, (1.02, 1.0, 0.96), 0.3, 0),
-    'mattoni': ('brick_wall_02', 2.0, (1.0, 0.95, 0.9), 1.2, 0),
+    'mattoni': ('brick_wall_02', 1.45, (1.0, 0.95, 0.9), 1.2, 0),
     'metro': ('long_white_tiles', 1.27, (1.0, 1.0, 1.0), 0.8, 0),
     'noce': ('walnut_veneer', 1.8, (0.62, 0.45, 0.34), 0.6, 0.004),
     'noceTavolo': ('walnut_veneer', 1.8, (0.64, 0.47, 0.35), 0.6, 0.005),
@@ -178,6 +178,10 @@ if os.environ.get('CONTROLLO'):
     CS.run(src, os.environ['CONTROLLO'], _C, _C.inverted())
     sys.exit(0)
 
+if os.environ.get('DEBUGPY'):   # script di diagnosi eseguito sulla scena completa
+    exec(open(os.environ['DEBUGPY']).read(), dict(globals(), src=src))
+    sys.exit(0)
+
 # lampadine e globi: non fanno ombra alla luce puntiforme posta al loro interno
 for o in bpy.data.objects:
     if o.type == 'MESH' and o.active_material and base(o.active_material.name) in ('lampadina', 'opale', 'vetro', 'calice'):
@@ -189,9 +193,9 @@ POW = {'sospensione': (34, 3000, 0.03), 'globo': (30, 3000, 0.09), 'applique': (
 for i, l in enumerate(luci):
     p = B(l['p'])
     if l['tipo'] == 'ambiente':
-        cucina = l.get('col', 0) == 0xf4f1ea
-        d = bpy.data.lights.new(f'amb{i}', 'AREA'); d.shape = 'DISK'; d.size = 0.8
-        d.energy = 90 if cucina else 14; d.color = kelvin(4000 if cucina else 3300)
+        cucina = l.get('col', 0) == 0xf4f1ea; servizio = l.get('col', 0) == 0xf6eee0
+        d = bpy.data.lights.new(f'amb{i}', 'AREA'); d.shape = 'DISK'; d.size = 0.5 if servizio else 0.8
+        d.energy = 160 if cucina else 30 if servizio else 14; d.color = kelvin(4000 if cucina else 3500 if servizio else 3300)
         ob = bpy.data.objects.new(f'amb{i}', d); ob.location = p + Vector((0, 0, 0.42)); sc.collection.objects.link(ob)
         continue
     pw, k, r = POW[l['tipo']]

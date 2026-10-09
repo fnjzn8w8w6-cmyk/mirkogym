@@ -136,6 +136,47 @@ def run(dati_dir, out_path, C, CI):
         ov = walls.overlap(b)
         if len(ov) > 6:
             report['arredi_nei_muri'].append(dict(oggetto=o.name, materiale=n, pos=[round(sum(x.x for x in bb) / 8, 2), round(-sum(x.y for x in bb) / 8, 2)], contatti=len(ov)))
+    # ---- 6. oggetti appesi in alto (lampade, cavi, rosoni, globi): devono toccare qualcosa sopra di se'
+    report['appesi_staccati'] = []
+    for o in meshes:
+        n = base(o.active_material.name) if o.active_material else ''
+        if n in WALL or n in ('soffitto', 'intonaco', 'vetro', 'cemento'): continue
+        bb = [o.matrix_world @ Vector(c) for c in o.bound_box]
+        zmin = min(v.z for v in bb); zmax = max(v.z for v in bb)
+        if max(max(v.x for v in bb) - min(v.x for v in bb), max(v.y for v in bb) - min(v.y for v in bb)) > 1.5: continue
+        cx = sum(v.x for v in bb) / 8; cy = sum(v.y for v in bb) / 8
+        alto = zmin > 1.4 if zmin > -0.3 else (-3.10 + 1.4 < zmin < -0.45)   # sopra 1.40 m dal pavimento del proprio piano
+        if not alto: continue
+        org = Vector((cx, cy, zmax - 0.001)); gap = None
+        for _ in range(8):
+            h = sc.ray_cast(dg, org, Vector((0, 0, 1)), distance=1.5)
+            if not h[0]: break
+            if h[4] is not None and h[4].name == o.name: org = h[1] + Vector((0, 0, 0.0003)); continue
+            gap = h[1].z - zmax; break
+        # appoggiato sopra a qualcosa? (mensole, mobili alti) allora non e' appeso
+        h2 = sc.ray_cast(dg, Vector((cx, cy, zmin + 0.002)), Vector((0, 0, -1)), distance=0.02)
+        if h2[0] and h2[4] is not None and h2[4].name != o.name: continue
+        if gap is None or gap > 0.01:
+            report['appesi_staccati'].append(dict(oggetto=o.name, materiale=n, pos=[round(cx, 2), round(-cy, 2), round(zmin, 2), round(zmax, 2)], vuoto_sopra_cm=None if gap is None else round(gap * 100, 1)))
+    # ---- 7. facce coincidenti con normali opposte (pareti/pannelli "a foglio" doppio): nel render diventano macchie nere
+    report['facce_doppie'] = []
+    cell = {}
+    for o in meshes:
+        if len(o.data.polygons) > 50000: continue
+        mw = o.matrix_world; m3 = mw.to_3x3()
+        for p in o.data.polygons:
+            if p.area < 0.01: continue
+            c = mw @ p.center; nw = (m3 @ p.normal).normalized()
+            k = (round(c.x / 0.005), round(c.y / 0.005), round(c.z / 0.005))
+            cell.setdefault(k, []).append((o.name, nw, p.area))
+    seen = set()
+    for k, L in cell.items():
+        for a in range(len(L)):
+            for b in range(a + 1, len(L)):
+                if L[a][1].dot(L[b][1]) < -0.99 and abs(L[a][2] - L[b][2]) < 0.2 * max(L[a][2], L[b][2]):
+                    kk = tuple(sorted((L[a][0], L[b][0])))
+                    if kk in seen: continue
+                    seen.add(kk); report['facce_doppie'].append(dict(oggetti=list(kk), pos=[round(k[0] * 0.005, 2), round(-k[1] * 0.005, 2), round(k[2] * 0.005, 2)]))
     dbg = []
     for o in bpy.data.objects:
         if o.name.startswith(('bottiglia_bar', 'piatto')) and len(dbg) < 12:

@@ -76,6 +76,16 @@ def tex_node(m, path, color=True, scale=1.0):
     return t
 
 
+def ombra_trasparente(m, tinta=(0.92, 0.92, 0.9, 1)):
+    """vetro e liquidi: i raggi d'ombra attraversano il materiale (senza caustiche il vetro farebbe un'ombra nera piena)"""
+    nt = m.node_tree; out = nt.nodes['Material Output']
+    src = out.inputs['Surface'].links[0].from_socket
+    lp = nt.nodes.new('ShaderNodeLightPath'); tr = nt.nodes.new('ShaderNodeBsdfTransparent'); tr.inputs['Color'].default_value = tinta
+    mx = nt.nodes.new('ShaderNodeMixShader')
+    nt.links.new(lp.outputs['Is Shadow Ray'], mx.inputs[0]); nt.links.new(src, mx.inputs[1]); nt.links.new(tr.outputs[0], mx.inputs[2])
+    nt.links.new(mx.outputs[0], out.inputs['Surface'])
+
+
 def materiali(pbr):
     M = {}
     M['vetro'], _ = mat_principled('vetro_vero', **{'Base Color': (1, 1, 1, 1), 'Transmission Weight': 1.0, 'Roughness': 0.0, 'IOR': 1.5})
@@ -114,6 +124,8 @@ def materiali(pbr):
     M['globo'], _ = mat_principled('globo_lampadina', **{'Base Color': (1, 1, 1, 1), 'Roughness': 0.35, 'Transmission Weight': 1.0,
                                                          'Emission Color': (1.0, 0.8, 0.55, 1), 'Emission Strength': 18})
     M['ottone'], _ = mat_principled('ottone_vero', **{'Base Color': (0.8, 0.6, 0.32, 1), 'Metallic': 1.0, 'Roughness': 0.25})
+    ombra_trasparente(M['vetro']); ombra_trasparente(M['acqua']); ombra_trasparente(M['votivo'], (0.95, 0.8, 0.6, 1))
+    ombra_trasparente(M['vino'], (0.45, 0.05, 0.07, 1))
     return M
 
 
@@ -211,39 +223,92 @@ def prototipi(M, pbr):
         return me
     def arc(y):   # curvatura longitudinale: manico che si alza in fondo, punta leggermente rialzata
         return 0.004 * max(0, -y - 0.03) ** 2 / 0.005 + 0.0025 * max(0, y - 0.03) ** 2 / 0.005
-    # coltello: manico 11 cm pieno (12x6 mm), ghiera, lama 10 cm sottile con dorso dritto e filo curvo
-    ks = []
-    for i in range(30):
-        y = -0.105 + i * 0.21 / 29
+    # posate come quelle vere: un unico pezzo tranciato da lamiera (sagoma in pianta), spessore variabile, poi curvato
+    def sagoma(name, contorno, spess, piega, passo=0.003):
+        """contorno: punti (x, y) in senso antiorario; spess(x, y) -> spessore; piega(x, y) -> sollevamento z"""
+        bm = bmesh.new()
+        vs = [bm.verts.new((x, y, 0)) for x, y in contorno]
+        f = bm.faces.new(vs)
+        ext = bmesh.ops.extrude_face_region(bm, geom=[f])
+        top = [e for e in ext['geom'] if isinstance(e, bmesh.types.BMVert)]
+        for v in top: v.co.z = 1.0
+        ys = [p[1] for p in contorno]; xs = [p[0] for p in contorno]
+        y = min(ys) + passo
+        while y < max(ys):
+            bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=(0, y, 0), plane_no=(0, 1, 0)); y += passo
+        x = min(xs) + 0.0015
+        while x < max(xs):
+            bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=(x, 0, 0), plane_no=(1, 0, 0)); x += 0.0015
+        for v in bm.verts:
+            v.co.z = v.co.z * spess(v.co.x, v.co.y)
+        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.00012)
+        bmesh.ops.dissolve_degenerate(bm, dist=0.00005, edges=bm.edges)
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
+        me = evaluated(me, [('BEVEL', dict(width=0.00035, segments=2, limit_method='ANGLE', angle_limit=math.radians(50)))])
+        for v in me.vertices:
+            v.co.z += piega(v.co.x, v.co.y)
+        for pl in me.polygons: pl.use_smooth = True
+        try: me.set_sharp_from_angle(angle=math.radians(48))
+        except Exception: pass
+        return me
+
+    def lato(prof):   # profilo destro [(y, mezza larghezza)] -> contorno simmetrico chiuso
+        return [(w, y) for y, w in prof] + [(-w, y) for y, w in reversed(prof)]
+
+    def mezza(prof, y):
+        for (y0, w0), (y1, w1) in zip(prof[:-1], prof[1:]):
+            if y0 <= y <= y1: return w0 + (w1 - w0) * (y - y0) / max(1e-9, y1 - y0)
+        return prof[-1][1]
+
+    # forchetta 19 cm: manico a spatola arrotondato, collo 7 mm, paletta 25 mm, 4 rebbi da 4.5 mm (fessure 2 mm, 40 mm)
+    mf = [(-0.098, 0.0)] + [(-0.098 + 0.009 * (1 - math.cos(a * math.pi / 2)), 0.0115 * math.sin(a * math.pi / 2)) for a in (0.25, 0.5, 0.75, 1.0)][0:4]
+    mf += [(-0.07, 0.0118), (-0.045, 0.0102), (-0.02, 0.0072), (0.0, 0.0042), (0.012, 0.0036), (0.024, 0.0062), (0.036, 0.0108), (0.046, 0.0124)]
+    ylo, yhi = 0.048, 0.090
+    W, G = 0.0047, 0.0021; xs0 = -(4 * W + 3 * G) / 2
+    destro = [(w, y) for y, w in mf]
+    rebbi = []   # dalla destra alla sinistra, sopra la paletta
+    for j in reversed(range(4)):
+        a, b = xs0 + j * (W + G), xs0 + j * (W + G) + W
+        tip = yhi - 0.0012 * abs(j - 1.5)
+        rebbi += ([(b, ylo)] if j == 3 else []) + [(b, tip - 0.003), (b - W * 0.2, tip - 0.0006), ((a + b) / 2, tip), (a + W * 0.2, tip - 0.0006), (a, tip - 0.003)]
+        if j > 0: rebbi += [(a, ylo + 0.0012), (a - G / 2, ylo - 0.0003), (a - G, ylo + 0.0012)]
+    rebbi[0] = (xs0 + 4 * W + 3 * G, ylo); rebbi = [(0.0124, ylo - 0.0005)] + rebbi[1:]
+    sinistro = [(-w, y) for y, w in reversed(mf)]
+    cont = destro[1:] + rebbi + [(-0.0124, ylo - 0.0005)] + sinistro[:-1]
+    cont = [(0.0, -0.098)] + cont
+
+    def sp_f(x, y):
+        if y < 0.0:   # manico: 3 mm al centro, bordo arrotondato
+            hw = mezza(mf, y) or 0.001
+            return 0.0018 + 0.0012 * math.sqrt(max(0, 1 - (x / hw) ** 2)) * (1 - 0.3 * max(0, (y + 0.06) / 0.06))
+        return 0.0021 - 0.0005 * min(1, max(0, (y - 0.04) / 0.05))
+
+    def piega_f(x, y):
+        z = 0.004 * max(0, -y - 0.03) ** 2 / 0.005 + 0.0022 * max(0, y - 0.025) ** 2 / 0.004
+        if y > 0.02: z += 0.0016 * (x / 0.0125) ** 2 * min(1, (y - 0.02) / 0.02)   # paletta leggermente concava
+        return z
+    P['forchetta'] = [(sagoma('forchetta', cont, sp_f, piega_f), M['acciaio'])]
+
+    # coltello da tavola 21 cm: manico pieno ovale 5 mm, ghiera stretta, lama piatta 2 mm che si assottiglia verso il filo, punta tonda
+    hk = [(-0.108, 0.0), (-0.1065, 0.0055), (-0.103, 0.0085), (-0.097, 0.0097), (-0.06, 0.0095), (-0.02, 0.0078), (-0.004, 0.0062), (0.002, 0.0052)]
+    destra = [(w, y) for y, w in hk]   # lato destro (+x) = dorso, dritto
+    dorso = [(0.0052, 0.01), (0.0058, 0.03), (0.0060, 0.06), (0.0056, 0.085), (0.0045, 0.098), (0.0028, 0.105), (0.0008, 0.1085)]
+    filo = [(-0.0016, 0.1088), (-0.0042, 0.1065), (-0.0068, 0.101), (-0.0092, 0.09), (-0.0108, 0.07), (-0.0112, 0.045), (-0.0104, 0.02), (-0.0078, 0.008), (-0.0052, 0.002)]
+    sinistra = [(-w, y) for y, w in reversed(hk)]
+    contk = [(0.0, -0.108)] + destra[1:] + dorso + filo + sinistra[1:-1]
+
+    def sp_k(x, y):
         if y < 0.0:
-            u = (y + 0.105) / 0.105; w = 0.013 + 0.004 * math.sin(u * math.pi * 0.9); t = 0.006 + 0.0015 * math.sin(u * math.pi)
-            if i == 0: w, t = 0.008, 0.004
-            ks.append((y, w, t, 0, arc(y)))
-        else:
-            u = y / 0.105; w = 0.017 * (1 - u ** 3) + 0.003; t = 0.0022 * (1 - 0.6 * u)
-            ks.append((y, w, t, 0.0015 * u, arc(y)))
-    ks[-1] = (0.105, 0.002, 0.001, 0.003, arc(0.105))
-    P['coltello'] = [(loft('coltello', ks), M['acciaio'])]
-    # forchetta: manico affusolato, collo stretto, testa leggermente concava con 4 rebbi separati
-    fparts = []
-    hs = []
-    for i in range(22):
-        y = -0.095 + i * 0.13 / 21
-        u = (y + 0.095) / 0.13
-        w = 0.018 - 0.011 * min(1, u / 0.85) if y < 0.02 else 0.007 + (y - 0.02) / 0.03 * 0.018
-        t = 0.0045 - 0.002 * u
-        if i == 0: w, t = 0.012, 0.003
-        hs.append((y, max(0.006, min(w, 0.025)), t, 0, arc(y)))
-    fparts.append(loft('forchetta_manico', hs))
-    for j in range(4):
-        x = (-1.5 + j) * 0.0062
-        ts = [(0.032 + q * 0.065 / 9, 0.0042 - 0.0026 * q / 9, 0.0021, x * (1 + 0.15 * q / 9), arc(0.032 + q * 0.065 / 9) + 0.0006 * (x / 0.009) ** 2) for q in range(10)]
-        fparts.append(loft(f'rebbio{j}', ts, 8))
-    bm = bmesh.new()
-    for me in fparts: bm.from_mesh(me)
-    fk = bpy.data.meshes.new('forchetta'); bm.to_mesh(fk); bm.free()
-    for pl in fk.polygons: pl.use_smooth = True
-    P['forchetta'] = [(fk, M['acciaio'])]
+            hw = mezza(hk, y) or 0.001
+            return 0.0024 + 0.0026 * math.sqrt(max(0, 1 - (x / hw) ** 2))
+        if y < 0.008: return 0.0035 - 0.0015 * y / 0.008
+        u = min(1, max(0, (0.0058 - x) / 0.017))   # dal dorso (2 mm) al filo (0.5 mm)
+        return 0.002 - 0.0015 * u ** 1.5
+
+    def piega_k(x, y):
+        return 0.0045 * max(0, -y - 0.03) ** 2 / 0.005 + 0.001 * max(0, y - 0.05) ** 2 / 0.003
+    P['coltello'] = [(sagoma('coltello', contk, sp_k, piega_k), M['acciaio'])]
     # basamento del tavolo in ghisa tornita
     P['base'] = [(lathe('base_tavolo', [(0.0001, 0.0), (0.215, 0.0), (0.222, 0.004), (0.22, 0.012), (0.2, 0.018), (0.12, 0.03), (0.07, 0.045),
                                          (0.05, 0.07), (0.042, 0.1), (0.036, 0.12), (0.034, 0.62), (0.04, 0.66), (0.06, 0.69), (0.12, 0.708),
@@ -276,7 +341,7 @@ def bottle_materials(M, labels):
     G = []
     for i, col in enumerate([(0.05, 0.16, 0.06), (0.02, 0.08, 0.03), (0.22, 0.12, 0.03), (0.6, 0.62, 0.5)]):
         m, _ = mat_principled(f'vetro_bottiglia_{i}', **{'Base Color': (*col, 1), 'Transmission Weight': 1.0, 'Roughness': 0.03, 'IOR': 1.5})
-        G.append(m)
+        ombra_trasparente(m, (*[c * 0.7 for c in col], 1)); G.append(m)
     L = []
     for i, p in enumerate(labels):
         m, Pn = mat_principled(f'etichetta_{i}', **{'Roughness': 0.7})
