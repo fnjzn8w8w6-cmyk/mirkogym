@@ -14,7 +14,7 @@ const fs = require('fs');
     for (const [k, m] of Object.entries(MAT)) m.name = k;
     for (const [k, m] of Object.entries(ESTERNO)) if (m && m.isMaterial) m.name = 'est_' + k;
     const skip = new Set([M_POOL, M_POOLF, M_SHADOW, M_AO, M_WASH]);
-    const out = new THREE.Scene(); let n = 0;
+    const out = new THREE.Scene(); let n = 0; const istanze = {};
     const add = (geo, mat, name) => { const m = new THREE.Mesh(geo, mat); m.name = (name || mat.name || 'misc') + '_' + (n++); out.add(m); };
     for (const root of [G.PT, G.S1, G.fuori]) {
       root.updateMatrixWorld(true);
@@ -23,6 +23,22 @@ const fs = require('fs');
         const mat = o.material;
         if (Array.isArray(mat) || skip.has(mat) || mat.blending === THREE.AdditiveBlending) return;
         if (!mat.name) mat.name = mat.isMeshBasicMaterial ? 'basic' : 'misc';
+        // oggetti ripetuti sostituiti in Blender da modelli dettagliati: si esportano solo le posizioni
+        const tag = o.isInstancedMesh ? (o.geometry === GEO.piatto ? 'piatto' : o.geometry === GEO.calice ? 'calice'
+          : o.geometry === GEO.bottiglia ? (mat === MAT.bottiglia ? 'bottiglia' : 'caraffa') : o.geometry === GEO.vasetto ? 'vasetto'
+          : o.geometry === GEO.portacandela ? 'portacandela' : mat === MAT.candela ? 'candela' : mat === MAT.fiori ? 'fiore'
+          : mat === MAT.lino ? 'tovagliolo' : mat === MAT.posate ? (o.geometry.parameters && o.geometry.parameters.width > 0.016 ? 'forchetta' : 'coltello')
+          : null) : null;
+        if (tag) {
+          const mtx = new THREE.Matrix4(), col = new THREE.Color();
+          for (let i = 0; i < o.count; i++) {
+            o.getMatrixAt(i, mtx); const w = new THREE.Matrix4().multiplyMatrices(o.matrixWorld, mtx);
+            const e = { m: w.elements.map(v => +v.toFixed(5)) };
+            if (o.instanceColor) { col.fromArray(o.instanceColor.array, i * 3); e.c = [col.r, col.g, col.b].map(v => +v.toFixed(3)); }
+            (istanze[tag] = istanze[tag] || []).push(e);
+          }
+          return;
+        }
         if (o.isInstancedMesh) {
           const parts = []; const mtx = new THREE.Matrix4(); const col = new THREE.Color();
           for (let i = 0; i < o.count; i++) {
@@ -46,12 +62,14 @@ const fs = require('fs');
     const exp = new THREE.GLTFExporter();
     const glb = await new Promise(r => exp.parse(out, r, { binary: true, maxTextureSize: 2048 }));
     const bytes = new Uint8Array(glb); let bin = ''; for (let i = 0; i < bytes.length; i += 32768) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 32768));
-    return { glb: btoa(bin), luci, tour: campionaTour(fps), meshes: n };
+    return { glb: btoa(bin), luci, tour: campionaTour(fps), meshes: n, istanze };
   }, Number(fps));
   fs.mkdirSync(out, { recursive: true });
   fs.writeFileSync(out + '/scena.glb', Buffer.from(res.glb, 'base64'));
   fs.writeFileSync(out + '/luci.json', JSON.stringify(res.luci));
   fs.writeFileSync(out + '/tour.json', JSON.stringify(res.tour));
+  fs.writeFileSync(out + '/istanze.json', JSON.stringify(res.istanze));
+  console.log('istanze', Object.fromEntries(Object.entries(res.istanze).map(([k, v]) => [k, v.length])));
   console.log('mesh', res.meshes, 'luci', res.luci.length, 'fotogrammi', res.tour.pos.length);
   await b.close();
 })();

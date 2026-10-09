@@ -104,7 +104,7 @@ PBRMAP = {   # materiale della scena: (texture, lato in metri, tinta moltiplicat
     'mattoni': ('brick_wall_02', 2.0, (1.0, 0.95, 0.9), 1.2, 0),
     'metro': ('long_white_tiles', 1.27, (1.0, 1.0, 1.0), 0.8, 0),
     'noce': ('walnut_veneer', 1.8, (0.62, 0.45, 0.34), 0.6, 0.004),
-    'noceTavolo': ('walnut_veneer', 1.8, (0.8, 0.6, 0.45), 0.6, 0.005),
+    'noceTavolo': ('walnut_veneer', 1.8, (0.64, 0.47, 0.35), 0.6, 0.005),
     'scaffale': ('walnut_veneer', 1.8, (0.6, 0.44, 0.33), 0.6, 0.003),
     'doghe': ('walnut_veneer', 1.8, (0.62, 0.45, 0.34), 0.6, 0.003),
     'trave': ('walnut_veneer', 1.8, (0.42, 0.3, 0.22), 0.8, 0.01),
@@ -148,6 +148,12 @@ if PBR:
         if n in ('noceTavolo', 'marmo', 'noce'): P.inputs['Coat Weight'].default_value = 0.25; P.inputs['Coat Roughness'].default_value = 0.12
     print('materiali fotografati applicati', flush=True)
 
+if os.environ.get('OGGETTI') and PBR:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import oggetti_veri as OV
+    OV.costruisci(src, PBR)
+    OV.tende(src, OV.materiali(PBR))
+
 # lampadine e globi: non fanno ombra alla luce puntiforme posta al loro interno
 for o in bpy.data.objects:
     if o.type == 'MESH' and o.active_material and base(o.active_material.name) in ('lampadina', 'opale', 'vetro', 'calice'):
@@ -155,13 +161,13 @@ for o in bpy.data.objects:
         if base(o.active_material.name) in ('lampadina', 'opale'): o.visible_shadow = False
 
 luci = json.load(open(os.path.join(src, 'luci.json')))
-POW = {'sospensione': (22, 3000, 0.035), 'globo': (30, 3000, 0.09), 'applique': (14, 2900, 0.06), 'candela': (0.35, 1900, 0.008)}
+POW = {'sospensione': (34, 3000, 0.03), 'globo': (30, 3000, 0.09), 'applique': (14, 2900, 0.06), 'candela': (0.35, 1900, 0.008)}
 for i, l in enumerate(luci):
     p = B(l['p'])
     if l['tipo'] == 'ambiente':
         cucina = l.get('col', 0) == 0xf4f1ea
         d = bpy.data.lights.new(f'amb{i}', 'AREA'); d.shape = 'DISK'; d.size = 0.8
-        d.energy = 90 if cucina else 35; d.color = kelvin(4000 if cucina else 3300)
+        d.energy = 90 if cucina else 14; d.color = kelvin(4000 if cucina else 3300)
         ob = bpy.data.objects.new(f'amb{i}', d); ob.location = p + Vector((0, 0, 0.42)); sc.collection.objects.link(ob)
         continue
     pw, k, r = POW[l['tipo']]
@@ -192,7 +198,8 @@ ENG = os.environ.get('ENGINE')
 if ENG: sc.render.engine = ENG
 
 if FOTO:
-    sc.cycles.use_fast_gi = False; sc.cycles.diffuse_bounces = 4; sc.cycles.glossy_bounces = 4; sc.cycles.adaptive_threshold = 0.01
+    sc.cycles.use_fast_gi = False; sc.cycles.diffuse_bounces = 4; sc.cycles.glossy_bounces = 6; sc.cycles.adaptive_threshold = 0.01
+    sc.cycles.max_bounces = 16; sc.cycles.transmission_bounces = 14; sc.cycles.transparent_max_bounces = 16   # vetri spessi senza bordi neri
     for k in json.load(open(sys.argv[4])):
         out = os.path.join(dst, k['nome'] + '.png')
         if os.path.exists(out): continue
