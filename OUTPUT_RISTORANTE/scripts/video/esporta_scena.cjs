@@ -28,7 +28,11 @@ const fs = require('fs');
           : o.geometry === GEO.bottiglia ? (mat === MAT.bottiglia ? 'bottiglia' : 'caraffa') : o.geometry === GEO.vasetto ? 'vasetto'
           : o.geometry === GEO.portacandela ? 'portacandela' : mat === MAT.candela ? 'candela' : mat === MAT.fiori ? 'fiore'
           : mat === MAT.lino ? 'tovagliolo' : mat === MAT.posate ? (o.geometry.parameters && o.geometry.parameters.width > 0.016 ? 'forchetta' : 'coltello')
-          : null) : null;
+          : o.geometry === GEO.base ? 'base' : o.geometry === GEO.paralume ? 'paralume' : o.geometry === GEO.vasino ? 'vasino'
+          : (mat === MAT.paralumeIn || mat === MAT.lampadina && o.geometry.type === 'SphereGeometry' || mat === MAT.piantaChiara || mat === MAT.foglie) ? 'scarta'
+          : null) : (o.geometry === GEO.vaso ? 'vaso_grande' : mat === MAT.tronco ? 'scarta' : null);
+        if (tag === 'scarta') return;
+        if (tag && !o.isInstancedMesh) { (istanze[tag] = istanze[tag] || []).push({ m: o.matrixWorld.elements.map(v => +v.toFixed(5)) }); return; }
         if (tag) {
           const mtx = new THREE.Matrix4(), col = new THREE.Color();
           for (let i = 0; i < o.count; i++) {

@@ -113,7 +113,7 @@ PBRMAP = {   # materiale della scena: (texture, lato in metri, tinta moltiplicat
     'legnoSedia': ('oak_veneer_01', 0.9, (0.5, 0.34, 0.22), 0.4, 0.0),
     'marmo': ('marble021', 2.0, (1.0, 1.0, 1.0), 0.4, 0.003),
     'lino': ('rough_linen', 0.27, (0.62, 0.68, 0.56), 1.0, 0.002),
-    'paglia': ('wicker009a', 0.5, (1.0, 0.95, 0.85), 1.0, 0.0),
+    'paglia': ('wicker009a', 0.22, (1.0, 0.95, 0.85), 1.0, 0.0),
 }
 if PBR:
     for m in bpy.data.materials:
@@ -136,7 +136,11 @@ if PBR:
         mix = nt.nodes.new('ShaderNodeMix'); mix.data_type = 'RGBA'; mix.blend_type = 'MULTIPLY'; mix.inputs['Factor'].default_value = 1.0
         nt.links.new(d.outputs[0], mix.inputs['A']); mix.inputs['B'].default_value = (*tint, 1)
         nt.links.new(mix.outputs['Result'], P.inputs['Base Color'])
-        nt.links.new(r.outputs[0], P.inputs['Roughness'])
+        if n in ('spina', 'gradino', 'noceTavolo'):   # parquet e legni a cera: meno specchiati
+            mr = nt.nodes.new('ShaderNodeMath'); mr.operation = 'MULTIPLY_ADD'; mr.inputs[1].default_value = 0.9; mr.inputs[2].default_value = 0.22
+            nt.links.new(r.outputs[0], mr.inputs[0]); nt.links.new(mr.outputs[0], P.inputs['Roughness'])
+        else:
+            nt.links.new(r.outputs[0], P.inputs['Roughness'])
         nmap = nt.nodes.new('ShaderNodeNormalMap'); nmap.inputs['Strength'].default_value = nstr
         nt.links.new(nm.outputs[0], nmap.inputs['Color'])
         if bev:
@@ -153,6 +157,19 @@ if os.environ.get('OGGETTI') and PBR:
     import oggetti_veri as OV
     OV.costruisci(src, PBR)
     OV.tende(src, OV.materiali(PBR))
+    OV.piante(src, os.environ.get('MODELLI', os.path.join(PBR, '..', 'models')))
+    # solidi estrusi (banconi, piani cucina): normali coerenti, niente facce nere
+    import bmesh as _bm
+    for o in bpy.data.objects:
+        if o.type == 'MESH' and o.active_material and base(o.active_material.name) in ('inox', 'laccato', 'ceramica', 'marmo', 'noce', 'cannettato', 'scaffale', 'ferro'):
+            me = o.data
+            for nm_ in [a.name for a in me.attributes if 'normal' in a.name.lower()]:
+                try: me.attributes.remove(me.attributes[nm_])     # normali personalizzate importate dal glTF
+                except Exception: pass
+            b = _bm.new(); b.from_mesh(me); _bm.ops.remove_doubles(b, verts=b.verts, dist=1e-5); _bm.ops.recalc_face_normals(b, faces=b.faces); b.to_mesh(me); b.free()
+            me.shade_flat()
+            if base(o.active_material.name) in ('inox', 'laccato', 'ceramica'):   # piani sovrapposti alla stessa quota: sfalsati di frazioni di mm
+                o.location.z += (sum(map(ord, o.name)) % 9) * 0.0004
 
 # lampadine e globi: non fanno ombra alla luce puntiforme posta al loro interno
 for o in bpy.data.objects:

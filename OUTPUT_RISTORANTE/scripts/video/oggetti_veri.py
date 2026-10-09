@@ -100,6 +100,12 @@ def materiali(pbr):
     mx = nt.nodes.new('ShaderNodeMixShader'); mx.inputs[0].default_value = 0.35
     nt.links.new(nt.nodes['Principled BSDF'].outputs[0], mx.inputs[1]); nt.links.new(tr.outputs[0], mx.inputs[2])
     nt.links.new(mx.outputs[0], nt.nodes['Material Output'].inputs['Surface'])
+    M['ghisa'], _ = mat_principled('ghisa_vera', **{'Base Color': (0.035, 0.033, 0.03, 1), 'Metallic': 0.7, 'Roughness': 0.55})
+    M['smalto_verde'], _ = mat_principled('smalto_verde', **{'Base Color': (0.05, 0.11, 0.075, 1), 'Roughness': 0.25, 'Coat Weight': 0.8, 'Coat Roughness': 0.1})
+    M['smalto_bianco'], _ = mat_principled('smalto_bianco', **{'Base Color': (0.9, 0.88, 0.84, 1), 'Roughness': 0.2,
+                                                              'Emission Color': (1.0, 0.85, 0.65, 1), 'Emission Strength': 0.6})
+    M['globo'], _ = mat_principled('globo_lampadina', **{'Base Color': (1, 1, 1, 1), 'Roughness': 0.35, 'Transmission Weight': 1.0,
+                                                         'Emission Color': (1.0, 0.8, 0.55, 1), 'Emission Strength': 18})
     M['ottone'], _ = mat_principled('ottone_vero', **{'Base Color': (0.8, 0.6, 0.32, 1), 'Metallic': 1.0, 'Roughness': 0.25})
     return M
 
@@ -170,30 +176,79 @@ def prototipi(M, pbr):
     so = bpy.data.objects.new('_s', cu); bpy.context.scene.collection.objects.link(so)
     dg = bpy.context.evaluated_depsgraph_get(); stelo = bpy.data.meshes.new_from_object(so.evaluated_get(dg)); bpy.data.objects.remove(so)
     P['fiore'] = [(stelo, M['stelo']), (me, M['foglia'])]
-    # tovagliolo piegato in lino: morbido, con pieghe leggere
-    bm = bmesh.new(); bmesh.ops.create_cube(bm, size=1.0); bm.transform(Matrix.Diagonal((0.1, 0.17, 0.008, 1)))
+    # tovagliolo in lino piegato in tre: sottile, angoli morbidi, pieghe e leggero rigonfiamento
+    bm = bmesh.new(); bmesh.ops.create_grid(bm, x_segments=24, y_segments=40, size=0.5)
+    for v in bm.verts:
+        x, y = v.co.x * 0.105, v.co.y * 0.18
+        z = 0.0035 * math.exp(-((x / 0.04) ** 2)) + 0.0012 * math.sin(y * 55 + x * 20) + 0.004 * (abs(y) > 0.082) * (abs(y) - 0.082) / 0.008
+        v.co = Vector((x, y, min(z, 0.006) - 0.005))
     me = bpy.data.meshes.new('tovagliolo'); bm.to_mesh(me); bm.free()
-    tx = bpy.data.textures.new('pieghe', 'CLOUDS'); tx.noise_scale = 0.03
-    P['tovagliolo'] = [(evaluated(me, [('BEVEL', dict(width=0.003, segments=3)), ('SUBSURF', dict(levels=2, render_levels=2)),
-                                       ('DISPLACE', dict(texture=tx, strength=0.0025, mid_level=0.5))]), M['lino'])]
-    # posate: coltello e forchetta (profilo estruso, smussato, leggermente curvato)
-    def piatta(name, outline, holes=()):
-        bm = bmesh.new(); vs = [bm.verts.new((x, y, 0)) for x, y in outline]; f = bm.faces.new(vs)
-        bmesh.ops.triangulate(bm, faces=[f])
-        r = bmesh.ops.extrude_face_region(bm, geom=bm.faces[:]); top = [g for g in r['geom'] if isinstance(g, bmesh.types.BMVert)]
-        bmesh.ops.translate(bm, verts=top, vec=(0, 0, 0.0022))
-        for v in bm.verts:   # curvatura: punta e manico leggermente rialzati
-            v.co.z += 0.12 * max(0, v.co.y - 0.04) ** 2 * 40 + 0.08 * max(0, -v.co.y - 0.06) ** 2 * 30
+    P['tovagliolo'] = [(evaluated(me, [('SOLIDIFY', dict(thickness=0.003, offset=0)), ('SUBSURF', dict(levels=1, render_levels=1))]), M['lino'])]
+    # posate in acciaio: sezioni ellittiche lungo l'asse (manico pieno e arrotondato, lama sottile, rebbi curvi)
+    def loft(name, sections, n=12, close=True):
+        """sections: [(y, larghezza, spessore, dx, dz)]; sezione a superellisse"""
+        bm = bmesh.new(); rings = []
+        for y, w, t, dx, dz in sections:
+            ring = []
+            for k in range(n):
+                a = k / n * math.tau; c, s_ = math.cos(a), math.sin(a)
+                px = dx + w / 2 * math.copysign(abs(c) ** 0.6, c); pz = dz + t / 2 * math.copysign(abs(s_) ** 0.8, s_)
+                ring.append(bm.verts.new((px, y, pz)))
+            rings.append(ring)
+        for r0, r1 in zip(rings[:-1], rings[1:]):
+            for k in range(n): bm.faces.new((r0[k], r0[(k + 1) % n], r1[(k + 1) % n], r1[k]))
+        if close: bm.faces.new(rings[0][::-1]); bm.faces.new(rings[-1])
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
         me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
-        return evaluated(me, [('BEVEL', dict(width=0.0006, segments=2)), ('WEIGHTED_NORMAL', dict())])
-    kn = [(-0.007, -0.105), (0.007, -0.105), (0.0075, -0.01), (0.009, 0.0), (0.0095, 0.06), (0.0075, 0.095), (0.002, 0.106),
-          (-0.004, 0.1), (-0.0065, 0.04), (-0.0065, 0.0), (-0.0075, -0.01)]
-    fk = [(-0.007, -0.095), (0.007, -0.095), (0.0075, -0.02), (0.004, 0.015), (0.011, 0.03), (0.0115, 0.092), (0.0085, 0.092),
-          (0.0075, 0.05), (0.0045, 0.05), (0.0042, 0.094), (0.0012, 0.094), (0.0012, 0.05), (-0.0012, 0.05), (-0.0012, 0.094),
-          (-0.0042, 0.094), (-0.0045, 0.05), (-0.0075, 0.05), (-0.0085, 0.092), (-0.0115, 0.092), (-0.011, 0.03), (-0.004, 0.015),
-          (-0.0075, -0.02)]
-    P['coltello'] = [(piatta('coltello', kn), M['acciaio'])]
-    P['forchetta'] = [(piatta('forchetta', fk), M['acciaio'])]
+        for pl in me.polygons: pl.use_smooth = True
+        return me
+    def arc(y):   # curvatura longitudinale: manico che si alza in fondo, punta leggermente rialzata
+        return 0.004 * max(0, -y - 0.03) ** 2 / 0.005 + 0.0025 * max(0, y - 0.03) ** 2 / 0.005
+    # coltello: manico 11 cm pieno (12x6 mm), ghiera, lama 10 cm sottile con dorso dritto e filo curvo
+    ks = []
+    for i in range(30):
+        y = -0.105 + i * 0.21 / 29
+        if y < 0.0:
+            u = (y + 0.105) / 0.105; w = 0.013 + 0.004 * math.sin(u * math.pi * 0.9); t = 0.006 + 0.0015 * math.sin(u * math.pi)
+            if i == 0: w, t = 0.008, 0.004
+            ks.append((y, w, t, 0, arc(y)))
+        else:
+            u = y / 0.105; w = 0.017 * (1 - u ** 3) + 0.003; t = 0.0022 * (1 - 0.6 * u)
+            ks.append((y, w, t, 0.0015 * u, arc(y)))
+    ks[-1] = (0.105, 0.002, 0.001, 0.003, arc(0.105))
+    P['coltello'] = [(loft('coltello', ks), M['acciaio'])]
+    # forchetta: manico affusolato, collo stretto, testa leggermente concava con 4 rebbi separati
+    fparts = []
+    hs = []
+    for i in range(22):
+        y = -0.095 + i * 0.13 / 21
+        u = (y + 0.095) / 0.13
+        w = 0.018 - 0.011 * min(1, u / 0.85) if y < 0.02 else 0.007 + (y - 0.02) / 0.03 * 0.018
+        t = 0.0045 - 0.002 * u
+        if i == 0: w, t = 0.012, 0.003
+        hs.append((y, max(0.006, min(w, 0.025)), t, 0, arc(y)))
+    fparts.append(loft('forchetta_manico', hs))
+    for j in range(4):
+        x = (-1.5 + j) * 0.0062
+        ts = [(0.032 + q * 0.065 / 9, 0.0042 - 0.0026 * q / 9, 0.0021, x * (1 + 0.15 * q / 9), arc(0.032 + q * 0.065 / 9) + 0.0006 * (x / 0.009) ** 2) for q in range(10)]
+        fparts.append(loft(f'rebbio{j}', ts, 8))
+    bm = bmesh.new()
+    for me in fparts: bm.from_mesh(me)
+    fk = bpy.data.meshes.new('forchetta'); bm.to_mesh(fk); bm.free()
+    for pl in fk.polygons: pl.use_smooth = True
+    P['forchetta'] = [(fk, M['acciaio'])]
+    # basamento del tavolo in ghisa tornita
+    P['base'] = [(lathe('base_tavolo', [(0.0001, 0.0), (0.215, 0.0), (0.222, 0.004), (0.22, 0.012), (0.2, 0.018), (0.12, 0.03), (0.07, 0.045),
+                                         (0.05, 0.07), (0.042, 0.1), (0.036, 0.12), (0.034, 0.62), (0.04, 0.66), (0.06, 0.69), (0.12, 0.7),
+                                         (0.12, 0.712), (0.0001, 0.712)], 64), M['ghisa'])]
+    # lampada a sospensione: cupola smaltata verde fuori e bianca dentro, bordo arrotolato, cappuccio in ottone, lampadina a globo
+    prof = [(0.025, 0.2), (0.04, 0.19), (0.1, 0.12), (0.16, 0.03), (0.175, 0.0)]
+    out = evaluated(lathe('paralume_est', prof, 96), [('SOLIDIFY', dict(thickness=0.0012, offset=1))])
+    inn = lathe('paralume_int', [(r - 0.0015, z) for r, z in prof], 96)
+    rim = lathe('paralume_bordo', [(0.175 + 0.003 * math.cos(a), 0.0 + 0.003 * math.sin(a)) for a in [k / 12 * math.tau for k in range(13)]], 96)
+    cap = lathe('paralume_cappuccio', [(0.0001, 0.245), (0.016, 0.245), (0.018, 0.235), (0.03, 0.2), (0.03, 0.185), (0.0001, 0.185)], 48)
+    bulb = lathe('globo', [(0.045 * math.sin(a), 0.06 + 0.045 * math.cos(a)) for a in [k / 24 * math.pi for k in range(25)]] + [(0.012, 0.11), (0.012, 0.13)], 48)
+    P['paralume'] = [(out, M['smalto_verde']), (inn, M['smalto_bianco']), (rim, M['smalto_verde']), (cap, M['ottone']), (bulb, M['globo'])]
     # bottiglia bordolese: vetro 3 mm, vino, etichetta, capsula
     bprof = [(0.0001, 0.012), (0.012, 0.004), (0.03, 0.0), (0.036, 0.004), (0.037, 0.02), (0.037, 0.2), (0.033, 0.225),
              (0.022, 0.245), (0.0145, 0.262), (0.0135, 0.3), (0.015, 0.302), (0.015, 0.31), (0.0125, 0.312)]
@@ -253,7 +308,7 @@ def costruisci(dati_dir, pbr):
     M = materiali(pbr); P = prototipi(M, pbr)
     labels = etichette(); G, L, K = bottle_materials(M, labels)
     col = coll(); rnd = random.Random(11)
-    for key in ('calice', 'portacandela', 'piatto', 'candela', 'vasetto', 'fiore', 'tovagliolo', 'coltello', 'forchetta'):
+    for key in ('calice', 'portacandela', 'piatto', 'candela', 'vasetto', 'fiore', 'tovagliolo', 'coltello', 'forchetta', 'base', 'paralume'):
         for e in ist.get(key, []):
             mw = matrix_from(e)
             if key == 'fiore':   # il rametto nasce dal vasetto (la sfera del fiore era 14 cm sopra la base)
@@ -264,6 +319,7 @@ def costruisci(dati_dir, pbr):
             flip = Matrix.Diagonal((1, -1, 1, 1)) if key in ('coltello', 'forchetta') else Matrix.Identity(4)   # rebbi e punta verso il centro del tavolo
             for me, mat in parts:
                 ob = bpy.data.objects.new(key, me); ob.matrix_world = C @ mw @ CI @ flip; col.objects.link(ob)
+                if mat is M.get('globo'): ob.visible_shadow = False   # la luce puntiforme e' dentro il globo
     # caraffe in vetrina: bottiglia in vetro chiaro senza etichetta
     B = P['_bottiglia']
     for e in ist.get('caraffa', []):
@@ -278,13 +334,71 @@ def costruisci(dati_dir, pbr):
     for ki in range(len(K)):
         c = B['caps'].copy(); c.materials.clear(); c.materials.append(K[ki]); variants[('k', ki)] = c
     vino = B['vino']; vino.materials.clear(); vino.materials.append(M['vino'])
+    altre = forme_bar(M, G)
     for e in ist.get('bottiglia', []):
         c = e.get('c', (0.1, 0.2, 0.1)); lum = sum(c) / 3
         gi = 3 if lum > 0.45 else (2 if c[0] > c[1] * 1.3 else (0 if c[1] > 0.2 else 1))
         mw = C @ matrix_from(e) @ CI
+        in_piedi = abs(mw.to_3x3() @ Vector((0, 0, 1)) @ Vector((0, 0, 1))) > 0.9
+        if in_piedi and rnd.random() < 0.7:   # bottigliera: amari, vermouth, gin, grappe in vetri e forme diverse
+            forma = altre[rnd.randrange(len(altre))]
+            for part in forma + [variants[('l', rnd.randrange(len(L)))]]:
+                ob = bpy.data.objects.new('bottiglia_bar', part); ob.matrix_world = mw @ Matrix.Diagonal((1, 1, 0.85 + rnd.random() * 0.3, 1)); col.objects.link(ob)
+            continue
         for part in (variants[('g', gi)], variants[('l', rnd.randrange(len(L)))], variants[('k', rnd.randrange(len(K)))]) + ((vino,) if gi < 3 else ()):
             ob = bpy.data.objects.new('bottiglia', part); ob.matrix_world = mw; col.objects.link(ob)
     print('oggetti veri:', {k: len(v) for k, v in ist.items()}, flush=True)
+
+
+def forme_bar(M, G):
+    """bottiglie da liquore: renana alta, fiaschetta tonda, collo corto, con liquidi ambrati e chiari"""
+    liq = []
+    for col in [(0.8, 0.45, 0.1), (0.95, 0.9, 0.75), (0.35, 0.08, 0.04), (0.6, 0.65, 0.3)]:
+        m, Pn = mat_principled('liquore', **{'Base Color': (*col, 1), 'Transmission Weight': 1.0, 'Roughness': 0.0, 'IOR': 1.36}); liq.append(m)
+    shapes = [
+        [(0.0001, 0.008), (0.03, 0.0), (0.033, 0.01), (0.033, 0.19), (0.026, 0.23), (0.013, 0.27), (0.012, 0.34), (0.014, 0.345)],
+        [(0.0001, 0.008), (0.045, 0.0), (0.05, 0.03), (0.05, 0.14), (0.04, 0.17), (0.016, 0.19), (0.015, 0.23), (0.018, 0.235)],
+        [(0.0001, 0.008), (0.038, 0.0), (0.04, 0.01), (0.04, 0.2), (0.037, 0.215), (0.02, 0.225), (0.019, 0.25), (0.022, 0.255)],
+    ]
+    out = []
+    for i, prof in enumerate(shapes):
+        g = evaluated(lathe(f'bar{i}', prof, 56), [('SOLIDIFY', dict(thickness=0.003, offset=-1))])
+        gm = [G[3], G[2], G[0]][i]; g.materials.append(gm)
+        top = prof[-3][1] - 0.01
+        l = lathe(f'bar_liq{i}', [(0.0001, 0.012), (prof[2][0] - 0.004, 0.006), (prof[2][0] - 0.004, top * 0.85), (0.0001, top * 0.85)], 40)
+        l.materials.append(liq[i % len(liq)])
+        tappo = lathe(f'tappo{i}', [(0.0001, prof[-1][1] + 0.025), (prof[-1][0] + 0.002, prof[-1][1] + 0.025), (prof[-1][0] + 0.002, prof[-1][1] - 0.005)], 24)
+        tappo.materials.append(M['ottone'] if i != 1 else M['ghisa'])
+        out.append([g, l, tappo])
+    return out
+
+
+def piante(dati_dir, pbr_models):
+    """piante vere (Poly Haven, CC0) al posto di quelle semplificate: vasetti sui davanzali e grandi vasi all'ingresso"""
+    ist = json.load(open(os.path.join(dati_dir, 'istanze.json')))
+    def carica(nome):
+        before = set(bpy.data.objects)
+        bpy.ops.import_scene.gltf(filepath=os.path.join(pbr_models, nome, nome + '.gltf'))
+        obs = [o for o in bpy.data.objects if o not in before]
+        for o in obs:
+            for c in o.users_collection: c.objects.unlink(o)
+        return obs
+    def altezza(obs):
+        zs = [ (o.matrix_world @ Vector(v)).z for o in obs if o.type == 'MESH' for v in o.bound_box]
+        return max(zs) - min(zs), min(zs)
+    proto = {n: carica(n) for n in ('potted_plant_01', 'potted_plant_02', 'potted_plant_04')}
+    col = coll(); rnd = random.Random(5)
+    def metti(nome, mw, h_target):
+        obs = proto[nome]; h, z0 = altezza(obs); s_ = h_target / max(h, 1e-3)
+        for o in obs:
+            if o.type != 'MESH': continue
+            ob = bpy.data.objects.new(o.name + '_c', o.data)
+            ob.matrix_world = mw @ Matrix.Rotation(rnd.random() * math.tau, 4, 'Z') @ Matrix.Scale(s_, 4) @ Matrix.Translation((0, 0, -z0)) @ o.matrix_world
+            col.objects.link(ob)
+    for i, e in enumerate(ist.get('vasino', [])):
+        metti(['potted_plant_04', 'potted_plant_02'][i % 2], C @ matrix_from(e) @ CI, 0.26)
+    for e in ist.get('vaso_grande', []):
+        metti('potted_plant_01', C @ matrix_from(e) @ CI, 1.25)
 
 
 def tende(dati_dir, M):
@@ -297,15 +411,21 @@ def tende(dati_dir, M):
         nx, ny = -dy, dx
         if nx > 0: nx, ny = -nx, -ny          # verso l'interno (la facciata e' a est)
         o = 0.09; h0, h1 = zb + 0.02, zb + 1.0
-        n = max(8, int(L / 0.012)); bm = bmesh.new(); rows = []
-        for j in range(2):
+        n = max(8, int(L / 0.008)); bm = bmesh.new(); rows = []
+        rnd = random.Random(int(L * 1000)); ph1, ph2 = rnd.random() * 6, rnd.random() * 6
+        hs = [h0, h0 + 0.035, h0 + 0.045, (h0 + h1) / 2, h1 - 0.03, h1]          # orlo cucito in basso, arricciatura in alto
+        for j, hz in enumerate(hs):
             row = []
+            gather = 1.0 if j < len(hs) - 2 else 1.25
             for i in range(n + 1):
-                t = i / n; w = math.sin(t * L / 0.11 * math.tau) * 0.018
+                t = i / n
+                w = (0.016 * math.sin(t * L / 0.11 * math.tau + ph1) + 0.006 * math.sin(t * L / 0.043 * math.tau + ph2)) * gather
+                w *= 1.0 - 0.25 * (j == len(hs) - 1)
                 px, py = x1 + dx * L * t + nx * (o + w), y1 + dy * L * t + ny * (o + w)
-                row.append(bm.verts.new((px, -py, h0 if j == 0 else h1)))
+                row.append(bm.verts.new((px, -py, hz - 0.004 * math.sin(t * 9 + ph2) * (j == 0))))
             rows.append(row)
-        for i in range(n): bm.faces.new((rows[0][i], rows[0][i + 1], rows[1][i + 1], rows[1][i]))
+        for j in range(len(rows) - 1):
+            for i in range(n): bm.faces.new((rows[j][i], rows[j][i + 1], rows[j + 1][i + 1], rows[j + 1][i]))
         me = bpy.data.meshes.new('tenda'); bm.to_mesh(me); bm.free()
         for p in me.polygons: p.use_smooth = True
         me.materials.append(M['tenda']); ob = bpy.data.objects.new('tenda', me); col.objects.link(ob)
