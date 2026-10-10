@@ -34,7 +34,9 @@ import { libraryIdOf } from '@/lib/seed-data';
 import { ACHIEVEMENTS, computeStats, isUnlocked, levelOf, xpOf } from '@/lib/gamification';
 import { renderShareCard, shareImage } from '@/lib/share-card';
 import { useBodyLogs } from '@/hooks/use-body-logs';
-import { Share2 } from 'lucide-react';
+import { Camera, Share2 } from 'lucide-react';
+import { NewBadge } from '@/components/ui/Help';
+import { DailyPhotoModal } from '@/components/body/DailyPhotoModal';
 import { ExerciseNoteModal, SwapExerciseModal } from '@/components/modals/SessionTools';
 import type { SetType } from '@/types';
 import { detectPR, exerciseKey, formatKg, formatTonnage, isAnyPR, sessionTonnage } from '@/lib/analytics';
@@ -142,6 +144,7 @@ function SessionView({ initial }: { initial: ActiveSession }) {
   // durante il trascinamento tutti gli esercizi si chiudono: la lista è corta e si sposta facilmente
   const [dragging, setDragging] = useState(false);
   const [orderChanged, setOrderChanged] = useState(false);
+  const [dailyOpen, setDailyOpen] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [extraOpen, setExtraOpen] = useState(false);
@@ -791,7 +794,10 @@ function SessionView({ initial }: { initial: ActiveSession }) {
                 }}
               />
             </div>
-            <div className="mt-6 grid grid-cols-[auto_1fr] gap-3">
+            <Button className="mt-6" size="lg" variant="secondary" fullWidth icon={<Camera className="h-5 w-5" />} onClick={() => setDailyOpen(true)}>
+              Foto del giorno <NewBadge className="ml-1" />
+            </Button>
+            <div className="mt-3 grid grid-cols-[auto_1fr] gap-3">
               <Button size="lg" variant="secondary" loading={sharing} icon={<Share2 className="h-5 w-5" />} onClick={share}>
                 Condividi
               </Button>
@@ -802,6 +808,7 @@ function SessionView({ initial }: { initial: ActiveSession }) {
           </div>
         )}
       </Modal>
+      <DailyPhotoModal open={dailyOpen} onClose={() => setDailyOpen(false)} />
     </div>
   );
 }

@@ -356,6 +356,8 @@ export interface ProgressPhoto {
   /** cambiamento visibile per zona rispetto alla foto precedente (−2 … +2) */
   regions?: Record<string, number>;
   hasSide?: boolean;
+  /** foto del giorno (con allenamento e muscoli sovrapposti quando la condividi) */
+  daily?: boolean;
   createdAt: number;
 }
 /** Immagini complete (caricate solo quando servono). */

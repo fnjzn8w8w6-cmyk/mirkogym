@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trash2 } from 'lucide-react';
+import { Camera, Share2, Trash2 } from 'lucide-react';
+import { DailyPhotoModal } from './DailyPhotoModal';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { usePhotos } from '@/hooks/use-photos';
 import { cn } from '@/lib/cn';
-import { SectionTitle } from '@/components/ui/Help';
+import { NewBadge, SectionTitle } from '@/components/ui/Help';
 import type { PhotoImages, ProgressPhoto } from '@/types';
 
 const fmt = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
@@ -19,6 +20,12 @@ export function ProgressPhotos() {
   const [pick, setPick] = useState<string[]>([]);
   const [compare, setCompare] = useState<[ProgressPhoto, ProgressPhoto] | null>(null);
   const [toDelete, setToDelete] = useState<string | null>(null);
+  // foto del giorno: nuova (date null) o già salvata da condividere di nuovo
+  const [daily, setDaily] = useState<{ date?: string; photo?: string } | null>(null);
+  const reshare = async (date: string) => {
+    const imgs = await images(date);
+    if (imgs) setDaily({ date, photo: imgs.front });
+  };
 
   const toggle = (d: string) => setPick((p) => (p.includes(d) ? p.filter((x) => x !== d) : [...p.slice(-1), d]));
   const openCompare = () => {
@@ -34,16 +41,19 @@ export function ProgressPhotos() {
         </h2>
         <span className="text-xs text-fg-3">{photos.length} foto</span>
       </div>
+      <Button className="mt-3" fullWidth icon={<Camera className="h-4 w-4" />} onClick={() => setDaily({})}>
+        Foto del giorno <NewBadge className="ml-1" />
+      </Button>
       {photos.length === 0 ? (
         <div className="mt-2 text-sm text-fg-2">
-          <p>Ogni settimana, nel check-in, puoi aggiungere una foto: il coach stima la massa grassa e la confronta con quella precedente.</p>
+          <p>Scatta la foto del giorno per seguire i cambiamenti e condividerli, oppure aggiungila al check-in settimanale: il coach stima la massa grassa e la confronta con quella precedente.</p>
           <Button className="mt-3" size="sm" variant="secondary" onClick={() => navigate('/food?tab=plan&checkin=1')}>
             📸 Fai il check-in con la foto
           </Button>
         </div>
       ) : (
         <>
-          <p className="mt-1 text-xs text-fg-3">Tocca due foto per confrontarle.</p>
+          <p className="mt-3 text-xs text-fg-3">Tocca una foto per condividerla, due per confrontarle.</p>
           <div className="-mx-1 mt-2 flex gap-2 overflow-x-auto px-1 pb-1">
             {photos.map((p) => (
               <button
@@ -65,15 +75,17 @@ export function ProgressPhotos() {
             ))}
           </div>
           {photos[0]?.comment && <p className="mt-2 text-sm text-fg-2">🧐 {photos[0].comment}</p>}
-          <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+          <div className="mt-3 grid grid-cols-[1fr_auto_auto] gap-2">
             <Button size="sm" disabled={pick.length !== 2} onClick={openCompare}>
               Confronta prima / dopo
             </Button>
+            <Button size="sm" variant="secondary" disabled={pick.length !== 1} icon={<Share2 className="h-4 w-4" />} onClick={() => void reshare(pick[0])} aria-label="Condividi la foto selezionata" />
             <Button size="sm" variant="ghost" disabled={pick.length !== 1} icon={<Trash2 className="h-4 w-4" />} onClick={() => setToDelete(pick[0])} aria-label="Elimina la foto selezionata" />
           </div>
         </>
       )}
 
+      <DailyPhotoModal open={daily != null} onClose={() => setDaily(null)} date={daily?.date} photo={daily?.photo} />
       <CompareModal pair={compare} load={images} onClose={() => setCompare(null)} />
       <ConfirmDialog
         open={Boolean(toDelete)}

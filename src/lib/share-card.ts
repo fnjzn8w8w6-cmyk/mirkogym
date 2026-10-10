@@ -4,15 +4,15 @@ import { formatDuration, formatLongDate } from './date-utils';
 
 const W = 1080;
 const H = 1920;
-const FONT = '"Inter Variable", Inter, system-ui, sans-serif';
-const DISPLAY = '"Saira Condensed", "Inter Variable", sans-serif';
-const ACCENT = '#3DDC84';
+export const FONT = '"Inter Variable", Inter, system-ui, sans-serif';
+export const DISPLAY = '"Saira Condensed", "Inter Variable", sans-serif';
+export const ACCENT = '#3DDC84';
 const GOLD = '#E8C25A';
 // coppa (Phosphor "trophy" piena, viewBox 256)
 const TROPHY =
   'M232 64h-24V48a8 8 0 0 0-8-8H56a8 8 0 0 0-8 8v16H24A16 16 0 0 0 8 80v16a40 40 0 0 0 40 40h3.65A80.13 80.13 0 0 0 120 191.61V216H96a8 8 0 0 0 0 16h64a8 8 0 0 0 0-16h-24v-24.42c31.94-3.23 58.44-25.64 68.08-55.58H208a40 40 0 0 0 40-40V80a16 16 0 0 0-16-16M48 120a24 24 0 0 1-24-24V80h24v32q0 4 .39 8Zm184-24a24 24 0 0 1-24 24h-.5a82 82 0 0 0 .5-8.9V80h24Z';
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+export function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -31,7 +31,7 @@ function trophy(ctx: CanvasRenderingContext2D, x: number, y: number, size: numbe
   ctx.restore();
 }
 
-function loadImage(src: string): Promise<HTMLImageElement | null> {
+export function loadImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => resolve(img);
@@ -41,7 +41,7 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
 }
 
 /** Taglia il testo con "…" finché sta nella larghezza. */
-function fit(ctx: CanvasRenderingContext2D, text: string, max: number) {
+export function fit(ctx: CanvasRenderingContext2D, text: string, max: number) {
   if (ctx.measureText(text).width <= max) return text;
   let t = text;
   while (t.length > 3 && ctx.measureText(`${t}…`).width > max) t = t.slice(0, -1);
@@ -49,7 +49,7 @@ function fit(ctx: CanvasRenderingContext2D, text: string, max: number) {
 }
 
 /** Testo del titolo: rimpicciolisce il font finché ci sta in una riga. */
-function fitFont(ctx: CanvasRenderingContext2D, text: string, max: number, size: number, min: number) {
+export function fitFont(ctx: CanvasRenderingContext2D, text: string, max: number, size: number, min: number) {
   let sz = size;
   for (; sz > min; sz -= 4) {
     ctx.font = `800 ${sz}px ${DISPLAY}`;
