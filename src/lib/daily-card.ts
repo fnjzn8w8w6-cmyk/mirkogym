@@ -28,7 +28,11 @@ export interface DailyCardInput {
   layout?: DailyLayout;
   /** il dato in kg aggiunto: peso corporeo o volume sollevato */
   kg?: 'peso' | 'volume';
+  /** posizione del logo (layout a colonna) */
+  logo?: LogoPos;
 }
+
+export type LogoPos = 'colonna' | 'alto-destra' | 'basso-centro' | 'basso-destra' | 'sopra';
 
 export type DailyLayout = 'colonna' | 'angolo' | 'striscia';
 
@@ -97,14 +101,20 @@ async function renderMinimal(input: DailyCardInput, layout: DailyLayout): Promis
   const dayTxt = `GIORNO ${input.day}`;
 
   if (layout === 'colonna') {
-    // colonna stretta in alto a sinistra: giorno, dati uno sotto l'altro, mappa, logo
+    // colonna stretta in alto a sinistra: giorno, dati uno sotto l'altro, mappa (logo dove scelto)
+    const pos = input.logo ?? 'colonna';
     const cx = 64 + 110;
+    let y = 150;
+    if (pos === 'sopra') {
+      brand(ctx, logo, cx, 60, 56, 'center');
+      y = 250;
+    }
     ctx.textAlign = 'center';
     shadow(ctx, true);
     ctx.fillStyle = '#FAFAFA';
     ctx.font = `800 64px ${DISPLAY}`;
-    ctx.fillText(dayTxt, cx, 150);
-    let y = 215;
+    ctx.fillText(dayTxt, cx, y);
+    y += 65;
     for (const [l, v] of list) {
       ctx.fillStyle = 'rgba(250,250,250,0.7)';
       ctx.font = `600 20px ${FONT}`;
@@ -121,7 +131,10 @@ async function renderMinimal(input: DailyCardInput, layout: DailyLayout): Promis
       ctx.drawImage(map, cx - mw / 2, y, mw, mh);
       y += mh + 30;
     }
-    brand(ctx, logo, cx, y, 64, 'center');
+    if (pos === 'colonna') brand(ctx, logo, cx, y, 64, 'center');
+    else if (pos === 'alto-destra') brand(ctx, logo, W - 64, 70, 72, 'right');
+    else if (pos === 'basso-centro') brand(ctx, logo, W / 2, H - 200, 64, 'center');
+    else if (pos === 'basso-destra') brand(ctx, logo, W - 64, H - 200, 64, 'right');
   } else if (layout === 'angolo') {
     // blocco in basso a sinistra: mappa piccola + giorno e dati in riga
     const x = 64;
