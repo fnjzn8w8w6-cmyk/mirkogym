@@ -123,6 +123,42 @@ const colliders = [], pavimenti = [];
 const PAV = /^W(lm|vc)_(spina|cotto|gres|cucina|gradino|zerbino|scalaCorpo)_/;
 const NON_OSTACOLO = /^W(lm|vc)_(spina|cotto|gres|cucina|gradino|zerbino|soffitto|trave|tenda_lino|quadro_|facciata|cemento)/;
 const nuovi = new Map();
+// luce cotta sui vertici: i vertici finiti dentro un'altra parte (giunti delle sedie, centro delle sedute) escono neri
+// e i triangoli lunghi della semplificazione fanno "raggiere". Si uniscono i vertici coincidenti, si scartano i valori
+// troppo scuri rispetto ai vicini e si leviga un poco sulla superficie.
+function sistemaLuceVertici(geo) {
+  const pos = geo.attributes.position, col = geo.attributes.color; if (!col) return;
+  const n = pos.count, id = new Int32Array(n), mappa = new Map(); let k = 0;
+  for (let i = 0; i < n; i++) {
+    const key = Math.round(pos.getX(i) * 2000) + ',' + Math.round(pos.getY(i) * 2000) + ',' + Math.round(pos.getZ(i) * 2000);
+    let v = mappa.get(key); if (v === undefined) { v = k++; mappa.set(key, v); } id[i] = v;
+  }
+  let c = new Float32Array(k * 3); const cnt = new Float32Array(k);
+  for (let i = 0; i < n; i++) { const v = id[i]; c[v * 3] += col.getX(i); c[v * 3 + 1] += col.getY(i); c[v * 3 + 2] += col.getZ(i); cnt[v]++; }
+  for (let v = 0; v < k; v++) for (let j = 0; j < 3; j++) c[v * 3 + j] /= cnt[v];
+  const idx = geo.index ? geo.index.array : null, T = idx ? idx.length : n;
+  const vicini = Array.from({ length: k }, () => []);
+  for (let t = 0; t < T; t += 3) {
+    const a = id[idx ? idx[t] : t], b = id[idx ? idx[t + 1] : t + 1], d = id[idx ? idx[t + 2] : t + 2];
+    vicini[a].push(b, d); vicini[b].push(a, d); vicini[d].push(a, b);
+  }
+  const lum = v => c[v * 3] * 0.3 + c[v * 3 + 1] * 0.59 + c[v * 3 + 2] * 0.11;
+  for (let it = 0; it < 3; it++) {
+    const nc = new Float32Array(c);
+    for (let v = 0; v < k; v++) {
+      const L = vicini[v]; if (!L.length) continue;
+      let s0 = 0, s1 = 0, s2 = 0, w = 0; const lv = [];
+      for (const u of L) lv.push(lum(u)); lv.sort((x, y) => x - y); const med = lv[lv.length >> 1];
+      for (const u of L) { if (lum(u) < med * 0.45) continue; s0 += c[u * 3]; s1 += c[u * 3 + 1]; s2 += c[u * 3 + 2]; w++; }   // i vicini "neri" non contano
+      if (!w) continue;
+      const scuro = lum(v) < med * 0.45, a = scuro ? 1 : 0.35;
+      nc[v * 3] = c[v * 3] * (1 - a) + s0 / w * a; nc[v * 3 + 1] = c[v * 3 + 1] * (1 - a) + s1 / w * a; nc[v * 3 + 2] = c[v * 3 + 2] * (1 - a) + s2 / w * a;
+    }
+    c = nc;
+  }
+  for (let i = 0; i < n; i++) { const v = id[i]; col.setXYZ(i, c[v * 3], c[v * 3 + 1], c[v * 3 + 2]); }
+  col.needsUpdate = true;
+}
 function materiale(m, piano) {
   const k = m.name + '|' + piano; if (nuovi.has(k)) return nuovi.get(k);
   let out = m; const g = spec.gruppi[m.name], e = spec.emissivi[m.name];
@@ -146,8 +182,12 @@ function materiale(m, piano) {
     out = new THREE.MeshBasicMaterial({ name: m.name, color: lin(e.colore).multiplyScalar(Math.max(1, e.forza * 0.6)), map: e.immagine ? tex(e.immagine) : null });
   } else {
     out = m.clone(); out.envMap = ENV[piano]; out.envMapIntensity = SE;
-    if (/bottiglia/.test(m.name) && out.transmission > 0) { out.transmission = 0; out.transparent = true; out.opacity = 0.86; out.roughness = 0.08; }
-    if (/^vetro(\.|$)/.test(m.name)) { out.transmission = 0; out.transparent = true; out.opacity = 0.12; out.roughness = 0.03; out.depthWrite = false; }   // vetrine e porte: trasparenti e nitide
+    if (/bottiglia/.test(m.name) && out.transmission > 0) {   // vetro da vino: scuro e lucido, pieno (vino dentro), come nella realta'
+      out.transmission = 0; out.transparent = false; out.opacity = 1; out.color.multiplyScalar(0.16); out.roughness = 0.1; out.metalness = 0; out.envMapIntensity = SE * 0.7;
+    }
+    if (/^capsula/.test(m.name)) { out.roughness = Math.max(out.roughness, 0.45); out.envMapIntensity = SE * 0.45; out.color.multiplyScalar(0.8); }   // capsule: stagnola opaca
+    if (/^vetro(\.|$)/.test(m.name) && piano === 'S1') { out.transmission = 0; out.transparent = true; out.opacity = 0.9; out.color.setRGB(0.55, 0.58, 0.6); out.roughness = 0.7; out.envMapIntensity = SE * 0.3; }   // finestrelle dell'interrato: vetro satinato
+    else if (/^vetro(\.|$)/.test(m.name)) { out.transmission = 0; out.transparent = true; out.opacity = 0.12; out.roughness = 0.03; out.depthWrite = false; }   // vetrine e porte: trasparenti e nitide
     if (out.transmission > 0) { out.thickness = 0.002; out.roughness = Math.max(out.roughness, 0.02); }
   }
   nuovi.set(k, out); return out;
@@ -160,6 +200,7 @@ gltf.scene.traverse(o => {
   box.setFromObject(o); const piano = (box.min.y + box.max.y) / 2 < -0.45 ? 'S1' : 'PT';
   o.material = Array.isArray(o.material) ? o.material.map(m => materiale(m, piano)) : materiale(o.material, piano);
   const n = (Array.isArray(o.material) ? o.material[0] : o.material).name;
+  if (/^Wvc_(legnoSedia|paglia|ghisa_vera|ferro|tenda_lino)/.test(n)) sistemaLuceVertici(o.geometry);
   if (/^W(lm|vc)_/.test(n) && !o.isInstancedMesh) {
     o.geometry.computeBoundsTree();
     if (PAV.test(n)) pavimenti.push(o);
