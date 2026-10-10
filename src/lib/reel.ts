@@ -5,7 +5,8 @@
  */
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import { ACCENT, DISPLAY, FONT, loadImage, roundRect } from './share-card';
-import { brand, shadow } from './daily-card';
+import { brand, drawDailyCard, shadow } from './daily-card';
+import type { Session } from '@/types';
 import { formatLongDate } from './date-utils';
 
 const W = 1080;
@@ -17,6 +18,10 @@ export interface ReelPhoto {
   /** giorno del percorso (1 = prima foto) */
   day: number;
   weight?: number | null;
+  /** allenamento di quel giorno (null = riposo) */
+  session: Session | null;
+  /** manichino con i muscoli allenati quel giorno (SVG come data URL) */
+  muscles: string | null;
 }
 
 export interface ReelSummary {
@@ -102,10 +107,12 @@ export async function renderReel(
 
   // foto caricate in anticipo (poche alla volta, per non riempire la memoria del telefono)
   const cache = new Map<string, Promise<HTMLImageElement | null>>();
+  const maps = new Map<string, Promise<HTMLImageElement | null>>();
   const get = (i: number) => {
     const f = frames[i];
     if (!f) return Promise.resolve(null);
     if (!cache.has(f.date)) cache.set(f.date, load(f.date).then((src) => (src ? loadImage(src) : null)));
+    if (!maps.has(f.date)) maps.set(f.date, f.muscles && f.session ? loadImage(f.muscles) : Promise.resolve(null));
     return cache.get(f.date)!;
   };
   const prefetch = (i: number) => {
@@ -158,28 +165,11 @@ export async function renderReel(
   };
 
   let shown: HTMLImageElement | null = null;
-  const drawLapse = (i: number, f: number) => {
-    black();
-    if (shown) coverRect(ctx, shown, 0, 0, W, H);
+  let shownMap: HTMLImageElement | null = null;
+  // ogni foto con la stessa schermata della foto del giorno
+  const drawLapse = (i: number) => {
     const p = frames[i];
-    // colonna a sinistra come nella foto del giorno
-    const cx = 64 + 110;
-    shadow(ctx, true);
-    text(`GIORNO ${p.day}`, cx, 150, `800 64px ${DISPLAY}`);
-    if (p.weight) {
-      text('Peso', cx, 215, `600 20px ${FONT}`, 'rgba(250,250,250,0.7)');
-      text(kg(p.weight), cx, 255, `700 36px ${FONT}`);
-    }
-    shadow(ctx, false);
-    // barra di avanzamento del percorso
-    const prog = (i + f / P.per) / frames.length;
-    roundRect(ctx, 64, H - 110, W - 128, 8, 4);
-    ctx.fillStyle = 'rgba(255,255,255,0.25)';
-    ctx.fill();
-    roundRect(ctx, 64, H - 110, Math.max(8, (W - 128) * prog), 8, 4);
-    ctx.fillStyle = ACCENT;
-    ctx.fill();
-    brand(ctx, logo, W - 64, H - 280, 64, 'right');
+    drawDailyCard(ctx, { day: p.day, session: p.session, weight: p.weight }, { photo: shown, logo, map: shownMap });
   };
 
   const drawCompare = (f: number) => {
@@ -281,11 +271,15 @@ export async function renderReel(
         lapseIdx = i;
         prefetch(i + 1);
         shown = await get(i);
+        shownMap = (await maps.get(frames[i].date)) ?? null;
         // libera le foto già passate (tranne la prima e l'ultima)
         const prev = frames[i - 1];
-        if (prev && !keep.has(prev.date)) cache.delete(prev.date);
+        if (prev && !keep.has(prev.date)) {
+          cache.delete(prev.date);
+          maps.delete(prev.date);
+        }
       }
-      return drawLapse(i, n % P.per);
+      return drawLapse(i);
     }
     n -= P.lapse;
     if (n < P.compare) return drawCompare(n);

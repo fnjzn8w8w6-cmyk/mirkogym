@@ -6,6 +6,7 @@
 import type { Session } from '@/types';
 import { sessionSetCount, workingSets } from './analytics';
 import { ACCENT, DISPLAY, FONT, loadImage, roundRect } from './share-card';
+import { GROUP_MUSCLES } from '@/components/library/MuscleFigure';
 
 const W = 1080;
 const H = 1920;
@@ -86,9 +87,19 @@ export async function renderDailyCard(input: DailyCardInput): Promise<Blob> {
   c.height = H;
   const ctx = c.getContext('2d');
   if (!ctx) throw new Error('Canvas non disponibile');
+  drawDailyCard(ctx, input, { photo, logo, map });
+  return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('Immagine non generata'))), 'image/jpeg', 0.9));
+}
+
+/** Disegna la foto del giorno su una tela 1080×1920 (usata anche per ogni fotogramma del reel). */
+export function drawDailyCard(
+  ctx: CanvasRenderingContext2D,
+  input: Pick<DailyCardInput, 'day' | 'session' | 'weight'>,
+  imgs: { photo: HTMLImageElement | null; logo: HTMLImageElement | null; map: HTMLImageElement | null },
+) {
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
-  if (photo) cover(ctx, photo, W, H);
+  if (imgs.photo) cover(ctx, imgs.photo, W, H);
 
   // colonna stretta in alto a sinistra: giorno, dati uno sotto l'altro, mappa
   const cx = 64 + 110;
@@ -99,7 +110,7 @@ export async function renderDailyCard(input: DailyCardInput): Promise<Blob> {
   ctx.font = `800 64px ${DISPLAY}`;
   ctx.fillText(`GIORNO ${input.day}`, cx, y);
   y += 65;
-  for (const [l, v] of stats(input)) {
+  for (const [l, v] of stats({ ...input, photo: '' })) {
     ctx.fillStyle = 'rgba(250,250,250,0.7)';
     ctx.font = `600 20px ${FONT}`;
     ctx.fillText(l, cx, y);
@@ -109,14 +120,37 @@ export async function renderDailyCard(input: DailyCardInput): Promise<Blob> {
     y += 92;
   }
   shadow(ctx, false);
-  if (map) {
+  if (imgs.map && input.session) {
     const mw = 230;
-    ctx.drawImage(map, cx - mw / 2, y, mw, mw * (212 / 218));
+    ctx.drawImage(imgs.map, cx - mw / 2, y, mw, mw * (212 / 218));
   }
   // logo discreto in basso a destra
-  brand(ctx, logo, W - 64, H - 200, 64, 'right');
+  brand(ctx, imgs.logo, W - 64, H - 200, 64, 'right');
+}
 
-  return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('Immagine non generata'))), 'image/jpeg', 0.9));
+/** Colori del manichino sopra la foto (chiaro, muscoli allenati in verde). */
+export const MAP_COLORS = { '--accent-500': '#3DDC84', '--bg-surface-3': 'rgba(232,236,234,0.88)', '--bg-surface-2': 'rgba(190,196,193,0.7)', '--bg-base': 'rgba(18,20,19,0.9)' };
+
+/** Intensità per muscolo dell'allenamento di un giorno (più serie = verde più pieno). */
+export function dayIntensity(session: Session | null, groupOf: (l: Session['logs'][number]) => string): Record<string, number> {
+  const sets = new Map<string, number>();
+  for (const l of session?.logs ?? []) sets.set(groupOf(l), (sets.get(groupOf(l)) ?? 0) + workingSets(l.sets).length);
+  const top = Math.max(1, ...sets.values());
+  const out: Record<string, number> = {};
+  for (const [g, n] of sets) for (const m of GROUP_MUSCLES[g] ?? []) out[m] = Math.max(out[m] ?? 0, 0.45 + (0.55 * n) / top);
+  return out;
+}
+
+/** Manichino colorato per un giorno, partendo dalla figura vuota già nella pagina. */
+export function muscleMapFor(svg: SVGSVGElement, intensity: Record<string, number>): string {
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+  clone.querySelectorAll('polygon').forEach((p) => {
+    if (p.getAttribute('fill') === 'var(--bg-surface-2)') return; // zone neutre (testa, mani…)
+    const v = intensity[p.querySelector('title')?.textContent ?? ''] ?? 0;
+    p.setAttribute('fill', v > 0 ? 'var(--accent-500)' : 'var(--bg-surface-3)');
+    p.setAttribute('fill-opacity', String(v > 0 ? 0.28 + 0.72 * v : 1));
+  });
+  return svgToDataUrl(clone, MAP_COLORS);
 }
 
 /** SVG della pagina → immagine autonoma (le variabili CSS vengono sostituite con i colori veri). */

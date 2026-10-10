@@ -12,6 +12,8 @@ import { shareFile } from '@/lib/share-card';
 import { sessionSetCount, sessionTonnage } from '@/lib/analytics';
 import { daysBetween, fromISODate, toISODate, todayISO } from '@/lib/date-utils';
 import type { BodyLog } from '@/types';
+import { MuscleFigure } from '@/components/library/MuscleFigure';
+import { dayIntensity, muscleMapFor } from '@/lib/daily-card';
 
 type Period = 'tutto' | '365' | '90' | '30';
 const PERIODS: { value: Period; label: string }[] = [
@@ -37,7 +39,8 @@ function nearest(logs: BodyLog[], date: string, field: 'weight' | 'bodyFat', max
 export function ReelModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const toast = useToast();
   const { photos, images } = usePhotos();
-  const { sessions } = useSessions();
+  const { sessions, groupOf } = useSessions();
+  const mapRef = useRef<HTMLDivElement>(null);
   const { bodyLogs } = useBodyLogs();
   const [period, setPeriod] = useState<Period>('tutto');
   const [progress, setProgress] = useState<number | null>(null);
@@ -60,11 +63,12 @@ export function ReelModal({ open, onClose }: { open: boolean; onClose: () => voi
     const firstEver = all[0]?.date;
     const from = period === 'tutto' ? '' : toISODate(Date.now() - (Number(period) - 1) * 86400000);
     const sel = all.filter((p) => p.date >= from && p.date <= todayISO());
-    if (!firstEver || sel.length < 2) return { list: [] as ReelPhoto[], summary: null as ReelSummary | null };
-    const list: ReelPhoto[] = sel.map((p) => ({
+    if (!firstEver || sel.length < 2) return { list: [] as Omit<ReelPhoto, 'muscles'>[], summary: null as ReelSummary | null };
+    const list: Omit<ReelPhoto, 'muscles'>[] = sel.map((p) => ({
       date: p.date,
       day: daysBetween(fromISODate(p.date), fromISODate(firstEver)) + 1,
       weight: p.weight ?? nearest(bodyLogs, p.date, 'weight', 3),
+      session: sessions.find((s) => toISODate(s.date) === p.date) ?? null,
     }));
     const a = sel[0].date;
     const b = sel[sel.length - 1].date;
@@ -87,8 +91,11 @@ export function ReelModal({ open, onClose }: { open: boolean; onClose: () => voi
     cancel.current = false;
     setProgress(0);
     try {
+      // manichino di ogni giorno con i muscoli allenati
+      const svg = mapRef.current?.querySelector('svg');
+      const list: ReelPhoto[] = data.list.map((p) => ({ ...p, muscles: svg && p.session ? muscleMapFor(svg, dayIntensity(p.session, groupOf)) : null }));
       const res = await renderReel(
-        data.list,
+        list,
         data.summary,
         async (date) => (await images(date))?.front ?? null,
         (p) => setProgress(p.value),
@@ -119,6 +126,10 @@ export function ReelModal({ open, onClose }: { open: boolean; onClose: () => voi
   return (
     <Modal open={open} onClose={onClose} title="Reel dei progressi" dismissible={progress == null}>
       <div className="space-y-3">
+        {/* figura vuota da cui si colorano i manichini di ogni giorno (non visibile) */}
+        <div ref={mapRef} className="pointer-events-none fixed -left-[9999px] top-0 w-[436px]" aria-hidden>
+          <MuscleFigure />
+        </div>
         {video ? (
           <>
             <video src={video.url} controls playsInline autoPlay muted loop className="mx-auto aspect-[9/16] max-h-[60vh] rounded-lg bg-black" aria-label="Anteprima del reel" />
@@ -159,7 +170,7 @@ export function ReelModal({ open, onClose }: { open: boolean; onClose: () => voi
         ) : (
           <>
             <p className="text-sm text-fg-2">
-              Un video verticale con tutte le tue foto del giorno in sequenza, il confronto tra il primo e l'ultimo giorno e i numeri del percorso: giorni, allenamenti, serie, kg
+              Un video verticale con tutte le tue foto del giorno in sequenza (ognuna con giorno, allenamento, peso e muscoli allenati), il confronto tra il primo e l'ultimo giorno e i numeri del percorso: giorni, allenamenti, serie, kg
               sollevati e cambio di peso.
             </p>
             <Segmented<Period> label="Periodo del reel" value={period} options={PERIODS} onChange={setPeriod} />

@@ -4,14 +4,13 @@ import { TimerCamera } from './TimerCamera';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
-import { MuscleFigure, GROUP_MUSCLES } from '@/components/library/MuscleFigure';
+import { MuscleFigure } from '@/components/library/MuscleFigure';
 import { usePhotos } from '@/hooks/use-photos';
 import { useSessions } from '@/hooks/use-sessions';
 import { useBodyLogs } from '@/hooks/use-body-logs';
 import { compressPhoto, thumbOf } from '@/lib/progress-photos';
-import { renderDailyCard, svgToDataUrl } from '@/lib/daily-card';
+import { dayIntensity, MAP_COLORS, renderDailyCard, svgToDataUrl } from '@/lib/daily-card';
 import { shareImage } from '@/lib/share-card';
-import { workingSets } from '@/lib/analytics';
 import { daysBetween, fromISODate, toISODate, todayISO } from '@/lib/date-utils';
 
 /**
@@ -43,11 +42,7 @@ export function DailyPhotoModal({ open, onClose, date, photo: saved }: { open: b
   // dati del giorno: allenamento (l'ultimo di quel giorno), peso, giorno del percorso
   const info = useMemo(() => {
     const session = sessions.find((s) => toISODate(s.date) === day) ?? null;
-    const sets = new Map<string, number>();
-    for (const l of session?.logs ?? []) sets.set(groupOf(l), (sets.get(groupOf(l)) ?? 0) + workingSets(l.sets).length);
-    const top = Math.max(1, ...sets.values());
-    const intensity: Record<string, number> = {};
-    for (const [g, n] of sets) for (const m of GROUP_MUSCLES[g] ?? []) intensity[m] = Math.max(intensity[m] ?? 0, 0.45 + (0.55 * n) / top);
+    const intensity = dayIntensity(session, groupOf);
     const weight = [...bodyLogs].filter((b) => b.weight && b.date <= day).sort((a, b) => b.date.localeCompare(a.date))[0]?.weight ?? null;
     const first = [day, ...photos.map((p) => p.date)].sort()[0];
     return { session, intensity, weight, number: daysBetween(fromISODate(day), fromISODate(first)) + 1 };
@@ -60,7 +55,7 @@ export function DailyPhotoModal({ open, onClose, date, photo: saved }: { open: b
     let url = '';
     const svg = mapRef.current?.querySelector('svg');
     const muscles = svg
-      ? svgToDataUrl(svg, { '--accent-500': '#3DDC84', '--bg-surface-3': 'rgba(232,236,234,0.88)', '--bg-surface-2': 'rgba(190,196,193,0.7)', '--bg-base': 'rgba(18,20,19,0.9)' })
+      ? svgToDataUrl(svg, MAP_COLORS)
       : null;
     void renderDailyCard({ photo, day: info.number, session: info.session, muscles, weight: info.weight })
       .then((blob) => {
