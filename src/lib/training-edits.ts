@@ -26,7 +26,7 @@ import {
  */
 
 export type TrainingEdit =
-  | { op: 'replace'; exerciseId: string; withId?: string; reason: string }
+  | { op: 'replace'; exerciseId: string; withId?: string; reason: string; /** il coach aveva indicato un esercizio (anche se non valido) */ asked?: boolean }
   | { op: 'remove'; exerciseId: string; reason: string }
   | { op: 'add'; dayId: string; libraryId: string; sets?: number; reason: string }
   | { op: 'sets'; exerciseId: string; sets: number; reason: string };
@@ -119,7 +119,7 @@ ${exerciseList}`;
         const op = oneOf(o.op, ['replace', 'remove', 'add', 'sets'] as const);
         if (op === 'replace' && exIds.has(exId)) {
           const w = str(o.withId, 80);
-          edits.push({ op, exerciseId: exId, withId: w in NAME_IT && availableFor(w, profile.equipment) ? w : undefined, reason });
+          edits.push({ op, exerciseId: exId, withId: w in NAME_IT && availableFor(w, profile.equipment) ? w : undefined, asked: w !== '' && w !== 'null', reason });
         } else if (op === 'remove' && exIds.has(exId)) edits.push({ op, exerciseId: exId, reason });
         else if (op === 'add' && dayIds.has(str(o.dayId, 20)) && str(o.libraryId, 80) in NAME_IT)
           edits.push({ op, dayId: str(o.dayId, 20), libraryId: str(o.libraryId, 80), sets: num(o.sets, 1, 6), reason });
@@ -215,7 +215,9 @@ export function applyTrainingChange(days: Day[], change: TrainingChange, profile
         return { ...d, exercises: d.exercises.filter((_, i) => i !== idx) };
       }
       const ex = newExercise(pick, old);
-      diff.push({ day: label(d), kind: 'replace', before: old.name, after: ex.name, reason: e.reason });
+      // se l'esercizio indicato dal coach non si può usare lo dico chiaramente: la scelta è dell'app
+      const own = e.asked && pick !== e.withId;
+      diff.push({ day: label(d), kind: 'replace', before: old.name, after: ex.name, reason: own ? `${e.reason} (scelta dall'app: l'esercizio indicato dal coach non è disponibile)` : e.reason });
       return { ...d, exercises: d.exercises.map((x, i) => (i === idx ? ex : x)) };
     });
   }

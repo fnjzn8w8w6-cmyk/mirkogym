@@ -14,7 +14,8 @@ interface Props {
   onClose: () => void;
   subject: { sex: Sex; age: number; heightCm: number; weightKg: number } | null;
   /** Salva il valore (es. nel diario "Corpo"). */
-  onUse: (bodyFat: number, result: BodyFatAIResult) => void | Promise<void>;
+  /** images: foto (data URL) da salvare nella galleria dei progressi */
+  onUse: (bodyFat: number, result: BodyFatAIResult, images: { front: string; side?: string }) => void | Promise<void>;
 }
 
 type Photo = { base64: string; preview: string };
@@ -88,7 +89,7 @@ export function BodyFatPhotoModal({ open, onClose, subject, onUse }: Props) {
             <Button variant="secondary" onClick={() => setResult(null)}>
               Riprova
             </Button>
-            <Button icon={<Check className="h-5 w-5" />} onClick={() => void onUse(result.bodyFat, result)}>
+            <Button icon={<Check className="h-5 w-5" />} onClick={() => front && void onUse(result.bodyFat, result, { front: front.preview, ...(side ? { side: side.preview } : {}) })}>
               Usa questo valore
             </Button>
           </div>

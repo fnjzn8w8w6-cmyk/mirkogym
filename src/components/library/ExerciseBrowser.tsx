@@ -28,9 +28,9 @@ interface Props {
 }
 
 /** Catalogo esercizi con ricerca (anche in italiano), filtri per muscolo e attrezzo. */
-export function ExerciseBrowser({ onPick, pickLabel = 'Aggiungi alla scheda' }: Props) {
+export function ExerciseBrowser({ onPick, pickLabel = 'Aggiungi alla scheda', initialQuery = '' }: Props & { initialQuery?: string }) {
   const { list, texts, error, loading } = useLibrary();
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(initialQuery);
   const [group, setGroup] = useState<string | null>(null);
   const [equip, setEquip] = useState<string | null>(null);
   const [shown, setShown] = useState(PAGE);

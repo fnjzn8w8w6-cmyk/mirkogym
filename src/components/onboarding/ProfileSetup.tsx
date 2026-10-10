@@ -24,6 +24,8 @@ import {
 import { generateProgram, weeklySetsFor } from '@/lib/program-generator';
 import { type Template } from '@/lib/templates';
 import { todayISO } from '@/lib/date-utils';
+import { usePhotos } from '@/hooks/use-photos';
+import { thumbOf } from '@/lib/progress-photos';
 import { formatKg, groupColor } from '@/lib/analytics';
 import { cn } from '@/lib/cn';
 import { Button } from '../ui/Button';
@@ -50,6 +52,7 @@ const EQUIPMENT: { value: Equipment; label: string; description: string; emoji: 
 
 /** Questionario iniziale: lingua, dati fisici, attività, esperienza, obiettivo → analisi e scheda su misura. */
 export function ProfileSetup() {
+  const photosApi = usePhotos();
   const { settings, update } = useSettings();
   const { save, days: currentDays } = useSchedule();
   const { sessions } = useSessions();
@@ -355,10 +358,15 @@ export function ProfileSetup() {
                 open={photoOpen}
                 onClose={() => setPhotoOpen(false)}
                 subject={profile}
-                onUse={(bf) => {
+                onUse={async (bf, r, imgs) => {
                   setBfKnown(String(bf).replace('.', ','));
                   setBfSource('photo');
                   setPhotoOpen(false);
+                  // la prima foto resta nella galleria dei progressi: servirà per il confronto prima/dopo
+                  await photosApi.save(
+                    { date: todayISO(), thumb: await thumbOf(imgs.front), ...(profile ? { weight: profile.weightKg } : {}), bodyFat: bf, low: r.low, high: r.high, comment: `Prima foto · ${r.notes}`, hasSide: Boolean(imgs.side), createdAt: Date.now() },
+                    imgs,
+                  );
                 }}
               />
             </>

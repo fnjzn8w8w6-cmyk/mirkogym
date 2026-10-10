@@ -21,6 +21,7 @@ import Session from '@/routes/Session';
 
 // Le schermate secondarie (grafici inclusi) vengono caricate on-demand
 const HistorySession = lazy(() => import('@/routes/HistorySession'));
+const DayPlan = lazy(() => import('@/routes/DayPlan'));
 const HistoryExercise = lazy(() => import('@/routes/HistoryExercise'));
 const Body = lazy(() => import('@/routes/Body'));
 const Mesocycle = lazy(() => import('@/routes/Mesocycle'));
@@ -51,7 +52,7 @@ function AppShell() {
   useMetabolismSync();
   useWeekCaloriesSync();
   const location = useLocation();
-  const inSession = location.pathname.startsWith('/session');
+  const inSession = location.pathname.startsWith('/session') || location.pathname.startsWith('/day/');
   const section = '/' + (location.pathname.split('/')[1] ?? '');
 
   useEffect(() => window.scrollTo(0, 0), [location.pathname]);
@@ -62,6 +63,7 @@ function AppShell() {
       <Routes location={location} key={section === '/history' ? location.pathname : section}>
         <Route path="/" element={<Page><Home /></Page>} />
         <Route path="/session/:dayId" element={<Page><Session /></Page>} />
+        <Route path="/day/:dayId" element={<Page><DayPlan /></Page>} />
         <Route path="/history" element={<Navigate to="/training?tab=sessions" replace />} />
         <Route path="/history/session/:id" element={<Page><HistorySession /></Page>} />
         <Route path="/history/exercise/:key" element={<Page><HistoryExercise /></Page>} />

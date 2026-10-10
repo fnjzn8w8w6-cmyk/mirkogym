@@ -164,6 +164,9 @@ export function useSessionDraft(initial: ActiveSession) {
       ],
     }));
 
+  /** Nuovo ordine degli esercizi della sessione (le serie restano col loro esercizio). */
+  const reorderExercises = (list: DraftExercise[]) => commit((d) => ({ ...d, exercises: list }));
+
   /** Toglie le serie di riscaldamento non ancora fatte e non le ripropone. */
   const removeWarmups = (exIdx: number) =>
     mapExercise(exIdx, (e) => ({ ...e, warmup: 'dismissed', sets: e.sets.filter((st) => st.type !== 'warmup' || st.done) }));
@@ -269,6 +272,7 @@ export function useSessionDraft(initial: ActiveSession) {
     insertWarmups,
     removeWarmups,
     autoWarmups,
+    reorderExercises,
     editExercise,
     replaceExercise,
     finish,

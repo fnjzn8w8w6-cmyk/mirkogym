@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { usePhotos } from '@/hooks/use-photos';
+import { thumbOf } from '@/lib/progress-photos';
 import { motion } from 'framer-motion';
 import { subDays } from 'date-fns';
 import { Camera, Moon, Plus, Trash2 } from 'lucide-react';
@@ -49,6 +51,7 @@ export default function Body() {
   const { bodyLogs, remove, loading, save } = useBodyLogs();
   const { settings } = useSettings();
   const [photoOpen, setPhotoOpen] = useState(false);
+  const photosApi = usePhotos();
   const latestWeight = bodyLogs.find((b) => b.weight != null)?.weight ?? settings.profile?.weightKg;
   const subject = settings.profile && latestWeight ? { ...settings.profile, weightKg: latestWeight } : null;
   const toast = useToast();
@@ -108,7 +111,13 @@ export default function Body() {
         open={photoOpen}
         onClose={() => setPhotoOpen(false)}
         subject={subject}
-        onUse={async (bf, r) => {
+        onUse={async (bf, r, imgs) => {
+          // la foto finisce anche nella galleria dei progressi (per il confronto prima/dopo)
+          const w = latestWeight;
+          await photosApi.save(
+            { date: todayISO(), thumb: await thumbOf(imgs.front), ...(w != null ? { weight: w } : {}), bodyFat: bf, low: r.low, high: r.high, comment: `Stima da foto: ${r.notes}`, hasSide: Boolean(imgs.side), createdAt: Date.now() },
+            imgs,
+          );
           await save({
             date: todayISO(),
             weight: latestWeight,
@@ -117,7 +126,7 @@ export default function Body() {
             notes: `Stima AI da foto (${r.low}–${r.high}%, affidabilità ${r.confidence})`,
           });
           setPhotoOpen(false);
-          toast.success('Massa grassa salvata nel diario');
+          toast.success('Massa grassa salvata, foto nella galleria dei progressi');
         }}
       />
       <div className="page space-y-4 pt-4">

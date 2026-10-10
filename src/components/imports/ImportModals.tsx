@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { Camera, FileUp, Trash2 } from 'lucide-react';
+import { Camera, Check, FileUp, Trash2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
@@ -9,7 +9,10 @@ import { useSchedule } from '@/hooks/use-schedule';
 import { useSettings } from '@/hooks/use-settings';
 import { settle } from '@/lib/firestore';
 import { macrosFor } from '@/lib/foods';
-import { analyzeMealPhoto, dietToWeekPlan, guessMacros, importDiet, importSchedule, type FoodGuess, type ImportedDiet } from '@/lib/imports';
+import { analyzeMealPhoto, dietToWeekPlan, guessMacros, importDiet, importSchedule, type FoodGuess, type ImportedDiet, type ImportMatch } from '@/lib/imports';
+import { ExerciseBrowser } from '@/components/library/ExerciseBrowser';
+import { displayName, groupForLibrary } from '@/lib/exercise-library';
+import { cn } from '@/lib/cn';
 import type { Day } from '@/types';
 
 const numIn = 'w-16 rounded-md border border-line bg-surface-2 px-2 py-1 text-right text-sm text-fg';
@@ -196,7 +199,9 @@ export function ScheduleImportModal({ open, onClose }: { open: boolean; onClose:
   const toast = useToast();
   const { save } = useSchedule();
   const [days, setDays] = useState<Day[] | null>(null);
-  const close = () => (ai.cancel(), setDays(null), onClose());
+  const [matches, setMatches] = useState<Record<string, ImportMatch>>({});
+  const [picking, setPicking] = useState<{ d: number; e: number } | null>(null);
+  const close = () => (ai.cancel(), setDays(null), setMatches({}), onClose());
   const edit = (d: number, e: number, patch: Partial<Day['exercises'][number]> | null) =>
     setDays((x) =>
       x &&
@@ -206,6 +211,7 @@ export function ScheduleImportModal({ open, onClose }: { open: boolean; onClose:
     );
   const n = (v: string) => Math.max(1, Math.min(100, Number(v.replace(/\D/g, '')) || 1));
   return (
+    <>
     <Modal open={open} onClose={close} title="Importa la scheda del personal trainer">
       <div className="space-y-3">
         {ai.busy ? (
@@ -213,7 +219,8 @@ export function ScheduleImportModal({ open, onClose }: { open: boolean; onClose:
         ) : days ? (
           <>
             <p className="text-sm text-fg-2">
-              Controlla esercizi, serie e ripetizioni. Quelli con 🎬 sono collegati alla libreria (demo, istruzioni). Salvando sostituisci la scheda attuale; lo storico resta.
+              Ogni esercizio del PDF è collegato a uno della libreria (demo, istruzioni, storico). Controlla quelli in giallo con «Verifica» e quelli
+              non trovati: tocca «Cambia» per scegliere quello giusto. Salvando sostituisci la scheda attuale; lo storico resta.
             </p>
             {days.map((day, d) => (
               <div key={d} className="rounded-lg border border-line-subtle p-3">
@@ -221,25 +228,36 @@ export function ScheduleImportModal({ open, onClose }: { open: boolean; onClose:
                   {day.name} · <span className="text-fg">{day.subtitle}</span>
                 </div>
                 {day.exercises.map((ex, e) => (
-                  <div key={ex.id} className="mt-2 flex items-center gap-2">
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm text-fg">
-                        {ex.libraryId ? '🎬 ' : ''}
-                        {ex.name}
-                      </span>
-                      <span className="block truncate text-xs text-fg-3">
-                        {ex.group} · rec. {ex.rest}
-                        {ex.notes ? ` · ${ex.notes}` : ''}
-                      </span>
-                    </span>
+                  <div
+                    key={ex.id}
+                    className={cn(
+                      'mt-2 rounded-md p-2',
+                      matches[ex.id]?.confidence === 'dubbio' && 'border border-warning/40 bg-warning-bg',
+                      (!ex.libraryId || matches[ex.id]?.confidence === 'none') && 'border border-danger/40 bg-danger-bg',
+                    )}
+                  >
+                  {matches[ex.id] && <div className="text-xs text-fg-3">Nel PDF: “{matches[ex.id].pdf}”</div>}
+                  <div className="mt-0.5 flex items-start gap-1.5 text-base font-semibold text-fg">
+                    {ex.libraryId ? <Check className={cn('mt-1 h-4 w-4 shrink-0', matches[ex.id]?.confidence === 'dubbio' ? 'text-warning' : 'text-accent-400')} aria-hidden /> : null}
+                    <span className="min-w-0">{ex.name}</span>
+                  </div>
+                  <div className="text-xs text-fg-3">
+                    {!ex.libraryId ? 'Non trovato nella libreria · ' : matches[ex.id]?.confidence === 'dubbio' ? 'Verifica · ' : ''}
+                    {ex.group} · rec. {ex.rest}
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-2">
                     <input aria-label={`Serie ${ex.name}`} inputMode="numeric" className={numIn + ' !w-10'} value={ex.sets} onChange={(v) => edit(d, e, { sets: n(v.target.value) })} />
                     <span className="text-xs text-fg-3">×</span>
                     <input aria-label={`Ripetizioni min ${ex.name}`} inputMode="numeric" className={numIn + ' !w-10'} value={ex.repMin} onChange={(v) => edit(d, e, { repMin: n(v.target.value) })} />
                     <span className="text-xs text-fg-3">-</span>
                     <input aria-label={`Ripetizioni max ${ex.name}`} inputMode="numeric" className={numIn + ' !w-10'} value={ex.repMax} onChange={(v) => edit(d, e, { repMax: n(v.target.value) })} />
+                    <button type="button" className="ml-auto h-9 px-1 text-sm font-semibold text-accent-400" onClick={() => setPicking({ d, e })}>
+                      Cambia
+                    </button>
                     <button type="button" aria-label={`Rimuovi ${ex.name}`} className="p-1 text-fg-3" onClick={() => edit(d, e, null)}>
                       <Trash2 className="h-4 w-4" />
                     </button>
+                  </div>
                   </div>
                 ))}
               </div>
@@ -264,7 +282,9 @@ export function ScheduleImportModal({ open, onClose }: { open: boolean; onClose:
                 const r = await ai.run((o) => importSchedule(f, o));
                 if (r) {
                   setDays(r.days);
-                  if (r.unmatched) toast.info(r.unmatched === 1 ? "1 esercizio senza demo: resta col nome della scheda" : `${r.unmatched} esercizi senza demo: restano col nome della scheda`);
+                  setMatches(r.matches);
+                  const todo = Object.values(r.matches).filter((m) => m.confidence !== 'ok').length;
+                  if (todo) toast.info(todo === 1 ? '1 esercizio da verificare' : `${todo} esercizi da verificare`);
                 }
               }}
             />
@@ -273,5 +293,20 @@ export function ScheduleImportModal({ open, onClose }: { open: boolean; onClose:
         {ai.error && <p className="text-sm text-danger" role="alert">{ai.error}</p>}
       </div>
     </Modal>
+    <Modal open={picking != null} onClose={() => setPicking(null)} title="Scegli l'esercizio giusto">
+      {picking && days && (
+        <ExerciseBrowser
+          initialQuery={matches[days[picking.d].exercises[picking.e].id]?.pdf ?? ''}
+          pickLabel="Usa questo esercizio"
+          onPick={(lib) => {
+            const ex = days[picking.d].exercises[picking.e];
+            edit(picking.d, picking.e, { libraryId: lib.id, name: displayName(lib), group: groupForLibrary(lib) });
+            setMatches((m) => ({ ...m, [ex.id]: { pdf: m[ex.id]?.pdf ?? ex.name, confidence: 'ok' } }));
+            setPicking(null);
+          }}
+        />
+      )}
+    </Modal>
+    </>
   );
 }

@@ -98,7 +98,13 @@ export default function Training() {
                   const isNext = d.id === next?.id;
                   return (
                     <li key={d.id}>
-                      <Card className={cn('flex items-center gap-3 p-4', isNext && 'border-accent-500/50')}>
+                      <Card
+                        interactive
+                        role="link"
+                        aria-label={`Vedi la scheda: ${d.subtitle}`}
+                        onClick={() => navigate(`/day/${d.id}`)}
+                        className={cn('flex items-center gap-3 p-4', isNext && 'border-accent-500/50')}
+                      >
                         <span
                           className={cn(
                             'flex h-12 w-12 shrink-0 items-center justify-center rounded-md font-display text-lg font-extrabold',
@@ -116,7 +122,12 @@ export default function Training() {
                         {activeSession?.dayId === d.id ? (
                           <Chip tone="accent">In corso</Chip>
                         ) : (
-                          <Button size="sm" variant={isNext ? 'primary' : 'secondary'} loading={starting === d.id} icon={<Play className="h-4 w-4" />} onClick={() => void startDay(d)} aria-label={`Inizia ${d.subtitle}`}>
+                          <Button size="sm" variant={isNext ? 'primary' : 'secondary'} loading={starting === d.id} icon={<Play className="h-4 w-4" />} onClick={(e) => {
+                              e.stopPropagation();
+                              void startDay(d);
+                            }}
+                            aria-label={`Inizia ${d.subtitle}`}
+                          >
                             {isNext ? 'Inizia' : ''}
                           </Button>
                         )}

@@ -1,7 +1,9 @@
 import { Medal } from '@/components/ui/Medal';
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Clock, Dumbbell, Flag, Play, Plus, Trophy, X } from 'lucide-react';
+import { ArrowUpDown, Clock, Dumbbell, Flag, Play, Plus, Trophy, X } from 'lucide-react';
+import { SessionReorder } from '@/components/session/SessionReorder';
+import { NewBadge } from '@/components/ui/Help';
 import type { ActiveSession, DraftSet, Exercise, Session as SessionT, SetLog } from '@/types';
 import { useSchedule } from '@/hooks/use-schedule';
 import { useData } from '@/hooks/data-context';
@@ -127,6 +129,7 @@ function SessionView({ initial }: { initial: ActiveSession }) {
     insertWarmups,
     removeWarmups,
     autoWarmups,
+    reorderExercises,
     editExercise,
     replaceExercise,
     finish,
@@ -145,6 +148,7 @@ function SessionView({ initial }: { initial: ActiveSession }) {
   const [noteFor, setNoteFor] = useState<number | null>(null);
   const [swapFor, setSwapFor] = useState<number | null>(null);
   const [editFor, setEditFor] = useState<number | null>(null);
+  const [reordering, setReordering] = useState(false);
   const effortScale = settings.effortScale ?? 'rpe';
   const [libPick, setLibPick] = useState<{ mode: 'extra' } | { mode: 'swap'; idx: number } | null>(null);
   const [info, setInfo] = useState<LibraryExercise | null>(null);
@@ -460,7 +464,39 @@ function SessionView({ initial }: { initial: ActiveSession }) {
       </header>
 
       <div className="mx-auto max-w-2xl space-y-3 px-4 pt-4" style={{ paddingBottom: 'calc(var(--safe-bottom) + 120px)' }}>
-        {draft.exercises.map((ex, i) => (
+        {reordering ? (
+          <SessionReorder
+            exercises={draft.exercises}
+            onReorder={(list) => {
+              reorderExercises(list);
+              setExpanded({});
+            }}
+            onDone={() => setReordering(false)}
+            onSaveToSchedule={
+              day && draft.exercises.some((e) => day.exercises.some((x) => x.id === e.exerciseId))
+                ? () => {
+                    const order = draft.exercises.map((e) => e.exerciseId);
+                    const pos = (id: string) => {
+                      const k = order.indexOf(id);
+                      return k === -1 ? Number.MAX_SAFE_INTEGER : k;
+                    };
+                    const sorted = [...day.exercises].sort((a, b) => pos(a.id) - pos(b.id));
+                    void saveSchedule(days.map((d) => (d.id === day.id ? { ...d, exercises: sorted } : d)));
+                    toast.success('Ordine salvato anche nella scheda');
+                  }
+                : null
+            }
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setReordering(true)}
+            className="flex h-10 items-center gap-1.5 rounded-full border border-line bg-surface-2 px-3 text-sm font-semibold text-fg-2"
+          >
+            <ArrowUpDown className="h-4 w-4" aria-hidden /> Riordina esercizi <NewBadge className="ml-0.5" />
+          </button>
+        )}
+        {!reordering && draft.exercises.map((ex, i) => (
           <ExerciseCard
             key={`${ex.exerciseId}-${i}`}
             index={i}

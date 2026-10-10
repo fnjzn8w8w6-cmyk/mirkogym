@@ -191,29 +191,40 @@ const tokens = (s: string) =>
       .filter((w) => w.length > 1 && !['with', 'the', 'con', 'alla', 'al', 'ai', 'di', 'a'].includes(w)),
   );
 
-/** Collega il nome all'esercizio della libreria più simile (nome inglese o italiano). */
-async function libraryMatcher() {
+/** Candidati della libreria più simili a un nome (inglese o italiano), dal più simile. */
+async function libraryRanker() {
   const lib = await loadLibrary().catch(() => []);
-  const index = lib.map((ex) => ({ id: ex.id, en: tokens(ex.n), it: tokens(NAME_IT[ex.id] ?? '') }));
+  const index = lib.map((ex) => ({ id: ex.id, name: NAME_IT[ex.id] ?? ex.n, en: tokens(ex.n), it: tokens(NAME_IT[ex.id] ?? '') }));
   const score = (a: Set<string>, b: Set<string>) => {
     if (!a.size || !b.size) return 0;
     let common = 0;
     a.forEach((w) => b.has(w) && common++);
     return common / Math.max(a.size, b.size);
   };
-  return (it: string, en: string): string | undefined => {
-    const ti = tokens(it);
-    const te = tokens(en);
-    let best: { id: string; s: number } | undefined;
-    for (const x of index) {
-      const s = Math.max(score(te, x.en), score(ti, x.it), score(ti, x.en) * 0.9);
-      if (!best || s > best.s) best = { id: x.id, s };
-    }
-    return best && best.s >= 0.6 ? best.id : undefined;
+  const byId = new Map(lib.map((x) => [x.id, x]));
+  return {
+    byId,
+    rank(it: string, en: string, n = 6) {
+      const ti = tokens(it);
+      const te = tokens(en);
+      return index
+        .map((x) => ({ id: x.id, name: x.name, s: Math.max(score(te, x.en), score(ti, x.it), score(ti, x.en) * 0.9) }))
+        .filter((x) => x.s > 0)
+        .sort((a, b) => b.s - a.s)
+        .slice(0, n);
+    },
   };
 }
 
-export async function importSchedule(files: File[], opts: AIOptions = {}): Promise<{ days: Day[]; unmatched: number }> {
+/** Come è stato collegato un esercizio del PDF alla libreria. */
+export interface ImportMatch {
+  /** nome scritto nel PDF */
+  pdf: string;
+  /** ok = sicuro; dubbio = da verificare; none = non trovato (resta col nome del PDF) */
+  confidence: 'ok' | 'dubbio' | 'none';
+}
+
+export async function importSchedule(files: File[], opts: AIOptions = {}): Promise<{ days: Day[]; unmatched: number; matches: Record<string, ImportMatch> }> {
   const parts = await Promise.all(files.map(fileToPart));
   const raw = await callAIJson(
     `Questa è una scheda di allenamento scritta da un personal trainer (foto o PDF). Trascrivila fedelmente, senza aggiungere o togliere esercizi.
@@ -225,33 +236,87 @@ Rispondi SOLO con JSON: {"days":[{"name":"","focus":"","exercises":[{"it":"","en
     { prefer: 'flash', temperature: 0.1, label: 'Leggo la scheda…', ...opts },
     parts,
   );
-  const match = await libraryMatcher();
-  let unmatched = 0;
-  const days: Day[] = (Array.isArray(raw.days) ? raw.days : []).slice(0, 7).map((d, di) => {
+  const ranker = await libraryRanker();
+  const rawDays = (Array.isArray(raw.days) ? raw.days : []).slice(0, 7).map((d) => {
     const o = (d ?? {}) as Record<string, unknown>;
-    const exercises: Exercise[] = (Array.isArray(o.exercises) ? o.exercises : []).slice(0, 15).map((x, ei) => {
+    const exs = (Array.isArray(o.exercises) ? o.exercises : []).slice(0, 15).map((x, ei) => {
       const e = (x ?? {}) as Record<string, unknown>;
       const it = str(e.it, 80) || str(e.en, 80) || `Esercizio ${ei + 1}`;
-      const libraryId = match(it, str(e.en, 80));
+      const en = str(e.en, 80);
+      return { e, it, en, cands: ranker.rank(it, en) };
+    });
+    return { o, exs };
+  });
+  // 2° passaggio: l'AI sceglie l'esercizio giusto SOLO tra i candidati della libreria (non può inventare)
+  const all = rawDays.flatMap((d) => d.exs);
+  const unsure = all.filter((x) => x.cands.length && x.cands[0].s < 0.85);
+  const chosen = new Map<(typeof all)[number], string | null>();
+  if (unsure.length) {
+    try {
+      const pick = await callAIJson(
+        `Collega ogni esercizio di una scheda di palestra all'esercizio GIUSTO della libreria, scegliendo SOLO tra le opzioni date (stesso movimento, stesso attrezzo, stessa inclinazione). Se nessuna opzione è lo stesso esercizio rispondi null.
+${unsure.map((x, k) => `${k + 1}. "${x.it}"${x.en ? ` (${x.en})` : ''} → opzioni: ${x.cands.map((c) => `${c.id} = ${c.name}`).join(' | ')}`).join('\n')}
+Rispondi SOLO con JSON: {"choices":[{"k":1,"id":"id scelto oppure null"}]}`,
+        (r) => r as { choices?: unknown },
+        { prefer: 'flash', temperature: 0, label: 'Collego gli esercizi alla libreria…', ...opts },
+      );
+      for (const c of Array.isArray(pick.choices) ? pick.choices : []) {
+        const o = (c ?? {}) as Record<string, unknown>;
+        const x = unsure[Number(o.k) - 1];
+        if (!x) continue;
+        const id = typeof o.id === 'string' && x.cands.some((cd) => cd.id === o.id) ? o.id : null;
+        chosen.set(x, id);
+      }
+    } catch {
+      /* senza il 2° passaggio si usa il candidato più simile, segnato come da verificare */
+    }
+  }
+  let unmatched = 0;
+  const matches: Record<string, ImportMatch> = {};
+  const days: Day[] = rawDays.map(({ o, exs }, di) => {
+    const exercises: Exercise[] = exs.map(({ e, it, cands }, ei, arr) => {
+      const x = arr[ei];
+      const best = cands[0];
+      let libraryId: string | undefined;
+      let confidence: ImportMatch['confidence'] = 'none';
+      if (best && best.s >= 0.85) {
+        libraryId = best.id;
+        confidence = 'ok';
+      } else if (chosen.has(x)) {
+        const id = chosen.get(x);
+        if (id) {
+          libraryId = id;
+          confidence = (cands.find((c) => c.id === id)?.s ?? 0) >= 0.4 ? 'ok' : 'dubbio';
+        }
+      } else if (best && best.s >= 0.5) {
+        libraryId = best.id;
+        confidence = 'dubbio';
+      }
       if (!libraryId) unmatched++;
+      const lib = libraryId ? ranker.byId.get(libraryId) : undefined;
+      const id = `p${di + 1}e${ei + 1}`;
+      matches[id] = { pdf: it, confidence };
       const repMin = Math.round(num(e.repMin, 1, 100) ?? 8);
+      const libName = lib ? (NAME_IT[lib.id] ?? lib.n) : '';
+      const pdfName = it.charAt(0).toUpperCase() + it.slice(1);
       return {
-        id: `p${di + 1}e${ei + 1}`,
+        id,
         libraryId,
-        name: it.charAt(0).toUpperCase() + it.slice(1),
+        // nome della libreria (così demo, istruzioni e storico combaciano); il nome del PDF resta nelle note
+        name: libName || pdfName,
         group: oneOf(e.group, GROUPS) ?? 'Core',
         sets: Math.round(num(e.sets, 1, 10) ?? 3),
         repMin,
         repMax: Math.max(repMin, Math.round(num(e.repMax, 1, 100) ?? repMin)),
         rirTarget: str(e.rir, 10) || '1-2',
         rest: str(e.rest, 20) || '90 sec',
-        notes: str(e.notes, 200) || undefined,
+        notes: [libName && normalize(libName) !== normalize(it) ? `Nel PDF: ${pdfName}` : '', str(e.notes, 200)].filter(Boolean).join(' · ') || undefined,
       };
     });
     return { id: `day${di + 1}`, order: di + 1, name: str(o.name, 30) || `Day ${di + 1}`, subtitle: str(o.focus, 50) || `Giorno ${di + 1}`, exercises };
   });
   const valid = days.filter((d) => d.exercises.length);
   if (!valid.length) throw new Error('Non ho trovato esercizi nel file: prova con una foto più nitida o il PDF');
-  return { days: valid.map((d, i) => ({ ...d, id: `day${i + 1}`, order: i + 1 })), unmatched };
+  return { days: valid.map((d, i) => ({ ...d, id: `day${i + 1}`, order: i + 1 })), unmatched, matches };
 }
 
