@@ -13,7 +13,7 @@ import { HelpTip, NewBadge } from '@/components/ui/Help';
 import { effortTarget, scaleLabel, type EffortScale } from '@/lib/effort';
 import { SuggestionBox } from './SuggestionBox';
 import { EffortSheet, type EffortSetInfo } from './EffortSheet';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 /** Confronto diretto con l'ultima volta che hai fatto l'esercizio. */
 function PrevCompare({ prevSets, lastDate, sets, lastText, scale }: { prevSets: { weight: string; reps: number }[]; lastDate?: number; sets: DraftSet[]; lastText?: string; scale: EffortScale }) {
@@ -72,8 +72,11 @@ interface ExerciseCardProps {
   lastText?: string;
   /** data dell'ultima volta (per il confronto) */
   lastDate?: number;
+  /** scheda aperta (serie visibili) o chiusa (solo il riepilogo) */
   expanded: boolean;
   onToggleExpanded: () => void;
+  /** maniglia per trascinare l'esercizio prima o dopo */
+  dragHandle?: ReactNode;
   onSetChange: (setIdx: number, patch: Partial<DraftSet>) => void;
   onToggleDone: (setIdx: number) => boolean;
   onAddSet: () => void;
@@ -104,6 +107,7 @@ export function ExerciseCard({
   lastDate,
   expanded,
   onToggleExpanded,
+  dragHandle,
   onSetChange,
   onToggleDone,
   onAddSet,
@@ -148,35 +152,39 @@ export function ExerciseCard({
     }));
   const canWarmup = !hasWarmups && isCompound(exercise) && workWeight != null && workWeight >= 20;
 
-  // Riepilogo compatto quando tutte le serie sono completate
-  if (allDone && !expanded) {
+  // Esercizio chiuso: riepilogo compatto (si apre toccandolo, si sposta dalla maniglia)
+  if (!expanded) {
+    const target = `${exercise.sets}×${exercise.repMin === exercise.repMax ? exercise.repMin : `${exercise.repMin}-${exercise.repMax}`}`;
+    const doneText = draft.sets.filter((s) => s.done).map((s) => `${s.weight || '–'}×${s.reps || '–'}`).join(' · ');
     return (
-      <motion.button
-        layout
-        type="button"
-        onClick={onToggleExpanded}
-        className="card flex w-full items-center gap-3 border-success/20 p-4 text-left"
-        aria-expanded={false}
-      >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-success text-black">
-          <Check className="h-5 w-5" strokeWidth={3} aria-hidden />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-base font-semibold text-fg">{draft.name}</span>
-          <span className="block truncate text-sm text-fg-3">
-            {draft.sets.map((s) => `${s.weight || '–'}×${s.reps || '–'}`).join(' · ')}
+      <div className={cn('card flex w-full items-stretch overflow-hidden', allDone && 'border-success/20')}>
+        {dragHandle}
+        <button type="button" onClick={onToggleExpanded} className="flex min-w-0 flex-1 items-center gap-3 py-3 pr-3 text-left" aria-expanded={false} aria-label={`Apri ${draft.name}`}>
+          {allDone ? (
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success text-black">
+              <Check className="h-4 w-4" strokeWidth={3} aria-hidden />
+            </span>
+          ) : (
+            <span className="h-9 w-1 shrink-0 rounded-full" style={{ backgroundColor: color }} aria-hidden />
+          )}
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-base font-semibold text-fg">{draft.name}</span>
+            <span className="block truncate text-sm text-fg-3">
+              {doneCount}/{draft.sets.length} serie{doneText ? ` · ${doneText}` : ` · ${target}`}
+            </span>
           </span>
-        </span>
-        <ChevronDown className="h-5 w-5 text-fg-3" aria-hidden />
-      </motion.button>
+          <ChevronDown className="h-5 w-5 shrink-0 text-fg-3" aria-hidden />
+        </button>
+      </div>
     );
   }
 
   return (
-    <motion.section layout className="card overflow-hidden" aria-label={draft.name}>
+    <section className="card overflow-hidden" aria-label={draft.name}>
       <div className="h-1 w-full" style={{ backgroundColor: color, opacity: 0.8 }} aria-hidden />
       <div className="p-4">
         <div className="flex items-start gap-3">
+          {dragHandle && <div className="-my-2 -ml-4 -mr-2 flex">{dragHandle}</div>}
           {libraryId && (
             <button
               type="button"
@@ -196,11 +204,9 @@ export function ExerciseCard({
             </div>
             <h2 className="mt-0.5 text-lg font-bold text-fg">{draft.name}</h2>
           </div>
-          {allDone && (
-            <IconButton label="Comprimi esercizio" onClick={onToggleExpanded} className="-mr-2 -mt-1">
-              <ChevronDown className="h-5 w-5 rotate-180" />
-            </IconButton>
-          )}
+          <IconButton label="Chiudi esercizio" onClick={onToggleExpanded} className="-mr-2 -mt-1">
+            <ChevronDown className="h-5 w-5 rotate-180" />
+          </IconButton>
           {onRemoveExercise && (
             <IconButton label="Rimuovi esercizio" onClick={onRemoveExercise} className="-mr-2 -mt-1">
               <Trash2 className="h-5 w-5" />
@@ -341,7 +347,7 @@ export function ExerciseCard({
         set={effortSets.find((x) => x.index === effortAt) ?? null}
         onPick={(idx, rir) => onSetChange(idx, { rir })}
       />
-    </motion.section>
+    </section>
   );
 }
 

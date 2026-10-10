@@ -1,9 +1,8 @@
 import { Medal } from '@/components/ui/Medal';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { ArrowUpDown, Clock, Dumbbell, Flag, Play, Plus, Trophy, X } from 'lucide-react';
-import { SessionReorder } from '@/components/session/SessionReorder';
-import { NewBadge } from '@/components/ui/Help';
+import { ArrowUpDown, Clock, Dumbbell, Flag, GripVertical, Play, Plus, Trophy, X } from 'lucide-react';
+import { Reorder, useDragControls } from 'framer-motion';
 import type { ActiveSession, DraftSet, Exercise, Session as SessionT, SetLog } from '@/types';
 import { useSchedule } from '@/hooks/use-schedule';
 import { useData } from '@/hooks/data-context';
@@ -138,7 +137,11 @@ function SessionView({ initial }: { initial: ActiveSession }) {
 
   const day = getDay(draft.dayId);
   const [now, setNow] = useState(Date.now());
-  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+  // esercizi aperti/chiusi (per chiave stabile, così restano tali anche dopo uno spostamento)
+  const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
+  // durante il trascinamento tutti gli esercizi si chiudono: la lista è corta e si sposta facilmente
+  const [dragging, setDragging] = useState(false);
+  const [orderChanged, setOrderChanged] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [extraOpen, setExtraOpen] = useState(false);
@@ -148,7 +151,6 @@ function SessionView({ initial }: { initial: ActiveSession }) {
   const [noteFor, setNoteFor] = useState<number | null>(null);
   const [swapFor, setSwapFor] = useState<number | null>(null);
   const [editFor, setEditFor] = useState<number | null>(null);
-  const [reordering, setReordering] = useState(false);
   const effortScale = settings.effortScale ?? 'rpe';
   const [libPick, setLibPick] = useState<{ mode: 'extra' } | { mode: 'swap'; idx: number } | null>(null);
   const [info, setInfo] = useState<LibraryExercise | null>(null);
@@ -300,6 +302,30 @@ function SessionView({ initial }: { initial: ActiveSession }) {
     return m;
   }, [sessions, exerciseIndex]);
 
+  // chiave stabile di ogni esercizio (lo stesso esercizio due volte: #2, #3…)
+  const keys = useMemo(() => {
+    const seen = new Map<string, number>();
+    return draft.exercises.map((e) => {
+      const n = (seen.get(e.exerciseId) ?? 0) + 1;
+      seen.set(e.exerciseId, n);
+      return n > 1 ? `${e.exerciseId}#${n}` : e.exerciseId;
+    });
+  }, [draft.exercises]);
+  // di base gli esercizi finiti sono chiusi, gli altri aperti
+  const isOpen = (i: number) => openMap[keys[i]] ?? !draft.exercises[i].sets.every((st) => st.done);
+  const canSaveOrder = Boolean(day && draft.exercises.some((e) => day.exercises.some((x) => x.id === e.exerciseId)));
+  const saveOrder = () => {
+    if (!day) return;
+    const order = draft.exercises.map((e) => e.exerciseId);
+    const pos = (id: string) => {
+      const k = order.indexOf(id);
+      return k === -1 ? Number.MAX_SAFE_INTEGER : k;
+    };
+    const sorted = [...day.exercises].sort((a, b) => pos(a.id) - pos(b.id));
+    void saveSchedule(days.map((d) => (d.id === day.id ? { ...d, exercises: sorted } : d)));
+    setOrderChanged(false);
+    toast.success('Ordine salvato anche nella scheda');
+  };
   const totalSets = draft.exercises.reduce((a, e) => a + e.sets.length, 0);
   const doneSets = draft.exercises.reduce((a, e) => a + e.sets.filter((s) => s.done).length, 0);
   const allDone = totalSets > 0 && doneSets === totalSets;
@@ -464,81 +490,79 @@ function SessionView({ initial }: { initial: ActiveSession }) {
       </header>
 
       <div className="mx-auto max-w-2xl space-y-3 px-4 pt-4" style={{ paddingBottom: 'calc(var(--safe-bottom) + 120px)' }}>
-        {reordering ? (
-          <SessionReorder
-            exercises={draft.exercises}
-            onReorder={(list) => {
-              reorderExercises(list);
-              setExpanded({});
-            }}
-            onDone={() => setReordering(false)}
-            onSaveToSchedule={
-              day && draft.exercises.some((e) => day.exercises.some((x) => x.id === e.exerciseId))
-                ? () => {
-                    const order = draft.exercises.map((e) => e.exerciseId);
-                    const pos = (id: string) => {
-                      const k = order.indexOf(id);
-                      return k === -1 ? Number.MAX_SAFE_INTEGER : k;
-                    };
-                    const sorted = [...day.exercises].sort((a, b) => pos(a.id) - pos(b.id));
-                    void saveSchedule(days.map((d) => (d.id === day.id ? { ...d, exercises: sorted } : d)));
-                    toast.success('Ordine salvato anche nella scheda');
-                  }
-                : null
-            }
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => setReordering(true)}
-            className="flex h-10 items-center gap-1.5 rounded-full border border-line bg-surface-2 px-3 text-sm font-semibold text-fg-2"
-          >
-            <ArrowUpDown className="h-4 w-4" aria-hidden /> Riordina esercizi <NewBadge className="ml-0.5" />
-          </button>
+        {orderChanged && canSaveOrder && (
+          <div className="flex items-center gap-2 rounded-md border border-line bg-surface-2 px-3 py-2 text-sm text-fg-2">
+            <ArrowUpDown className="h-4 w-4 shrink-0 text-accent-400" aria-hidden />
+            <span className="min-w-0 flex-1">Ordine cambiato</span>
+            <button type="button" onClick={saveOrder} className="h-9 px-1 font-semibold text-accent-400">
+              Salva nella scheda
+            </button>
+            <button type="button" onClick={() => setOrderChanged(false)} className="h-9 px-1 text-fg-3" aria-label="Chiudi">
+              ✕
+            </button>
+          </div>
         )}
-        {!reordering && draft.exercises.map((ex, i) => (
-          <ExerciseCard
-            key={`${ex.exerciseId}-${i}`}
-            index={i}
-            draft={ex}
-            exercise={exercises[i]}
-            suggestion={suggestions[i].suggestion}
-            lastText={suggestions[i].lastText}
-            lastDate={suggestions[i].lastDate}
-            expanded={Boolean(expanded[i])}
-            onToggleExpanded={() => setExpanded((e) => ({ ...e, [i]: !e[i] }))}
-            onSetChange={(j, patch) => updateSet(i, j, patch)}
-            onToggleDone={(j) => toggleDone(i, j)}
-            onAddSet={() => addSet(i)}
-            onRemoveSet={() => removeSet(i, ex.sets.length - 1)}
-            onRemoveExercise={ex.extra ? () => removeExercise(i) : undefined}
-            prevSets={suggestions[i].prevSets}
-            repTargets={suggestions[i].repTargets}
-            onCycleType={(j) => {
-              const order: SetType[] = ['normal', 'warmup', 'drop', 'failure'];
-              const cur = ex.sets[j].type ?? 'normal';
-              const next = order[(order.indexOf(cur) + 1) % order.length];
-              updateSet(i, j, { type: next === 'normal' ? undefined : next, isPersonalRecord: false });
-              haptics.tap();
-            }}
-            onAddWarmups={(w) => {
-              insertWarmups(i, w);
-              toast.info(`${w.length} serie di riscaldamento aggiunte`);
-            }}
-            onNote={() => setNoteFor(i)}
-            onSwap={() => setSwapFor(i)}
-            effortScale={effortScale}
-            onEdit={() => setEditFor(i)}
-            onRemoveWarmups={() => removeWarmups(i)}
-            libraryId={ex.libraryId ?? libraryIdOf(exercises[i])}
-            onInfo={() => {
-              const id = ex.libraryId ?? libraryIdOf(exercises[i]);
-              const lib = id ? library.byId.get(id) : undefined;
-              if (lib) setInfo(lib);
-              else toast.info('Caricamento della libreria…');
-            }}
-          />
-        ))}
+        <p className="flex items-center gap-1.5 text-xs text-fg-3">
+          <GripVertical className="h-3.5 w-3.5" aria-hidden /> Trascina per spostare un esercizio · toccalo per aprirlo o chiuderlo
+        </p>
+        <Reorder.Group
+          axis="y"
+          values={keys}
+          onReorder={(next: string[]) => {
+            const byKey = new Map(keys.map((k, j) => [k, draft.exercises[j]]));
+            reorderExercises(next.map((k) => byKey.get(k)!));
+            setOrderChanged(true);
+          }}
+          className="space-y-3"
+        >
+          {draft.exercises.map((ex, i) => (
+            <DragItem key={keys[i]} value={keys[i]} name={ex.name} onDragStart={() => setDragging(true)} onDragEnd={() => setDragging(false)}>
+              {(handle) => (
+              <ExerciseCard
+                index={i}
+                draft={ex}
+                exercise={exercises[i]}
+                suggestion={suggestions[i].suggestion}
+                lastText={suggestions[i].lastText}
+                lastDate={suggestions[i].lastDate}
+                expanded={!dragging && isOpen(i)}
+                onToggleExpanded={() => setOpenMap((m) => ({ ...m, [keys[i]]: !isOpen(i) }))}
+                dragHandle={handle}
+                onSetChange={(j, patch) => updateSet(i, j, patch)}
+                onToggleDone={(j) => toggleDone(i, j)}
+                onAddSet={() => addSet(i)}
+                onRemoveSet={() => removeSet(i, ex.sets.length - 1)}
+                onRemoveExercise={ex.extra ? () => removeExercise(i) : undefined}
+                prevSets={suggestions[i].prevSets}
+                repTargets={suggestions[i].repTargets}
+                onCycleType={(j) => {
+                  const order: SetType[] = ['normal', 'warmup', 'drop', 'failure'];
+                  const cur = ex.sets[j].type ?? 'normal';
+                  const next = order[(order.indexOf(cur) + 1) % order.length];
+                  updateSet(i, j, { type: next === 'normal' ? undefined : next, isPersonalRecord: false });
+                  haptics.tap();
+                }}
+                onAddWarmups={(w) => {
+                  insertWarmups(i, w);
+                  toast.info(`${w.length} serie di riscaldamento aggiunte`);
+                }}
+                onNote={() => setNoteFor(i)}
+                onSwap={() => setSwapFor(i)}
+                effortScale={effortScale}
+                onEdit={() => setEditFor(i)}
+                onRemoveWarmups={() => removeWarmups(i)}
+                libraryId={ex.libraryId ?? libraryIdOf(exercises[i])}
+                onInfo={() => {
+                  const id = ex.libraryId ?? libraryIdOf(exercises[i]);
+                  const lib = id ? library.byId.get(id) : undefined;
+                  if (lib) setInfo(lib);
+                  else toast.info('Caricamento della libreria…');
+                }}
+              />
+              )}
+            </DragItem>
+          ))}
+        </Reorder.Group>
 
         <div className="grid grid-cols-[1fr_auto] gap-2">
           <button
@@ -782,7 +806,7 @@ function SessionView({ initial }: { initial: ActiveSession }) {
   );
 }
 
-function Stat({ icon, label, value, highlight }: { icon: React.ReactNode; label: string; value: string; highlight?: boolean }) {
+function Stat({ icon, label, value, highlight }: { icon: ReactNode; label: string; value: string; highlight?: boolean }) {
   return (
     <div className={`rounded-md border p-3 ${highlight ? 'border-warning/30 bg-warning-bg' : 'border-line-subtle bg-surface-2'}`}>
       <div className="flex items-center justify-center gap-1 text-xs uppercase text-fg-3">
@@ -961,5 +985,43 @@ function ReadinessModal({
         </Button>
       </div>
     </Modal>
+  );
+}
+
+/** Esercizio trascinabile: si sposta tenendo premuta la maniglia (il resto della scheda scorre normalmente). */
+function DragItem({
+  value,
+  name,
+  onDragStart,
+  onDragEnd,
+  children,
+}: {
+  value: string;
+  name: string;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  children: (handle: ReactNode) => ReactNode;
+}) {
+  const controls = useDragControls();
+  const handle = (
+    <button
+      type="button"
+      aria-label={`Trascina ${name}`}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        onDragStart();
+        window.addEventListener('pointerup', onDragEnd, { once: true });
+        window.addEventListener('pointercancel', onDragEnd, { once: true });
+        controls.start(e);
+      }}
+      className="flex w-10 shrink-0 cursor-grab touch-none items-center justify-center self-stretch text-fg-3 active:cursor-grabbing"
+    >
+      <GripVertical className="h-5 w-5" aria-hidden />
+    </button>
+  );
+  return (
+    <Reorder.Item value={value} dragListener={false} dragControls={controls} className="relative" whileDrag={{ scale: 1.02, zIndex: 20, boxShadow: '0 10px 30px rgba(0,0,0,0.6)' }}>
+      {children(handle)}
+    </Reorder.Item>
   );
 }
