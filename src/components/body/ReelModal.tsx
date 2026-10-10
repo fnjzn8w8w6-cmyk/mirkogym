@@ -139,6 +139,9 @@ export function ReelModal({ open, onClose }: { open: boolean; onClose: () => voi
                 Condividi
               </Button>
             </div>
+            {video.ext !== 'mp4' && (
+              <p className="text-sm text-warning">Questo telefono ha creato il video in formato WebM: alcune app (es. Instagram su iPhone) potrebbero non accettarlo.</p>
+            )}
             <p className="text-xs text-fg-3">Il video è senza musica: puoi aggiungerla tu su Instagram o TikTok prima di pubblicarlo.</p>
           </>
         ) : progress != null ? (

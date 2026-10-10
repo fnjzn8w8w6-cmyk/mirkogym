@@ -71,20 +71,15 @@ export function reelSeconds(n: number): number {
   return Math.round((p.intro + p.lapse + p.compare + p.summary + p.outro) / FPS);
 }
 
-/** Codificatore: mp4 H.264 se possibile (va bene per Instagram), altrimenti VP9, altrimenti registrazione della tela. */
-async function pickEncoder(): Promise<{ codec: 'avc' | 'vp9'; config: VideoEncoderConfig } | null> {
+/** Codificatore: MP4 H.264 con WebCodecs se possibile, altrimenti registrazione della tela (MP4 su iPhone). */
+async function pickEncoder(): Promise<{ codec: 'avc'; config: VideoEncoderConfig } | null> {
   if (typeof VideoEncoder === 'undefined') return null;
   const base = { width: W, height: H, bitrate: 6_000_000, framerate: FPS };
-  const tries: [('avc' | 'vp9'), string][] = [
-    ['avc', 'avc1.640028'],
-    ['avc', 'avc1.4d0028'],
-    ['avc', 'avc1.42002a'],
-    ['vp9', 'vp09.00.40.08'],
-  ];
-  for (const [codec, c] of tries) {
-    const config: VideoEncoderConfig = { ...base, codec: c, ...(codec === 'avc' ? { avc: { format: 'avc' } } : {}) };
+  // solo H.264: iPhone, Instagram e WhatsApp non leggono il VP9 dentro un MP4 (il video risulterebbe nero)
+  for (const c of ['avc1.640028', 'avc1.4d0028', 'avc1.42002a']) {
+    const config: VideoEncoderConfig = { ...base, codec: c, avc: { format: 'avc' } };
     try {
-      if ((await VideoEncoder.isConfigSupported(config)).supported) return { codec, config };
+      if ((await VideoEncoder.isConfigSupported(config)).supported) return { codec: 'avc', config };
     } catch {
       /* prova il successivo */
     }
@@ -323,7 +318,8 @@ export async function renderReel(
   }
 
   // riserva: registrazione in tempo reale della tela
-  const mime = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'].find((m) => MediaRecorder.isTypeSupported?.(m)) ?? '';
+  // MP4 solo se dichiaratamente H.264 (alcuni browser mettono VP9 nell'MP4 e iPhone/Instagram lo vedono nero)
+  const mime = ['video/mp4;codecs=avc1.640028', 'video/mp4;codecs=avc1.42E01E', 'video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm'].find((m) => MediaRecorder.isTypeSupported?.(m)) ?? '';
   const stream = canvas.captureStream(FPS);
   const rec = new MediaRecorder(stream, { ...(mime ? { mimeType: mime } : {}), videoBitsPerSecond: 6_000_000 });
   const parts: Blob[] = [];
@@ -344,6 +340,6 @@ export async function renderReel(
   rec.stop();
   await done;
   stream.getTracks().forEach((t) => t.stop());
-  const type = rec.mimeType || mime || 'video/webm';
-  return { blob: new Blob(parts, { type }), ext: type.includes('mp4') ? 'mp4' : 'webm' };
+  const type = mime.startsWith('video/mp4') ? 'video/mp4' : 'video/webm';
+  return { blob: new Blob(parts, { type }), ext: type === 'video/mp4' ? 'mp4' : 'webm' };
 }
