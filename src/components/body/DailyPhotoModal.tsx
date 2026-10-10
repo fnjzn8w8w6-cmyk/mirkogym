@@ -6,13 +6,12 @@ import { useToast } from '@/components/ui/Toast';
 import { MuscleFigure, GROUP_MUSCLES } from '@/components/library/MuscleFigure';
 import { usePhotos } from '@/hooks/use-photos';
 import { useSessions } from '@/hooks/use-sessions';
-import { useSchedule } from '@/hooks/use-schedule';
 import { useBodyLogs } from '@/hooks/use-body-logs';
 import { compressPhoto, thumbOf } from '@/lib/progress-photos';
 import { renderDailyCard, svgToDataUrl } from '@/lib/daily-card';
 import { shareImage } from '@/lib/share-card';
 import { workingSets } from '@/lib/analytics';
-import { daysBetween, fromISODate, mondayISO, toISODate, todayISO } from '@/lib/date-utils';
+import { daysBetween, fromISODate, toISODate, todayISO } from '@/lib/date-utils';
 
 /**
  * Foto del giorno: scatti una foto, l'app ci mette sopra il giorno del percorso, l'allenamento e i muscoli allenati.
@@ -23,7 +22,6 @@ export function DailyPhotoModal({ open, onClose, date, photo: saved }: { open: b
   const toast = useToast();
   const { photos, save, images } = usePhotos();
   const { sessions, groupOf } = useSessions();
-  const { getDay } = useSchedule();
   const { bodyLogs } = useBodyLogs();
   const day = date ?? todayISO();
   const [photo, setPhoto] = useState<string | null>(null);
@@ -48,13 +46,10 @@ export function DailyPhotoModal({ open, onClose, date, photo: saved }: { open: b
     const top = Math.max(1, ...sets.values());
     const intensity: Record<string, number> = {};
     for (const [g, n] of sets) for (const m of GROUP_MUSCLES[g] ?? []) intensity[m] = Math.max(intensity[m] ?? 0, 0.45 + (0.55 * n) / top);
-    const plan = session ? getDay(session.dayId) : undefined;
     const weight = [...bodyLogs].filter((b) => b.weight && b.date <= day).sort((a, b) => b.date.localeCompare(a.date))[0]?.weight ?? null;
     const first = [day, ...photos.map((p) => p.date)].sort()[0];
-    const week = mondayISO(fromISODate(day));
-    const weekSessions = sessions.filter((s) => toISODate(s.date) >= week && toISODate(s.date) <= day).length;
-    return { session, intensity, title: plan?.subtitle || plan?.name, weight, number: daysBetween(fromISODate(day), fromISODate(first)) + 1, weekSessions };
-  }, [sessions, groupOf, getDay, bodyLogs, photos, day]);
+    return { session, intensity, weight, number: daysBetween(fromISODate(day), fromISODate(first)) + 1 };
+  }, [sessions, groupOf, bodyLogs, photos, day]);
 
   // ricompone l'immagine quando c'è la foto
   useEffect(() => {
@@ -63,9 +58,9 @@ export function DailyPhotoModal({ open, onClose, date, photo: saved }: { open: b
     let url = '';
     const svg = mapRef.current?.querySelector('svg');
     const muscles = svg
-      ? svgToDataUrl(svg, { '--accent-500': '#3DDC84', '--bg-surface-3': 'rgba(255,255,255,0.16)', '--bg-surface-2': 'rgba(255,255,255,0.16)', '--bg-base': '#0B0D0C' })
+      ? svgToDataUrl(svg, { '--accent-500': '#3DDC84', '--bg-surface-3': 'rgba(232,236,234,0.88)', '--bg-surface-2': 'rgba(190,196,193,0.7)', '--bg-base': 'rgba(18,20,19,0.9)' })
       : null;
-    void renderDailyCard({ photo, day: info.number, date: fromISODate(day).getTime(), session: info.session, title: info.title, muscles, weight: info.weight, weekSessions: info.weekSessions })
+    void renderDailyCard({ photo, day: info.number, session: info.session, muscles, weight: info.weight })
       .then((blob) => {
         if (!alive) return;
         url = URL.createObjectURL(blob);
@@ -136,7 +131,7 @@ export function DailyPhotoModal({ open, onClose, date, photo: saved }: { open: b
         {!photo ? (
           <>
             <p className="text-sm text-fg-2">
-              Una foto al giorno, sempre nella stessa posa e con la stessa luce: l'app aggiunge il giorno del percorso, l'allenamento di oggi e i muscoli allenati. Resta
+              Una foto al giorno, sempre nella stessa posa e con la stessa luce: l'app aggiunge il giorno del percorso, durata, esercizi, serie, peso e i muscoli allenati. Resta
               nella galleria dei progressi e puoi condividerla.
             </p>
             <button
