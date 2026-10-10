@@ -159,6 +159,7 @@ export const HELP = {
       'Foto del giorno: scatti una foto (anche a fine allenamento) e l\'app ci aggiunge, in una colonna a sinistra, il giorno del percorso, durata, esercizi, serie, peso e i muscoli allenati. Una per giorno: se la rifai sostituisce quella di oggi.',
       'Con l\'autoscatto appoggi il telefono, scegli 3, 5 o 10 secondi e ti metti in posa: un bip scandisce il conto alla rovescia.',
       'Per condividerla di nuovo tocca la foto nella galleria e poi il tasto di condivisione.',
+      'Reel: con almeno 2 foto l\'app crea un video con tutte le foto in sequenza, il confronto tra il primo e l\'ultimo giorno e i numeri del percorso. Si crea sul telefono (le foto non vengono inviate a nessuno) ed è senza musica, così puoi aggiungerla tu sul social.',
       'Per confronti affidabili: stesso posto e stessa luce, al mattino a digiuno.',
     ],
   },

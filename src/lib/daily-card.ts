@@ -36,13 +36,13 @@ function stats(input: DailyCardInput): [string, string][] {
 }
 
 /** Testo leggibile sopra qualsiasi foto (ombra morbida). */
-function shadow(ctx: CanvasRenderingContext2D, on: boolean) {
+export function shadow(ctx: CanvasRenderingContext2D, on: boolean) {
   ctx.shadowColor = on ? 'rgba(0,0,0,0.65)' : 'transparent';
   ctx.shadowBlur = on ? 14 : 0;
   ctx.shadowOffsetY = on ? 2 : 0;
 }
 
-function brand(ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null, x: number, y: number, size: number, align: 'left' | 'center' | 'right') {
+export function brand(ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null, x: number, y: number, size: number, align: 'left' | 'center' | 'right') {
   ctx.font = `800 ${Math.round(size * 0.42)}px ${DISPLAY}`;
   const w1 = ctx.measureText('VULCAN ').width;
   const w2 = ctx.measureText('LIFT').width;
@@ -66,7 +66,7 @@ function brand(ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null, x: 
 }
 
 /** Copre tutto il riquadro con la foto (come object-fit: cover). */
-function cover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, w: number, h: number) {
+export function cover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, w: number, h: number) {
   const k = Math.max(w / img.width, h / img.height);
   const iw = img.width * k;
   const ih = img.height * k;

@@ -206,9 +206,14 @@ export async function renderShareCard(
 
 /** Condivide l'immagine (menu di condivisione del telefono) o la scarica. */
 export async function shareImage(blob: Blob, filename: string): Promise<'shared' | 'downloaded'> {
-  const file = new File([blob], filename, { type: 'image/png' });
+  return shareFile(blob, filename, 'Il mio allenamento');
+}
+
+/** Condivide un file (immagine o video) col menu del telefono, altrimenti lo scarica. */
+export async function shareFile(blob: Blob, filename: string, title: string): Promise<'shared' | 'downloaded'> {
+  const file = new File([blob], filename, { type: blob.type || 'application/octet-stream' });
   if (navigator.canShare?.({ files: [file] })) {
-    await navigator.share({ files: [file], title: 'Il mio allenamento' });
+    await navigator.share({ files: [file], title });
     return 'shared';
   }
   const url = URL.createObjectURL(blob);

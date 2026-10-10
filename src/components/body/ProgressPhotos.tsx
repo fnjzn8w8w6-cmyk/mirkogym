@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, Share2, Trash2 } from 'lucide-react';
+import { Camera, Clapperboard, Share2, Trash2 } from 'lucide-react';
+import { ReelModal } from './ReelModal';
 import { DailyPhotoModal } from './DailyPhotoModal';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -22,6 +23,7 @@ export function ProgressPhotos() {
   const [toDelete, setToDelete] = useState<string | null>(null);
   // foto del giorno: nuova (date null) o già salvata da condividere di nuovo
   const [daily, setDaily] = useState<{ date?: string; photo?: string } | null>(null);
+  const [reel, setReel] = useState(false);
   const reshare = async (date: string) => {
     const imgs = await images(date);
     if (imgs) setDaily({ date, photo: imgs.front });
@@ -41,9 +43,14 @@ export function ProgressPhotos() {
         </h2>
         <span className="text-xs text-fg-3">{photos.length} foto</span>
       </div>
-      <Button className="mt-3" fullWidth icon={<Camera className="h-4 w-4" />} onClick={() => setDaily({})}>
-        Foto del giorno <NewBadge className="ml-1" />
-      </Button>
+      <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+        <Button fullWidth icon={<Camera className="h-4 w-4" />} onClick={() => setDaily({})}>
+          Foto del giorno <NewBadge className="ml-1" />
+        </Button>
+        <Button variant="secondary" icon={<Clapperboard className="h-4 w-4" />} onClick={() => setReel(true)}>
+          Reel <NewBadge className="ml-1" />
+        </Button>
+      </div>
       {photos.length === 0 ? (
         <div className="mt-2 text-sm text-fg-2">
           <p>Scatta la foto del giorno per seguire i cambiamenti e condividerli, oppure aggiungila al check-in settimanale: il coach stima la massa grassa e la confronta con quella precedente.</p>
@@ -85,6 +92,7 @@ export function ProgressPhotos() {
         </>
       )}
 
+      <ReelModal open={reel} onClose={() => setReel(false)} />
       <DailyPhotoModal open={daily != null} onClose={() => setDaily(null)} date={daily?.date} photo={daily?.photo} />
       <CompareModal pair={compare} load={images} onClose={() => setCompare(null)} />
       <ConfirmDialog
