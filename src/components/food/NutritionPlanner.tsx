@@ -34,7 +34,7 @@ import { useFoodLog, useMyRecipes } from '@/hooks/use-food';
 import { todayISO } from '@/lib/date-utils';
 import type { DiaryMeal, UserRecipe } from '@/types';
 import { RecipeDetail } from './RecipeDetail';
-import { useLearnedFavorites } from '@/hooks/use-habits';
+import { useCyclingDays, useLearnedFavorites } from '@/hooks/use-habits';
 import { weekTargets } from '@/lib/habits';
 import { HelpTip, NewBadge, SectionTitle } from '@/components/ui/Help';
 import { RecipeGallery } from './RecipeGallery';
@@ -339,7 +339,7 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
   const favorites = useMemo(() => [...(settings.favoriteRecipes ?? []), ...learned.map((l) => l.id)], [settings.favoriteRecipes, learned]);
   const pp = useMemo(() => planPrefs(settings.nutritionPrefs ?? prefs, favorites), [settings.nutritionPrefs, prefs, favorites]);
   // calorie che seguono la scheda: un obiettivo per ogni giorno (se attivo)
-  const cycling = settings.carbCycling?.length ? settings.carbCycling : null;
+  const cycling = useCyclingDays();
   const week = useMemo(() => (cycling ? weekTargets(target, cycling) : undefined), [target, cycling]);
   const plan = settings.weekPlan;
   const byId = useMemo(() => new Map((data?.recipes ?? []).map((r) => [r.id, r])), [data]);

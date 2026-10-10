@@ -4,7 +4,6 @@ import { Segmented } from '@/components/ui/Input';
 import { SectionTitle } from '@/components/ui/Help';
 import { useRecentFoodLogs } from '@/hooks/use-athlete';
 import { useSessions } from '@/hooks/use-sessions';
-import { useSettings } from '@/hooks/use-settings';
 import { useDayTarget } from '@/hooks/use-habits';
 import { cn } from '@/lib/cn';
 import { fromISODate, toISODate, todayISO } from '@/lib/date-utils';
@@ -29,7 +28,6 @@ const avg = (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length
 /** Analisi della dieta: tutto calcolato dal diario (quello che hai mangiato davvero), niente da compilare. */
 export function DietAnalysis({ profile }: { profile: UserProfile }) {
   const [period, setPeriod] = useState<Period>(7);
-  const { settings } = useSettings();
   const { sessions } = useSessions();
   const dayT = useDayTarget(profile);
   const logs = useRecentFoodLogs(period);
@@ -43,13 +41,13 @@ export function DietAnalysis({ profile }: { profile: UserProfile }) {
       .sort((a, b) => a.date.localeCompare(b.date))
       .map((l) => {
         const wd = (fromISODate(l.date).getDay() + 6) % 7;
-        const t = dayNutrition(dayT.base, wd, settings.carbCycling, trainedOn.has(l.date));
+        const t = dayNutrition(dayT.base, wd, dayT.cycling, trainedOn.has(l.date));
         const m = sumMacros(l.entries.map(entryMacros));
         const byMeal = Object.fromEntries(MEALS.map(({ key }) => [key, l.entries.filter((e) => e.meal === key).reduce((a, e) => a + entryMacros(e).kcal, 0)])) as Record<DiaryMeal, number>;
         const inTarget = Math.abs(m.kcal - t.target) <= t.target * 0.1 && m.protein >= t.protein * 0.85;
         return { date: l.date, wd, m, t, byMeal, inTarget, kcalOk: Math.abs(m.kcal - t.target) <= t.target * 0.1 };
       });
-  }, [logs, dayT, sessions, settings.carbCycling, today]);
+  }, [logs, dayT, sessions, today]);
 
   const foods = useMemo(() => {
     const c = new Map<string, number>();

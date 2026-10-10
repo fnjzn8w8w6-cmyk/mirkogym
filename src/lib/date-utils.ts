@@ -50,4 +50,6 @@ export function formatDuration(totalSeconds?: number): string {
 }
 
 export const weekStart = (d: Date | number): Date => startOfWeek(d, { weekStartsOn: 1 });
+/** Lunedì della settimana (YYYY-MM-DD). */
+export const mondayISO = (d: Date | number = new Date()): string => toISODate(weekStart(d));
 export const daysBetween = (a: Date | number, b: Date | number): number => differenceInCalendarDays(a, b);

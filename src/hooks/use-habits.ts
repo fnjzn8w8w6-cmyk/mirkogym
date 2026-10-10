@@ -7,15 +7,27 @@ import { useMesocycle } from './use-mesocycle';
 import { useAthlete, useRecentFoodLogs } from './use-athlete';
 import { useTrainingModel } from './use-training-model';
 import { userNutrition } from '@/lib/coach';
-import { buildProposals, dayNutrition, learnedFavorites, weekTargets, weekdayOf } from '@/lib/habits';
+import { buildProposals, dayNutrition, learnedFavorites, resolveCycling, weekTargets, weekdayOf } from '@/lib/habits';
 import { fromISODate, toISODate, todayISO } from '@/lib/date-utils';
 import type { UserProfile } from '@/lib/metabolism';
+
+/** Giorni con più calorie (allenamento) o null se le calorie sono uguali tutti i giorni. */
+export function useCyclingDays(): number[] | null {
+  const { settings } = useSettings();
+  const { sessions } = useSessions();
+  const { days } = useSchedule();
+  return useMemo(
+    () => resolveCycling({ enabled: settings.calorieCycling, manual: settings.carbCycling, sessions, perWeek: settings.profile?.daysPerWeek ?? days.length }),
+    [settings.calorieCycling, settings.carbCycling, settings.profile?.daysPerWeek, sessions, days.length],
+  );
+}
 
 /** Obiettivo nutrizionale di un giorno (con le calorie che seguono la scheda, se attive). */
 export function useDayTarget(profile: UserProfile | undefined, date = todayISO()) {
   const { settings } = useSettings();
   const { sessions } = useSessions();
   const { bodyLogs } = useBodyLogs();
+  const cycling = useCyclingDays();
   return useMemo(() => {
     if (!profile) return null;
     const w = bodyLogs.find((b) => b.weight != null)?.weight ?? profile.weightKg;
@@ -23,8 +35,8 @@ export function useDayTarget(profile: UserProfile | undefined, date = todayISO()
     const trainedThatDay = sessions.some((s) => toISODate(s.date) === date);
     // giorni passati senza allenamento = riposo; oggi e futuro seguono i giorni abituali
     const trained = trainedThatDay ? true : date < todayISO() ? false : undefined;
-    return { base, day: dayNutrition(base, weekdayOf(fromISODate(date)), settings.carbCycling, trained), week: weekTargets(base, settings.carbCycling) };
-  }, [profile, settings, sessions, bodyLogs, date]);
+    return { base, cycling, day: dayNutrition(base, weekdayOf(fromISODate(date)), cycling, trained), week: weekTargets(base, cycling) };
+  }, [profile, settings, sessions, bodyLogs, date, cycling]);
 }
 
 /** Ricette che mangi davvero (dal diario): il piano le propone più spesso. */
@@ -42,6 +54,7 @@ export function useProposals() {
   const { report } = useAthlete();
   const { ideal } = useTrainingModel();
   const foodLogs = useRecentFoodLogs(35);
+  const cyclingNow = useCyclingDays();
   return useMemo(() => {
     if (!settings.profile) return [];
     return buildProposals({
@@ -52,9 +65,9 @@ export function useProposals() {
       ideal,
       profile: settings.profile,
       coachPrefs: settings.coachPrefs,
-      cycling: settings.carbCycling,
+      cycling: cyclingNow,
       hasPlan: Boolean(settings.weekPlan),
       mesoEnding: Boolean(meso.mesocycle) && meso.currentWeek >= meso.totalWeeks,
     });
-  }, [settings, sessions, days, foodLogs, report, ideal, meso.mesocycle, meso.currentWeek, meso.totalWeeks]);
+  }, [settings, sessions, days, foodLogs, report, ideal, meso.mesocycle, meso.currentWeek, meso.totalWeeks, cyclingNow]);
 }

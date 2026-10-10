@@ -205,6 +205,12 @@ export default function Settings() {
             <p className="mt-1.5 text-sm text-fg-3">RPE: quanto è stata dura la serie, 10 = al limite. RIR: quante ripetizioni ti restavano.</p>
           </div>
           <Toggle
+            label="Calorie diverse allenamento / riposo"
+            description="Più calorie (carboidrati) nei giorni in cui ti alleni, un po' meno a riposo: stessa media settimanale"
+            checked={settings.calorieCycling !== false}
+            onChange={(v) => set({ calorieCycling: v })}
+          />
+          <Toggle
             label="Riscaldamento suggerito"
             description="Serie W già pronte sul primo esercizio multiarticolare di ogni gruppo"
             checked={settings.autoWarmup !== false}

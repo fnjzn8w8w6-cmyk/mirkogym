@@ -167,8 +167,12 @@ export interface Settings {
   questsDone?: string[];
   /** Ultima analisi completa del coach (tab Analisi). */
   coachAnalysis?: { text: string; at: number; sessions: number };
-  /** Correzione calorica giornaliera applicata dal check-in settimanale (kcal). */
+  /** Correzione calorica giornaliera (kcal): usata quando il metabolismo reale non è ancora calcolabile. */
   kcalAdjust?: number;
+  /** Aggiornamento settimanale delle calorie: un solo calcolo, fisso per tutta la settimana. */
+  weekCal?: WeekCalories;
+  /** Calorie diverse nei giorni di allenamento e di riposo (default sì). */
+  calorieCycling?: boolean;
   restTimerEnabled: boolean;
   restTimerAutoStart: boolean;
   /** Come si segna lo sforzo delle serie: RPE (6-10, default) o RIR (ripetizioni in riserva). Internamente si salva sempre il RIR. */
@@ -189,6 +193,30 @@ export interface Settings {
   weeklySetsMax: number;
   onboardingCompleted: boolean;
   startingLoadsPrompted: boolean;
+}
+
+/** Aggiornamento settimanale delle calorie (lunedì). */
+export interface WeekCalories {
+  /** lunedì della settimana (YYYY-MM-DD) */
+  week: string;
+  /** metabolismo reale usato per la settimana (null = formula + correzione) */
+  tdee: number | null;
+  /** correzione in kcal (solo senza metabolismo reale) */
+  adjust: number;
+  /** obiettivo medio giornaliero della settimana */
+  target: number;
+  /** obiettivo medio della settimana prima (null = primo calcolo) */
+  prevTarget: number | null;
+  prevTdee: number | null;
+  /** andamento del peso (kg/settimana) e quello atteso dall'obiettivo */
+  trend: number | null;
+  expected: number | null;
+  /** giorni con il diario compilato negli ultimi 7 */
+  logged: number;
+  at: number;
+  /** valori della settimana prima, per "Annulla" */
+  undo?: { tdee: number | null; adjust: number; target: number };
+  undone?: boolean;
 }
 
 /* ---------- Sessione in corso (bozza sincronizzata) ---------- */

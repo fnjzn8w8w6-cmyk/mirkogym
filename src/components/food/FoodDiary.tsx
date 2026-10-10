@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { addDays } from 'date-fns';
-import { BookOpen, CalendarDays, Camera, Shuffle, Undo2, ChevronLeft, ChevronRight, ClipboardCopy, Plus, Trash2 } from 'lucide-react';
+import { BookOpen, CalendarDays, Camera, Shuffle, Undo2, ChevronLeft, ChevronRight, ClipboardCopy, Dumbbell, Moon, Plus, Trash2 } from 'lucide-react';
 import { MealPhotoModal } from '@/components/imports/ImportModals';
 import { useSettings } from '@/hooks/use-settings';
 import { useFoodLog } from '@/hooks/use-food';
@@ -24,7 +24,8 @@ import { FoodPicker } from './FoodPicker';
 import { DayRecapForm } from '@/components/coach/Recaps';
 import { useDayTarget } from '@/hooks/use-habits';
 import { WhyKcal, planPrefs } from './NutritionPlanner';
-import { HelpTip, NewBadge } from '@/components/ui/Help';
+import { HelpTip, NewBadge, SectionTitle } from '@/components/ui/Help';
+import { WD_SHORT } from '@/lib/habits';
 import { fmtPieces, pieceGrams } from '@/lib/food-units';
 import { Segmented } from '@/components/ui/Input';
 import { FillGap, NowSuggest } from './MealSuggest';
@@ -41,6 +42,47 @@ export const entryMacros = (e: DiaryEntry): Macros =>
   e.unit === 'g'
     ? macrosFor(e.per, e.qty)
     : { kcal: Math.round(e.per.kcal * e.qty), protein: round1(e.per.protein * e.qty), carbs: round1(e.per.carbs * e.qty), fat: round1(e.per.fat * e.qty) };
+
+/** Calorie giorno per giorno della settimana: più alte nei giorni di allenamento. */
+function WeekCalories({ week, cycling, date }: { week: { target: number }[]; cycling: number[]; date: string }) {
+  const wd = (fromISODate(date).getDay() + 6) % 7;
+  const min = Math.min(...week.map((d) => d.target));
+  const max = Math.max(...week.map((d) => d.target));
+  return (
+    <Card className="p-4">
+      <div className="section-title !mb-0 flex items-center">
+        <SectionTitle help="diet-cycling" isNew>
+          Calorie della settimana
+        </SectionTitle>
+      </div>
+      <div className="mt-4 flex h-28 items-end gap-1.5">
+        {week.map((d, i) => {
+          const train = cycling.includes(i);
+          const h = max > min ? 28 + ((d.target - min) / (max - min)) * 44 : 50;
+          return (
+            <div key={i} className="flex flex-1 flex-col items-center justify-end">
+              <span className={cn('mb-1 text-[10px] font-semibold', train ? 'text-accent-400' : 'text-fg-3')}>{d.target}</span>
+              <span
+                className={cn('w-full rounded-md', train ? 'bg-accent-500' : 'bg-surface-3', i === wd && 'outline outline-2 outline-offset-2 outline-fg')}
+                style={{ height: `${h}px` }}
+              />
+              <span className={cn('mt-1.5 text-xs font-bold', i === wd ? 'text-fg' : 'text-fg-3')}>{WD_SHORT[i]}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-fg-2">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-sm bg-accent-500" aria-hidden /> allenamento
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-sm bg-surface-3" aria-hidden /> riposo
+        </span>
+      </div>
+      <p className="mt-1.5 text-xs text-fg-3">Se ti alleni in un giorno diverso, le calorie si spostano da sole su quel giorno.</p>
+    </Card>
+  );
+}
 
 /** Macro del pasto: grammi di proteine, carboidrati e grassi e quanto pesano sulle calorie del pasto. */
 function MealMacros({ m }: { m: Macros }) {
@@ -179,6 +221,23 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
       </div>
 
       <Card variant="elevated" className="space-y-3 p-4">
+        {dayT && dayT.day.delta !== 0 && (
+          <div className="flex items-center justify-between gap-2">
+            <span
+              className={cn(
+                'inline-flex h-7 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold',
+                dayT.day.training ? 'border-accent-500/40 bg-accent-glow text-accent-400' : 'border-line bg-surface-2 text-fg-2',
+              )}
+            >
+              {dayT.day.training ? <Dumbbell className="h-4 w-4" aria-hidden /> : <Moon className="h-4 w-4" aria-hidden />}
+              {dayT.day.training ? 'Giorno di allenamento' : 'Giorno di riposo'}
+            </span>
+            <span className="flex items-center">
+              <NewBadge />
+              <HelpTip id="diet-cycling" className="ml-1" />
+            </span>
+          </div>
+        )}
         <div className="grid grid-cols-3 text-center">
           <div>
             <div className="font-display text-2xl font-extrabold text-fg">{target.target}</div>
@@ -197,13 +256,23 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
         <MacroBar label="Carboidrati" value={totals.carbs} target={target.carbs} unit="g" color="#A7B0AB" />
         <MacroBar label="Grassi" value={totals.fat} target={target.fat} unit="g" color="#EAB308" />
         {dayT && dayT.day.delta !== 0 && (
-          <p className="text-xs text-fg-2">
-            {dayT.day.training ? `🏋️ Giorno di allenamento: +${dayT.day.delta} kcal di carboidrati` : `😴 Giorno di riposo: ${dayT.day.delta} kcal`}
-            <HelpTip id="diet-cycling" className="ml-1" />
+          <p className="text-sm text-fg-2">
+            {dayT.day.training ? (
+              <>
+                Giorno di allenamento: <strong className="text-fg">+{dayT.day.delta} kcal</strong> sulla media, quasi tutte carboidrati attorno all'allenamento.
+              </>
+            ) : (
+              <>
+                Giorno di riposo: <strong className="text-fg">{dayT.day.delta} kcal</strong> sulla media.
+              </>
+            )}{' '}
+            La media della settimana resta <strong className="text-fg">{dayT.base.target.toLocaleString('it-IT')} kcal</strong>.
           </p>
         )}
         <WhyKcal base={dayT?.base ?? target} day={dayT?.day} />
       </Card>
+
+      {dayT?.cycling && <WeekCalories week={dayT.week} cycling={dayT.cycling} date={date} />}
 
       {date === todayISO() && !loading && (
         <>

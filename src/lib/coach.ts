@@ -1,4 +1,5 @@
-import type { BodyLog, Session } from '@/types';
+import type { BodyLog, Session, WeekCalories } from '@/types';
+import { mondayISO } from './date-utils';
 import { callAI, callAIJson, num, oneOf, str, strArr, type AIOptions } from './ai';
 import { GOALS, EXPERIENCE, MACRO_STYLE_LABEL, nutrition, type Goal, type MacroStyle, type Nutrition, type UserProfile } from './metabolism';
 import { PRIORITY_KEYS, SLOT_IDS, SLOT_LABEL, type CoachPrefs } from './program-generator';
@@ -86,14 +87,17 @@ export interface NutritionPrefs {
 /** Obiettivi dell'utente: calorie con la correzione del check-in e stile dei macro scelto con il coach. */
 export const userNutrition = (
   p: UserProfile,
-  s: { kcalAdjust?: number; nutritionPrefs?: NutritionPrefs; goalPlan?: GoalPlan | null; metabolism?: MetabolismState | null },
+  s: { kcalAdjust?: number; nutritionPrefs?: NutritionPrefs; goalPlan?: GoalPlan | null; metabolism?: MetabolismState | null; weekCal?: WeekCalories },
 ): Nutrition => {
   // Obiettivo a fasi: la fase in corso decide tipo di obiettivo e ritmo (calorie)
   const phase = s.goalPlan?.phases[s.goalPlan.current];
   const prof = phase ? { ...p, goal: phase.type } : p;
-  // Con il metabolismo reale le correzioni dei check-in non servono più (lo misura già)
-  const real = s.metabolism?.tdee ?? null;
-  return nutrition(prof, real ? 0 : (s.kcalAdjust ?? 0), s.nutritionPrefs?.style ?? 'standard', phase ? planRate(s.goalPlan, [], p.weightKg) : null, real);
+  // Aggiornamento settimanale: per tutta la settimana valgono i numeri fissati il lunedì
+  const wk = s.weekCal && s.weekCal.week === mondayISO() ? s.weekCal : null;
+  // Con il metabolismo reale le correzioni non servono più (lo misura già)
+  const real = wk ? wk.tdee : (s.metabolism?.tdee ?? null);
+  const adjust = wk ? wk.adjust : (s.kcalAdjust ?? 0);
+  return nutrition(prof, wk ? adjust : real ? 0 : adjust, s.nutritionPrefs?.style ?? 'standard', phase ? planRate(s.goalPlan, [], p.weightKg) : null, real);
 };
 
 /** Metabolismo reale salvato (aggiornato una volta al giorno, ±50 kcal). */
@@ -415,6 +419,7 @@ Usa ESATTAMENTE queste 4 sezioni, ognuna con il titolo su una riga e 2-4 righe b
 🩹 DOLORI E RECUPERO (se non ci sono fastidi segnalati scrivi che è tutto ok e come prevenirli)
 🎯 3 AZIONI PER LA PROSSIMA SETTIMANA
 Se ci sono pochi dati dillo in una riga e dai comunque indicazioni sulla base di quelli disponibili.
+CALORIE: usa SOLO i numeri della riga CALORIE dello storico (li calcola l'app ogni lunedì e li applica da sola): non proporre aumenti o riduzioni diversi; se servono cambiamenti, di' che l'aggiornamento automatico di lunedì ne terrà conto.
 Profilo: ${profile.sex === 'm' ? 'uomo' : 'donna'}, ${profile.age} anni, obiettivo ${GOALS.find((g) => g.value === profile.goal)?.label}, livello ${EXPERIENCE.find((e) => e.value === profile.experience)?.label}.
 STORICO:
 ${memory}`;

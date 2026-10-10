@@ -1,4 +1,5 @@
 import { MicButton, appendText } from '@/components/ui/MicButton';
+import { useCyclingDays } from '@/hooks/use-habits';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Apple, ArrowRight, RefreshCw, Sparkles } from 'lucide-react';
@@ -139,6 +140,7 @@ function dayLabel(d: number): string {
 
 /** Dietologo: la richiesta in linguaggio naturale diventa impostazioni, obiettivi e un nuovo piano settimanale. */
 export function DietCoach({ profile }: { profile: UserProfile }) {
+  const cyclingDays = useCyclingDays();
   const navigate = useNavigate();
   const { settings, update } = useSettings();
   const toast = useToast();
@@ -198,7 +200,7 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
     let rebuilt = false;
     const needsPlan = prefChange || change.mealEdits.length > 0;
     if ((!plan && needsPlan) || change.scope === 'rebuild') {
-      plan = planWeek(data, target, pp, Date.now(), settings.carbCycling?.length ? weekTargets(target, settings.carbCycling) : undefined);
+      plan = planWeek(data, target, pp, Date.now(), cyclingDays ? weekTargets(target, cyclingDays) : undefined);
       rebuilt = true;
     } else if (prefChange && plan) {
       // cambio solo i pasti che non rispettano più le preferenze, poi ricalcolo le porzioni

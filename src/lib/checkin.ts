@@ -119,24 +119,12 @@ export function evaluate(a: CheckInAnswers, s: CheckInStats, deloadAvailable: bo
   else if (fatigue <= 25) points.push('⚡ Energia e recupero ottimi: puoi spingere sulla progressione dei carichi.');
   if (a.sleep <= 2) points.push('🌙 Il sonno è il primo fattore di recupero: prova a coricarti 30 minuti prima.');
 
-  // Calorie: si corregge solo se la dieta è stata seguita (altrimenti i dati del peso non sono affidabili)
-  let kcalChange = 0;
-  if (a.adherence <= 2) {
-    points.push('🍽️ Calorie e macro rispettati poco questa settimana: prima di cambiare l\'obiettivo proviamo a centrarlo. Usa "Cosa mangio adesso?" nel diario per chiudere le giornate.');
-  } else if (s.metabolism) {
-    // già gestito dal metabolismo reale (riga sopra)
-  } else if (s.weightRate != null) {
-    kcalChange = s.weightSuggestion;
-    // In definizione con fame alta non scendere oltre: meglio una correzione più morbida
-    if (kcalChange < 0 && a.hunger >= 4) kcalChange = Math.max(kcalChange, -100);
-    if (kcalChange !== 0)
-      points.push(
-        `⚖️ Peso ${fmtRate(s.weightRate)} contro ${fmtRate(s.expectedRate ?? 0)} atteso: consiglio ${kcalChange > 0 ? '+' : ''}${kcalChange} kcal al giorno.`,
-      );
-    else points.push(`⚖️ Peso in linea con l'obiettivo (${fmtRate(s.weightRate)}): calorie invariate.`);
-  } else {
-    points.push('⚖️ Pesati 3–4 volte a settimana (in "Corpo") per permettere al coach di correggere le calorie.');
-  }
+  // Calorie: le decide solo l'aggiornamento settimanale automatico (un calcolo unico, niente correzioni doppie)
+  const kcalChange = 0;
+  if (a.adherence <= 2)
+    points.push('🍽️ Calorie e macro rispettati poco questa settimana: l\'aggiornamento di lunedì si basa sul diario, quindi prova a registrare tutto e a centrare l\'obiettivo. Usa "Cosa mangio adesso?" nel diario per chiudere le giornate.');
+  else if (s.weightRate == null) points.push('⚖️ Pesati 3–4 volte a settimana (in "Corpo"): servono per l\'aggiornamento automatico delle calorie del lunedì.');
+  else points.push(`⚖️ Peso ${fmtRate(s.weightRate)} a settimana (atteso ${fmtRate(s.expectedRate ?? 0)}): le calorie le aggiorna l'app ogni lunedì in automatico (Corpo → Aggiornamento settimanale).`);
   if (a.hunger >= 4 && kcalChange <= 0)
     points.push('🥗 Fame alta: aumenta verdure, proteine e fibre ai pasti principali e bevi di più; sposta carboidrati attorno all\'allenamento.');
   return { kcalChange, deload, fatigue, points };
@@ -161,7 +149,7 @@ ${memory || 'nessun dato storico'}
 Obiettivo: ${goal}. Allenamenti ${s.sessions}/${s.planned}, volume ${s.tonnage} kg (settimana prima ${s.prevTonnage} kg), record ${s.prs}.
 Risposte (1-5): energia ${a.energy}, fame ${a.hunger}, qualità del sonno ${a.sleep}, stress ${a.stress}, calorie e macro rispettati ${a.adherence} (l'utente può usare ricette sue: conta il rispetto dei numeri, non del piano), indolenzimento ${a.soreness}.${a.note ? `\nNota dell'utente: """${a.note.slice(0, 400)}"""` : ''}
 Decisioni già prese dall'app (non cambiarle, spiegale): ${r.points.join(' ')}
-Correzione calorie: ${r.kcalChange} kcal. Deload consigliato: ${r.deload ? 'sì' : 'no'}.
+Calorie: le aggiorna l'app ogni lunedì con un calcolo automatico (peso + diario): NON proporre numeri di calorie diversi, al massimo spiega. Deload consigliato: ${r.deload ? 'sì' : 'no'}.
 Chiudi con UN obiettivo pratico per la prossima settimana.`;
   const text = await callAI([{ text: prompt }], { temperature: 0.5, label: 'Il coach legge il tuo check-in…', prefer: 'lite', ...opts });
   const clean = text.replace(/[*#_`]/g, '').trim();

@@ -5,7 +5,7 @@ import { useSettings } from '@/hooks/use-settings';
 import { useSessions } from '@/hooks/use-sessions';
 import { useAthlete, useRecentFoodLogs } from '@/hooks/use-athlete';
 import { usePhotos } from '@/hooks/use-photos';
-import { useLearnedFavorites, useProposals } from '@/hooks/use-habits';
+import { useCyclingDays, useLearnedFavorites, useProposals } from '@/hooks/use-habits';
 import { useSchedule } from '@/hooks/use-schedule';
 import { weekTargets } from '@/lib/habits';
 import { NewBadge, SectionTitle } from '@/components/ui/Help';
@@ -65,6 +65,7 @@ function Scale({ value, options, onChange, label }: { value: number; options: st
 }
 
 export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; autoOpen?: boolean }) {
+  const cyclingDays = useCyclingDays();
   const { settings, update } = useSettings();
   const { sessions } = useSessions();
   const athlete = useAthlete();
@@ -223,7 +224,7 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
             data,
             t,
             planPrefs(settings.nutritionPrefs ?? DEFAULT_NUTRITION, settings.favoriteRecipes ?? []),
-            settings.carbCycling?.length ? weekTargets(t, settings.carbCycling) : undefined,
+            cyclingDays ? weekTargets(t, cyclingDays) : undefined,
           );
         } catch {
           /* il piano verrà ricalibrato dalla sezione Dieta */
@@ -236,7 +237,7 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
       const target = userNutrition(profile, { ...settings, ...patch });
       const pp = planPrefs(settings.nutritionPrefs ?? DEFAULT_NUTRITION, [...(settings.favoriteRecipes ?? []), ...learned.map((l) => l.id)]);
       let plan: WeekPlan | undefined = patch.weekPlan ?? settings.weekPlan ?? undefined;
-      let cycling = settings.carbCycling ?? null;
+      let cycling = cyclingDays;
       let schedule = days;
       for (const pr of accepted) {
         if (pr.kind === 'meso') schedule = pr.days;
@@ -257,7 +258,7 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
           /* il piano verrà aggiornato dalla sezione Dieta */
         }
       }
-      if (cycling !== (settings.carbCycling ?? null)) patch.carbCycling = cycling;
+      if (cycling !== cyclingDays) patch.carbCycling = cycling;
       if (schedule !== days) await settle(saveSchedule(schedule));
     }
     await settle(update(patch));

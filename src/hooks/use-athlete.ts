@@ -1,4 +1,7 @@
 import { useMemo, useSyncExternalStore } from 'react';
+import { resolveCycling } from '@/lib/habits';
+import { mondayISO } from '@/lib/date-utils';
+import type { WeekCalories } from '@/types';
 import { addDays } from 'date-fns';
 import type { FoodLog } from '@/types';
 import { subscribeRecentFoodLogs } from '@/lib/firestore';
@@ -64,6 +67,22 @@ export function useRecentFoodLogs(days = 28) {
   }, [all, days]);
 }
 
+/** Calorie decise dall'app, da passare al coach così non ne inventa altre. */
+function calorieText(target: number, w: WeekCalories | undefined, cycling: number[] | null): string {
+  const parts = [`CALORIE (decise dall'app con l'aggiornamento settimanale automatico: NON proporre altri numeri, spiegali soltanto): obiettivo medio ${target} kcal al giorno`];
+  if (cycling) {
+    const bonus = Math.max(100, Math.min(300, Math.round((target * 0.08) / 10) * 10));
+    parts.push(`più alto nei giorni di allenamento (+${bonus} kcal, carboidrati) e più basso a riposo, stessa media`);
+  }
+  if (w && w.week === mondayISO()) {
+    if (w.prevTarget != null && !w.undone) parts.push(`variazione di questa settimana ${w.target - w.prevTarget >= 0 ? '+' : ''}${w.target - w.prevTarget} kcal`);
+    if (w.tdee) parts.push(`dispendio reale stimato ${w.tdee} kcal`);
+    if (w.trend != null && w.expected != null) parts.push(`peso ${w.trend} kg/sett (atteso ${w.expected})`);
+    parts.push(`diario compilato ${w.logged}/7 giorni`);
+  }
+  return parts.join('; ') + '.';
+}
+
 /** Profilo dell'atleta (memoria del coach) + testo per i prompt. */
 export function useAthlete() {
   const { sessions, nameOf, groupOf } = useSessions();
@@ -91,7 +110,8 @@ export function useAthlete() {
       athleteText(report) +
       (plan && p ? `\n${planText(plan, planStatus(plan, bodyLogs, p.weightKg))}` : '') +
       (lastCheck ? `\nUltimo check-in (${new Date(lastCheck.date).toLocaleDateString('it-IT')}): ${lastCheck.summary.slice(0, 400)}` : '') +
-      (settings.coachAnalysis ? `\nUltima analisi del coach: ${settings.coachAnalysis.text.slice(0, 500)}` : '');
+      (settings.coachAnalysis ? `\nUltima analisi del coach: ${settings.coachAnalysis.text.slice(0, 500)}` : '') +
+      (t ? `\n${calorieText(t.target, settings.weekCal, resolveCycling({ enabled: settings.calorieCycling, manual: settings.carbCycling, sessions, perWeek: p?.daysPerWeek ?? days.length }))}` : '');
     return { report, text };
   }, [sessions, days, foodLogs, bodyLogs, settings, nameOf, groupOf]);
 }

@@ -36,8 +36,25 @@ export function trainingWeekdays(sessions: Session[], perWeek: number, now = Dat
   return top.length >= 2 ? top : null;
 }
 
-/** Calorie extra nei giorni di allenamento (tutte da carboidrati). */
-const BONUS = 130;
+/** Calorie extra nei giorni di allenamento (tutte da carboidrati): ~8% dell'obiettivo, tra 100 e 300 kcal. */
+const bonusFor = (target: number) => Math.max(100, Math.min(300, Math.round((target * 0.08) / 10) * 10));
+
+/** Giorni di allenamento di default se non ci sono abbastanza dati: distribuiti nella settimana. */
+export function defaultTrainingDays(perWeek: number): number[] {
+  const MAP: Record<number, number[]> = { 1: [0], 2: [0, 3], 3: [0, 2, 4], 4: [0, 1, 3, 4], 5: [0, 1, 2, 3, 4], 6: [0, 1, 2, 3, 4, 5] };
+  return MAP[Math.max(1, Math.min(6, Math.round(perWeek)))];
+}
+
+/**
+ * Giorni con più calorie: quelli scelti a mano (check-in), altrimenti quelli in cui ti alleni davvero,
+ * altrimenti distribuiti in base agli allenamenti a settimana. null = calorie uguali tutti i giorni.
+ */
+export function resolveCycling(o: { enabled?: boolean; manual?: number[] | null; sessions: Session[]; perWeek: number }): number[] | null {
+  if (o.enabled === false) return null;
+  if (o.manual?.length) return o.manual;
+  if (o.perWeek < 1 || o.perWeek >= 7) return null;
+  return trainingWeekdays(o.sessions, o.perWeek) ?? defaultTrainingDays(o.perWeek);
+}
 
 /**
  * Obiettivo del giorno: più carboidrati nei giorni di allenamento, meno nel riposo, a parità di totale settimanale.
@@ -46,8 +63,9 @@ const BONUS = 130;
 export function dayNutrition(base: Nutrition, weekday: number, cycling: number[] | null | undefined, trained?: boolean): Nutrition & { delta: number; training: boolean } {
   if (!cycling?.length || cycling.length >= 7) return { ...base, delta: 0, training: Boolean(trained) };
   const training = trained ?? cycling.includes(weekday);
-  const rest = -Math.round((BONUS * cycling.length) / (7 - cycling.length) / 10) * 10;
-  const delta = training ? BONUS : rest;
+  const bonus = bonusFor(base.target);
+  const rest = -Math.round((bonus * cycling.length) / (7 - cycling.length) / 10) * 10;
+  const delta = training ? bonus : rest;
   return { ...base, target: base.target + delta, carbs: Math.max(60, base.carbs + Math.round(delta / 4)), delta, training };
 }
 
@@ -124,17 +142,7 @@ export function buildProposals(ctx: {
       });
   }
 
-  // 3) Calorie che seguono la scheda (quando l'app ha imparato i tuoi giorni di allenamento)
-  const wds = trainingWeekdays(ctx.sessions, ctx.profile.daysPerWeek, now);
-  if (wds && ctx.hasPlan && (!ctx.cycling || ctx.cycling.join() !== wds.join()))
-    out.push({
-      id: `cycling-${wds.join('')}`,
-      kind: 'cycling',
-      emoji: '🏋️',
-      title: 'Più carboidrati nei giorni di allenamento',
-      detail: `Ti alleni di solito ${wds.map((d) => WEEKDAYS[d]).join(', ')}: in quei giorni +${BONUS} kcal di carboidrati, meno nei giorni di riposo. Il totale settimanale non cambia.`,
-      weekdays: wds,
-    });
+  // 3) Le calorie seguono già da sole i giorni in cui ti alleni (nessuna proposta da confermare)
 
   // 4) Fine mesociclo → aggiornamento mirato della scheda
   if (ctx.mesoEnding) {

@@ -4,7 +4,7 @@ import { subDays } from 'date-fns';
 import { Camera, Moon, Plus, Trash2 } from 'lucide-react';
 import { BodyFatPhotoModal } from '@/components/modals/BodyFatPhotoModal';
 import { useSettings } from '@/hooks/use-settings';
-import { todayISO } from '@/lib/date-utils';
+import { mondayISO, todayISO } from '@/lib/date-utils';
 import type { BodyLog } from '@/types';
 import { useBodyLogs } from '@/hooks/use-body-logs';
 import { TopBar } from '@/components/layout/TopBar';
@@ -20,7 +20,7 @@ import { BodyLogModal, ENERGY_LABELS } from '@/components/modals/BodyLogModal';
 import { formatKg, movingAverage7d, trendDelta } from '@/lib/analytics';
 import { formatRelativeDay, fromISODate, toISODate } from '@/lib/date-utils';
 import { cn } from '@/lib/cn';
-import { CompositionCard, GoalStatus, Measurements } from '@/components/body/BodyOverview';
+import { CompositionCard, GoalStatus, Measurements, WeekCaloriesCard } from '@/components/body/BodyOverview';
 import { MuscleWeekCard } from '@/components/body/MuscleWeek';
 import { useRecentFoodLogs } from '@/hooks/use-athlete';
 import { useSessions } from '@/hooks/use-sessions';
@@ -135,7 +135,8 @@ export default function Body() {
         ) : (
           <>
             <CompositionCard />
-            <GoalStatus />
+            <WeekCaloriesCard />
+            {settings.weekCal?.week !== mondayISO() && <GoalStatus />}
             <MuscleWeekCard />
             <ProgressPhotos />
 

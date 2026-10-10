@@ -16,7 +16,7 @@ import { SetupRequired, Splash, FatalError } from '@/components/onboarding/Scree
 import { AuthScreen } from '@/components/onboarding/AuthScreen';
 import { ProfileSetup } from '@/components/onboarding/ProfileSetup';
 import Home from '@/routes/Home';
-import { useMetabolismSync } from '@/hooks/use-metabolism';
+import { useMetabolismSync, useWeekCaloriesSync } from '@/hooks/use-metabolism';
 import Session from '@/routes/Session';
 
 // Le schermate secondarie (grafici inclusi) vengono caricate on-demand
@@ -49,6 +49,7 @@ function Page({ children }: { children: ReactNode }) {
 function AppShell() {
   useMesocycleSync();
   useMetabolismSync();
+  useWeekCaloriesSync();
   const location = useLocation();
   const inSession = location.pathname.startsWith('/session');
   const section = '/' + (location.pathname.split('/')[1] ?? '');

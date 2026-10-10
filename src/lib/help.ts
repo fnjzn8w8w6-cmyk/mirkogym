@@ -125,6 +125,14 @@ export const HELP = {
     title: 'Composizione corporea',
     body: ['Peso, massa grassa, massa magra e FFMI (quanto muscolo hai rispetto all\'altezza). La massa grassa parte dall\'ultima misura affidabile (foto del check-in, plicometro, bilancia, DEXA) e tra una misura e l\'altra viene aggiornata dal trend del peso: chi dimagrisce perde circa 75% grasso, chi ingrassa ne prende circa 60%.', 'Le misure della bilancia impedenziometrica si leggono come media di 7 giorni, perché oscillano molto. Senza misure negli ultimi 4 mesi si usa la stima dal questionario.'],
   },
+  'body-weekcal': {
+    title: 'Aggiornamento settimanale delle calorie',
+    body: [
+      'Ogni lunedì l\'app confronta l\'andamento del peso con le calorie che hai registrato e stima quanto consumi davvero (come le app di nutrizione più avanzate).',
+      'Poi fissa l\'obiettivo della settimana: resta uguale fino al lunedì dopo, così sai sempre cosa mangiare. Check-in, coach e analisi usano questi stessi numeri e non ne propongono altri.',
+      'Ritmo di riferimento: in massa +0,25-0,5% del peso a settimana, in definizione −0,5-1%. Se non ti convince puoi annullare l\'aggiornamento della settimana.',
+    ],
+  },
   'body-status': {
     title: 'Sei nell\'obiettivo?',
     body: ['Confronta la velocità reale con cui cambia il peso con quella necessaria per il tuo obiettivo. Servono almeno 4 pesate in 10 giorni.'],
@@ -218,10 +226,11 @@ export const HELP = {
     ],
   },
   'diet-cycling': {
-    title: 'Calorie che seguono la scheda',
+    title: 'Calorie diverse allenamento / riposo',
     body: [
-      'L\'app impara dallo storico in quali giorni della settimana ti alleni. In quei giorni ci sono più carboidrati, nei giorni di riposo meno: il totale settimanale resta uguale.',
-      'Se ti alleni in un giorno di riposo, l\'obiettivo di quel giorno sale in automatico.',
+      'Nei giorni di allenamento mangi circa l\'8% in più (quasi tutto carboidrati, per rendere meglio e recuperare), nei giorni di riposo un po\' meno: la media della settimana resta uguale.',
+      'I giorni di allenamento sono quelli in cui ti alleni davvero (l\'app li impara dallo storico); all\'inizio sono distribuiti in base agli allenamenti a settimana.',
+      'Se ti alleni in un giorno di riposo, l\'obiettivo di quel giorno sale in automatico. Puoi spegnere questa funzione in Impostazioni → Allenamento.',
     ],
   },
   'diet-plan': {
