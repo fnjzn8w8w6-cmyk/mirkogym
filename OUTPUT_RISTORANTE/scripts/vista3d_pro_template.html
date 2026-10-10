@@ -868,8 +868,16 @@ for (const [key, fl] of Object.entries(DATA.floors)) {
   }
   // ---- luci d'ambiente
   for (const [x, y, t] of fl.lights) {
-    const l = new THREE.PointLight(t === 'c' ? 0xf4f1ea : t === 's' ? 0xf6eee0 : 0xffb978, 1, t === 's' ? 4 : 8, 1.4); l.position.set(x, z0 + H - 0.5, y); l.userData.base = t === 'c' ? 0.7 : t === 's' ? 0.5 : 0.8;
+    const l = new THREE.PointLight(t === 'c' ? 0xf4f1ea : t === 's' ? 0xf6eee0 : t === 'g' ? 0xffcc99 : 0xffb978, 1, t === 's' ? 4 : 8, 1.4); l.position.set(x, z0 + H - 0.5, y); l.userData.base = t === 'c' ? 0.7 : t === 's' ? 0.5 : 0.8;
     grp.add(l); lights[key].push(l);
+    if (t === 'g' && key === 'PT') {   // vano scala: globo opalino appeso nel vuoto della scala, con cavo e rosone
+      const gy = z0 + 2.0;
+      const s = new THREE.Mesh(new THREE.SphereGeometry(0.13, 24, 16), MAT.opale); s.position.set(x, gy, y); SOFF[key].add(s);
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, z0 + H - gy - 0.12, 8), MAT.ottone); c.position.set(x, (z0 + H + gy + 0.12) / 2, y); SOFF[key].add(c);
+      const ca = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.055, 0.035, 24), MAT.ottone); ca.position.set(x, z0 + H - 0.0175, y); SOFF[key].add(ca);
+      const pa = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 0.05, 24), MAT.ottone); pa.position.set(x, gy + 0.14, y); SOFF[key].add(pa);
+      l.position.set(x, gy, y);
+    }
   }
   // ---- parapetti in vetro con corrimano continuo (lungo le rampe segue la pendenza dei gradini)
   for (const [x1, y1, x2, y2] of fl.rail) {
@@ -1252,6 +1260,7 @@ const TOUR = [
   { p: [21.45, 5.15, 0], look: [24.2, 2.5, 0.9], hold: 3.5, t: 'Sala davanti alla cucina', c: '10 tavoli · 22 coperti. Boiserie verde, travi a vista e una lampada sopra ogni tavolo.' },
   { p: [21.95, 4.3, 0], look: [25.2, 2.3, 0.85] },
   { p: [21.9, 2.6, 0], look: [25.0, 0.9, 0.9] },
+  { p: [21.95, 3.3, 0], look: [20.6, 2.1, 1.25], hold: 3.5, t: 'Credenza e vetrina', c: 'Panadora in noce con piano in marmo: cassetti per le posate, pile di piatti e calici; sopra, la vetrina a giorno illuminata.' },
   { p: [21.75, 1.45, 0], look: [21.15, 4.25, 1.15], hold: 3, t: 'Montacarichi bevande', c: 'Vano 80×80 rivestito in noce, a due passi dalla porta della cucina: si carica dal lato sala.' },
   { p: [24.55, 12.48, 0], look: [21.0, 12.5, -0.9], cut: true, hold: 2, t: "Scendiamo all'interrato", c: "La scala parte a sinistra dell'ingresso e scende in tre tratti, girando due volte a destra. Proseguendo dritti dall'ingresso, in piano, si arriva all'antibagno." },
   { p: [23.4, 12.53, -0.39], look: [20.6, 12.5, -1.6] },
@@ -1263,6 +1272,7 @@ const TOUR = [
   { p: [25.15, 7.1, PS], look: [24.2, 3.6, -2.2] },
   { p: [25.0, 5.25, PS], look: [22.6, 1.6, -2.35], hold: 3.5, t: 'Sala interrata', c: '9 tavoli · 18 coperti. Mattoni a vista, pavimento in cotto, applique in ottone.' },
   { p: [23.6, 4.85, PS], look: [21.15, 4.25, -1.95], hold: 3, t: 'Scarico del montacarichi', c: 'Si scarica dal lato est su una mensola ribaltabile in acciaio: nessun ingombro fisso in sala.' },
+  { p: [22.9, 4.0, PS], look: [22.6, 5.6, -2.05], hold: 3.5, t: 'Panadora e vetrina dei bicchieri', c: "All'ingresso della sala 2, accanto al montacarichi: credenza in noce e marmo e vetrina con calici e piatti." },
   { p: [22.7, 4.8, PS], look: [24.9, 1.2, -2.3], hold: 4, t: 'Dvca Rovello', c: '60 coperti su due livelli · 27 tavoli · percorsi verificati dal software di controllo.' },
 ];
 function campionaTour(fps = 30, v = 0.75) {

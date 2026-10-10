@@ -696,8 +696,8 @@
    "normale": 1.0,
    "luce": "vertici"
   },
-  "Wvc_quadro_misc_344_PT": {
-   "materiale": "quadro_misc_344",
+  "Wvc_quadro_misc_352_PT": {
+   "materiale": "quadro_misc_352",
    "piano": "PT",
    "area": 0.48,
    "colore": [
@@ -707,11 +707,11 @@
    ],
    "rugosita": 0.85,
    "metallo": 0.0,
-   "immagine": "tx/img_quadro_misc_344_PT.jpg",
+   "immagine": "tx/img_quadro_misc_352_PT.jpg",
    "luce": "vertici"
   },
-  "Wvc_quadro_misc_347_PT": {
-   "materiale": "quadro_misc_347",
+  "Wvc_quadro_misc_355_PT": {
+   "materiale": "quadro_misc_355",
    "piano": "PT",
    "area": 0.48,
    "colore": [
@@ -721,11 +721,11 @@
    ],
    "rugosita": 0.85,
    "metallo": 0.0,
-   "immagine": "tx/img_quadro_misc_347_PT.jpg",
+   "immagine": "tx/img_quadro_misc_355_PT.jpg",
    "luce": "vertici"
   },
-  "Wvc_quadro_misc_350_PT": {
-   "materiale": "quadro_misc_350",
+  "Wvc_quadro_misc_358_PT": {
+   "materiale": "quadro_misc_358",
    "piano": "PT",
    "area": 0.48,
    "colore": [
@@ -735,11 +735,11 @@
    ],
    "rugosita": 0.85,
    "metallo": 0.0,
-   "immagine": "tx/img_quadro_misc_350_PT.jpg",
+   "immagine": "tx/img_quadro_misc_358_PT.jpg",
    "luce": "vertici"
   },
-  "Wvc_quadro_misc_353_PT": {
-   "materiale": "quadro_misc_353",
+  "Wvc_quadro_misc_361_PT": {
+   "materiale": "quadro_misc_361",
    "piano": "PT",
    "area": 0.48,
    "colore": [
@@ -749,11 +749,11 @@
    ],
    "rugosita": 0.85,
    "metallo": 0.0,
-   "immagine": "tx/img_quadro_misc_353_PT.jpg",
+   "immagine": "tx/img_quadro_misc_361_PT.jpg",
    "luce": "vertici"
   },
-  "Wvc_quadro_misc_356_PT": {
-   "materiale": "quadro_misc_356",
+  "Wvc_quadro_misc_364_PT": {
+   "materiale": "quadro_misc_364",
    "piano": "PT",
    "area": 0.48,
    "colore": [
@@ -763,11 +763,11 @@
    ],
    "rugosita": 0.85,
    "metallo": 0.0,
-   "immagine": "tx/img_quadro_misc_356_PT.jpg",
+   "immagine": "tx/img_quadro_misc_364_PT.jpg",
    "luce": "vertici"
   },
-  "Wvc_quadro_misc_359_PT": {
-   "materiale": "quadro_misc_359",
+  "Wvc_quadro_misc_367_PT": {
+   "materiale": "quadro_misc_367",
    "piano": "PT",
    "area": 0.48,
    "colore": [
@@ -777,11 +777,11 @@
    ],
    "rugosita": 0.85,
    "metallo": 0.0,
-   "immagine": "tx/img_quadro_misc_359_PT.jpg",
+   "immagine": "tx/img_quadro_misc_367_PT.jpg",
    "luce": "vertici"
   },
-  "Wvc_quadro_misc_362_PT": {
-   "materiale": "quadro_misc_362",
+  "Wvc_quadro_misc_370_PT": {
+   "materiale": "quadro_misc_370",
    "piano": "PT",
    "area": 0.48,
    "colore": [
@@ -791,11 +791,11 @@
    ],
    "rugosita": 0.85,
    "metallo": 0.0,
-   "immagine": "tx/img_quadro_misc_362_PT.jpg",
+   "immagine": "tx/img_quadro_misc_370_PT.jpg",
    "luce": "vertici"
   },
-  "Wvc_quadro_misc_365_PT": {
-   "materiale": "quadro_misc_365",
+  "Wvc_quadro_misc_373_PT": {
+   "materiale": "quadro_misc_373",
    "piano": "PT",
    "area": 0.48,
    "colore": [
@@ -805,11 +805,11 @@
    ],
    "rugosita": 0.85,
    "metallo": 0.0,
-   "immagine": "tx/img_quadro_misc_365_PT.jpg",
+   "immagine": "tx/img_quadro_misc_373_PT.jpg",
    "luce": "vertici"
   },
-  "Wvc_quadro_misc_368_PT": {
-   "materiale": "quadro_misc_368",
+  "Wvc_quadro_misc_376_PT": {
+   "materiale": "quadro_misc_376",
    "piano": "PT",
    "area": 0.48,
    "colore": [
@@ -819,11 +819,11 @@
    ],
    "rugosita": 0.85,
    "metallo": 0.0,
-   "immagine": "tx/img_quadro_misc_368_PT.jpg",
+   "immagine": "tx/img_quadro_misc_376_PT.jpg",
    "luce": "vertici"
   },
-  "Wvc_quadro_misc_589_S1": {
-   "materiale": "quadro_misc_589",
+  "Wvc_quadro_misc_597_S1": {
+   "materiale": "quadro_misc_597",
    "piano": "S1",
    "area": 0.48,
    "colore": [
@@ -833,11 +833,11 @@
    ],
    "rugosita": 0.85,
    "metallo": 0.0,
-   "immagine": "tx/img_quadro_misc_589_S1.jpg",
+   "immagine": "tx/img_quadro_misc_597_S1.jpg",
    "luce": "vertici"
   },
-  "Wvc_quadro_misc_592_S1": {
-   "materiale": "quadro_misc_592",
+  "Wvc_quadro_misc_600_S1": {
+   "materiale": "quadro_misc_600",
    "piano": "S1",
    "area": 0.48,
    "colore": [
@@ -847,11 +847,11 @@
    ],
    "rugosita": 0.85,
    "metallo": 0.0,
-   "immagine": "tx/img_quadro_misc_592_S1.jpg",
+   "immagine": "tx/img_quadro_misc_600_S1.jpg",
    "luce": "vertici"
   },
-  "Wvc_quadro_misc_595_S1": {
-   "materiale": "quadro_misc_595",
+  "Wvc_quadro_misc_603_S1": {
+   "materiale": "quadro_misc_603",
    "piano": "S1",
    "area": 0.48,
    "colore": [
@@ -861,11 +861,11 @@
    ],
    "rugosita": 0.85,
    "metallo": 0.0,
-   "immagine": "tx/img_quadro_misc_595_S1.jpg",
+   "immagine": "tx/img_quadro_misc_603_S1.jpg",
    "luce": "vertici"
   },
-  "Wvc_quadro_misc_598_S1": {
-   "materiale": "quadro_misc_598",
+  "Wvc_quadro_misc_606_S1": {
+   "materiale": "quadro_misc_606",
    "piano": "S1",
    "area": 0.48,
    "colore": [
@@ -875,11 +875,11 @@
    ],
    "rugosita": 0.85,
    "metallo": 0.0,
-   "immagine": "tx/img_quadro_misc_598_S1.jpg",
+   "immagine": "tx/img_quadro_misc_606_S1.jpg",
    "luce": "vertici"
   },
-  "Wvc_quadro_misc_601_S1": {
-   "materiale": "quadro_misc_601",
+  "Wvc_quadro_misc_609_S1": {
+   "materiale": "quadro_misc_609",
    "piano": "S1",
    "area": 0.48,
    "colore": [
@@ -889,11 +889,11 @@
    ],
    "rugosita": 0.85,
    "metallo": 0.0,
-   "immagine": "tx/img_quadro_misc_601_S1.jpg",
+   "immagine": "tx/img_quadro_misc_609_S1.jpg",
    "luce": "vertici"
   },
-  "Wvc_quadro_misc_604_S1": {
-   "materiale": "quadro_misc_604",
+  "Wvc_quadro_misc_612_S1": {
+   "materiale": "quadro_misc_612",
    "piano": "S1",
    "area": 0.48,
    "colore": [
@@ -903,11 +903,11 @@
    ],
    "rugosita": 0.85,
    "metallo": 0.0,
-   "immagine": "tx/img_quadro_misc_604_S1.jpg",
+   "immagine": "tx/img_quadro_misc_612_S1.jpg",
    "luce": "vertici"
   },
-  "Wvc_quadro_misc_607_S1": {
-   "materiale": "quadro_misc_607",
+  "Wvc_quadro_misc_615_S1": {
+   "materiale": "quadro_misc_615",
    "piano": "S1",
    "area": 0.48,
    "colore": [
@@ -917,7 +917,7 @@
    ],
    "rugosita": 0.85,
    "metallo": 0.0,
-   "immagine": "tx/img_quadro_misc_607_S1.jpg",
+   "immagine": "tx/img_quadro_misc_615_S1.jpg",
    "luce": "vertici"
   },
   "Wlm_scaffale_PT": {

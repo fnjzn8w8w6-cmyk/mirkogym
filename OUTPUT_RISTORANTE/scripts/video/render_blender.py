@@ -136,8 +136,8 @@ if PBR:
         mix = nt.nodes.new('ShaderNodeMix'); mix.data_type = 'RGBA'; mix.blend_type = 'MULTIPLY'; mix.inputs['Factor'].default_value = 1.0
         nt.links.new(d.outputs[0], mix.inputs['A']); mix.inputs['B'].default_value = (*tint, 1)
         # imperfezioni: macchie ampie e irregolari (pareti mai uniformi, legni e pavimenti consumati in modo diverso)
-        LO, HI, SC = {'intonacoPT': (0.84, 1.05, 0.45), 'intonaco': (0.86, 1.05, 0.45), 'soffitto': (0.9, 1.03, 0.4),
-                      'mattoni': (0.85, 1.08, 0.6), 'spina': (0.88, 1.06, 0.7), 'cotto': (0.86, 1.06, 0.7)}.get(n, (0.92, 1.05, 1.2))
+        LO, HI, SC = {'intonacoPT': (0.93, 1.03, 0.45), 'intonaco': (0.96, 1.02, 0.45), 'soffitto': (0.96, 1.02, 0.4),   # appena percettibili:
+                      'mattoni': (0.88, 1.06, 0.6), 'spina': (0.94, 1.04, 0.7), 'cotto': (0.93, 1.04, 0.7)}.get(n, (0.95, 1.03, 1.2))  # piu' forti sembrano sporco
         nz = nt.nodes.new('ShaderNodeTexNoise'); nz.inputs['Scale'].default_value = SC; nz.inputs['Detail'].default_value = 6
         nz.inputs['Roughness'].default_value = 0.62; nt.links.new(tc.outputs['Object'], nz.inputs['Vector'])
         mrg = nt.nodes.new('ShaderNodeMapRange'); mrg.inputs['From Min'].default_value = 0.32; mrg.inputs['From Max'].default_value = 0.68
@@ -216,6 +216,10 @@ for i, l in enumerate(luci):
     p = B(l['p'])
     if l['tipo'] == 'ambiente':
         cucina = l.get('col', 0) == 0xf4f1ea; servizio = l.get('col', 0) == 0xf6eee0
+        if l.get('col', 0) == 0xffcc99:   # vano scala: luce calda dall'alto, come una sospensione nel vuoto della scala
+            d = bpy.data.lights.new(f'scala{i}', 'POINT'); d.energy = 110; d.color = kelvin(2800); d.shadow_soft_size = 0.08
+            ob = bpy.data.objects.new(f'scala{i}', d); ob.location = p;   # dentro il globo sc.collection.objects.link(ob)
+            continue
         d = bpy.data.lights.new(f'amb{i}', 'AREA'); d.shape = 'DISK'; d.size = 0.5 if servizio else 0.8
         d.energy = 160 if cucina else 30 if servizio else float(os.environ.get('RIEMPIMENTO', 5)); d.color = kelvin(4000 if cucina else 3500 if servizio else 3300)
         ob = bpy.data.objects.new(f'amb{i}', d); ob.location = p + Vector((0, 0, 0.42)); sc.collection.objects.link(ob)

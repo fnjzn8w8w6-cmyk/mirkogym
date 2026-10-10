@@ -194,7 +194,7 @@ for (n, pz), objs in sorted(gruppi.items()):
         info['luce'] = 'vertici'
     else:
         uv_luce(ob)
-        res = int(min(2048, max(128, 2 ** math.ceil(math.log2(max(1, math.sqrt(area) * DENS * 1.4))))))
+        res = int(min(4096 if area > 300 else 2048, max(128, 2 ** math.ceil(math.log2(max(1, math.sqrt(area) * DENS * 1.4))))))
         img = bpy.data.images.new('lm_' + nome, res, res, float_buffer=True, alpha=True); img.generated_color = (0, 0, 0, 0)
         nt = mat.node_tree; node = nt.nodes.new('ShaderNodeTexImage'); node.image = img; nt.nodes.active = node
         bpy.ops.object.bake(type='DIFFUSE', pass_filter={'DIRECT', 'INDIRECT'}, target='IMAGE_TEXTURES', uv_layer='lm', margin=6)
@@ -216,7 +216,11 @@ for g in spec['gruppi'].values():
     if not tex or tex in fatte: continue
     fatte.add(tex)
     for kind, size in (('diff', 1024), ('nor', 1024), ('rough', 512)):
-        Image.open(os.path.join(globals()['PBR'], f'{tex}_{kind}.jpg')).convert('RGB').resize((size, size), Image.LANCZOS).save(os.path.join(OUT, 'tx', f'{tex}_{kind}.jpg'), quality=86)
+        im = Image.open(os.path.join(globals()['PBR'], f'{tex}_{kind}.jpg')).convert('RGB').resize((size, size), Image.LANCZOS)
+        k = {'painted_plaster_wall': 0.45, 'floor_tiles_06': 0.6, 'terracotta_floor_tiles': 0.75, 'herringbone_parquet': 0.85}.get(tex)
+        if kind == 'diff' and k:   # intonaci e pavimenti: macchie della foto attenuate (a distanza ravvicinata sembravano sporco)
+            a = np.asarray(im, np.float32); m = a.reshape(-1, 3).mean(0); im = Image.fromarray(np.clip(m + (a - m) * k, 0, 255).astype(np.uint8))
+        im.save(os.path.join(OUT, 'tx', f'{tex}_{kind}.jpg'), quality=86)
 
 # ---------------------------------------------------------------- 3. oggetti piccoli: semplificati e materiali esportabili
 fatti = set()
