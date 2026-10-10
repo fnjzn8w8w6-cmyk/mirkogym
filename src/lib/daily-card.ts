@@ -24,6 +24,162 @@ export interface DailyCardInput {
   weight?: number | null;
   /** allenamenti fatti questa settimana (per i giorni di riposo) */
   weekSessions?: number;
+  /** impaginazione minima: colonna a sinistra, blocco in basso o striscia in alto */
+  layout?: DailyLayout;
+  /** il dato in kg aggiunto: peso corporeo o volume sollevato */
+  kg?: 'peso' | 'volume';
+}
+
+export type DailyLayout = 'colonna' | 'angolo' | 'striscia';
+
+/** Dati brevi da mostrare (etichetta, valore). */
+function stats(input: DailyCardInput): [string, string][] {
+  const s = input.session;
+  const out: [string, string][] = [];
+  if (s) {
+    const mins = s.duration != null ? Math.round(s.duration / 60) : null;
+    out.push(['Durata', mins == null ? '—' : mins < 60 ? `${Math.max(1, mins)}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`]);
+    out.push(['Esercizi', String(s.logs.filter((l) => workingSets(l.sets).length).length)]);
+    out.push(['Serie', String(sessionSetCount(s))]);
+  } else out.push(['Oggi', 'Riposo']);
+  if (input.kg === 'volume' && s) out.push(['Sollevati', `${Math.round(sessionTonnage(s)).toLocaleString('it-IT')} kg`]);
+  else if (input.weight) out.push(['Peso', `${String(input.weight).replace('.', ',')} kg`]);
+  return out;
+}
+
+/** Testo leggibile sopra qualsiasi foto (ombra morbida). */
+function shadow(ctx: CanvasRenderingContext2D, on: boolean) {
+  ctx.shadowColor = on ? 'rgba(0,0,0,0.65)' : 'transparent';
+  ctx.shadowBlur = on ? 14 : 0;
+  ctx.shadowOffsetY = on ? 2 : 0;
+}
+
+function brand(ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null, x: number, y: number, size: number, align: 'left' | 'center' | 'right') {
+  ctx.font = `800 ${Math.round(size * 0.42)}px ${DISPLAY}`;
+  const w1 = ctx.measureText('VULCAN ').width;
+  const w2 = ctx.measureText('LIFT').width;
+  const tw = w1 + w2;
+  const total = Math.max(size, tw);
+  const cx = align === 'left' ? x + total / 2 : align === 'right' ? x - total / 2 : x;
+  if (logo) {
+    ctx.save();
+    roundRect(ctx, cx - size / 2, y, size, size, size * 0.24);
+    ctx.clip();
+    ctx.drawImage(logo, cx - size / 2, y, size, size);
+    ctx.restore();
+  }
+  ctx.textAlign = 'left';
+  shadow(ctx, true);
+  ctx.fillStyle = '#FAFAFA';
+  ctx.fillText('VULCAN ', cx - tw / 2, y + size + size * 0.48);
+  ctx.fillStyle = ACCENT;
+  ctx.fillText('LIFT', cx - tw / 2 + w1, y + size + size * 0.48);
+  shadow(ctx, false);
+}
+
+async function renderMinimal(input: DailyCardInput, layout: DailyLayout): Promise<Blob> {
+  await Promise.all([document.fonts?.load(`800 100px ${DISPLAY}`), document.fonts?.load(`700 40px ${FONT}`)].map((p) => p?.catch(() => undefined)));
+  await document.fonts?.ready;
+  const [photo, logo, map] = await Promise.all([
+    loadImage(input.photo),
+    loadImage(`${import.meta.env.BASE_URL}icons/icon-512.png`),
+    input.muscles && input.session ? loadImage(input.muscles) : Promise.resolve(null),
+  ]);
+  const c = document.createElement('canvas');
+  c.width = W;
+  c.height = H;
+  const ctx = c.getContext('2d');
+  if (!ctx) throw new Error('Canvas non disponibile');
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+  if (photo) cover(ctx, photo, W, H);
+  const list = stats(input);
+  const dayTxt = `GIORNO ${input.day}`;
+
+  if (layout === 'colonna') {
+    // colonna stretta in alto a sinistra: giorno, dati uno sotto l'altro, mappa, logo
+    const cx = 64 + 110;
+    ctx.textAlign = 'center';
+    shadow(ctx, true);
+    ctx.fillStyle = '#FAFAFA';
+    ctx.font = `800 64px ${DISPLAY}`;
+    ctx.fillText(dayTxt, cx, 150);
+    let y = 215;
+    for (const [l, v] of list) {
+      ctx.fillStyle = 'rgba(250,250,250,0.7)';
+      ctx.font = `600 20px ${FONT}`;
+      ctx.fillText(l, cx, y);
+      ctx.fillStyle = '#FAFAFA';
+      ctx.font = `700 36px ${FONT}`;
+      ctx.fillText(v, cx, y + 40);
+      y += 92;
+    }
+    shadow(ctx, false);
+    if (map) {
+      const mw = 230;
+      const mh = mw * (212 / 218);
+      ctx.drawImage(map, cx - mw / 2, y, mw, mh);
+      y += mh + 30;
+    }
+    brand(ctx, logo, cx, y, 64, 'center');
+  } else if (layout === 'angolo') {
+    // blocco in basso a sinistra: mappa piccola + giorno e dati in riga
+    const x = 64;
+    const yb = H - 120;
+    let tx = x;
+    if (map) {
+      const mh = 190;
+      const mw = mh * (218 / 212);
+      ctx.drawImage(map, x - 10, yb - mh + 8, mw, mh);
+      tx = x + mw + 14;
+    }
+    ctx.textAlign = 'left';
+    shadow(ctx, true);
+    ctx.fillStyle = '#FAFAFA';
+    ctx.font = `800 84px ${DISPLAY}`;
+    ctx.fillText(dayTxt, tx, yb - 70);
+    ctx.font = `600 30px ${FONT}`;
+    ctx.fillStyle = 'rgba(250,250,250,0.9)';
+    ctx.fillText(list.map(([, v]) => v).join('  ·  '), tx, yb - 18);
+    ctx.font = `600 18px ${FONT}`;
+    ctx.fillStyle = 'rgba(250,250,250,0.6)';
+    ctx.letterSpacing = '2px';
+    ctx.fillText(list.map(([l]) => l.toUpperCase()).join('   ·   '), tx, yb + 14);
+    ctx.letterSpacing = '0px';
+    shadow(ctx, false);
+    brand(ctx, logo, W - 64, 70, 72, 'right');
+  } else {
+    // striscia in alto: giorno a sinistra, logo a destra, una riga di dati sotto
+    const top = ctx.createLinearGradient(0, 0, 0, 360);
+    top.addColorStop(0, 'rgba(0,0,0,0.55)');
+    top.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = top;
+    ctx.fillRect(0, 0, W, 360);
+    ctx.textAlign = 'left';
+    shadow(ctx, true);
+    ctx.fillStyle = '#FAFAFA';
+    ctx.font = `800 96px ${DISPLAY}`;
+    ctx.fillText(dayTxt, 64, 165);
+    const cw = (W - 128 - (map ? 170 : 0)) / list.length;
+    list.forEach(([l, v], i) => {
+      const x = 64 + i * cw;
+      ctx.fillStyle = '#FAFAFA';
+      ctx.font = `700 36px ${FONT}`;
+      ctx.fillText(v, x, 240);
+      ctx.fillStyle = 'rgba(250,250,250,0.7)';
+      ctx.font = `600 19px ${FONT}`;
+      ctx.fillText(l, x, 272);
+    });
+    shadow(ctx, false);
+    if (map) {
+      const mh = 165;
+      const mw = mh * (218 / 212);
+      ctx.drawImage(map, W - 64 - mw, 140, mw, mh);
+    }
+    brand(ctx, logo, W / 2, H - 190, 64, 'center');
+  }
+
+  return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('Immagine non generata'))), 'image/jpeg', 0.9));
 }
 
 /** Copre tutto il riquadro con la foto (come object-fit: cover). */
@@ -35,6 +191,7 @@ function cover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, w: number, 
 }
 
 export async function renderDailyCard(input: DailyCardInput): Promise<Blob> {
+  if (input.layout) return renderMinimal(input, input.layout);
   await Promise.all([document.fonts?.load(`800 100px ${DISPLAY}`), document.fonts?.load(`700 40px ${FONT}`)].map((p) => p?.catch(() => undefined)));
   await document.fonts?.ready;
   const [photo, logo, map] = await Promise.all([
