@@ -44,7 +44,7 @@ export function ProgressPhotos() {
         <span className="text-xs text-fg-3">{photos.length} foto</span>
       </div>
       <div className="mt-3 space-y-2">
-        <Button fullWidth className="whitespace-nowrap" icon={<Camera className="h-4 w-4" />} onClick={() => setDaily({})}>
+        <Button fullWidth variant="secondary" className="whitespace-nowrap" icon={<Camera className="h-4 w-4" />} onClick={() => setDaily({})}>
           Foto del giorno <NewBadge className="ml-1" />
         </Button>
         <Button fullWidth variant="secondary" className="whitespace-nowrap" icon={<Clapperboard className="h-4 w-4" />} onClick={() => setReel(true)}>
