@@ -43,12 +43,12 @@ export function ProgressPhotos() {
         </h2>
         <span className="text-xs text-fg-3">{photos.length} foto</span>
       </div>
-      <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
-        <Button fullWidth icon={<Camera className="h-4 w-4" />} onClick={() => setDaily({})}>
+      <div className="mt-3 space-y-2">
+        <Button fullWidth className="whitespace-nowrap" icon={<Camera className="h-4 w-4" />} onClick={() => setDaily({})}>
           Foto del giorno <NewBadge className="ml-1" />
         </Button>
-        <Button variant="secondary" icon={<Clapperboard className="h-4 w-4" />} onClick={() => setReel(true)}>
-          Reel <NewBadge className="ml-1" />
+        <Button fullWidth variant="secondary" className="whitespace-nowrap" icon={<Clapperboard className="h-4 w-4" />} onClick={() => setReel(true)}>
+          Crea il reel <NewBadge className="ml-1" />
         </Button>
       </div>
       {photos.length === 0 ? (
