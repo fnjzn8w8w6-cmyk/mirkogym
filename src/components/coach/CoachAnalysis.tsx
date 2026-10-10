@@ -1,4 +1,5 @@
 import { RefreshCw } from 'lucide-react';
+import { useCoachMemory } from '@/hooks/use-training-model';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useSettings } from '@/hooks/use-settings';
@@ -14,7 +15,8 @@ import { AIBusy, AINote, AIPersona, useAITask } from './AIBusy';
 export function CoachAnalysis() {
   const { settings, update } = useSettings();
   const { sessions } = useSessions();
-  const { report, text } = useAthlete();
+  const { report } = useAthlete();
+  const text = useCoachMemory();
   const ai = useAITask();
   const saved = settings.coachAnalysis;
   const newSince = saved ? sessions.filter((s) => s.date > saved.at).length : sessions.length;

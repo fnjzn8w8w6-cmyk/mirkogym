@@ -1,17 +1,16 @@
-import { MicButton, appendText } from '@/components/ui/MicButton';
+import { CoachThread, threadContext, useThread, type ThreadMsg } from './CoachThread';
+import { useCoachMemory } from '@/hooks/use-training-model';
 import { useCyclingDays } from '@/hooks/use-habits';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Apple, ArrowRight, RefreshCw, Sparkles } from 'lucide-react';
+import { Apple, ArrowRight, RefreshCw } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { Button } from '@/components/ui/Button';
-import { TextArea } from '@/components/ui/Input';
-import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { AIBusy, AINote, useAITask } from './AIBusy';
-import { useAthlete, useRecentFoodLogs } from '@/hooks/use-athlete';
+import { useRecentFoodLogs } from '@/hooks/use-athlete';
 import { useData } from '@/hooks/data-context';
 import { addDays } from 'date-fns';
 import { saveFoodLog } from '@/lib/firestore';
@@ -129,6 +128,15 @@ interface Proposal {
   touchedDays: number[];
 }
 
+const describeDiet = (p: Proposal) =>
+  [
+    p.prefChange ? `obiettivi ${p.target.target} kcal, P ${p.target.protein} g` : '',
+    ...p.diff.slice(0, 6).map((d) => `${WEEKDAYS_IT[d.day]} ${d.slot}: ${d.before ?? ''} → ${d.after}`),
+    ...p.diary.map((c) => `diario ${c.date} ${c.meal}: ${c.after.map((e) => e.name).join(' + ')}`),
+  ]
+    .filter(Boolean)
+    .join('; ') || 'nessuna modifica';
+
 const todayIdx = () => (new Date().getDay() + 6) % 7;
 function dayLabel(d: number): string {
   const t = todayIdx();
@@ -145,12 +153,11 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
   const { settings, update } = useSettings();
   const toast = useToast();
   const ai = useAITask();
-  const athleteMem = useAthlete();
+  const coachMem = useCoachMemory();
   const { data } = useRecipes();
   const { uid } = useData();
   const foodLogs = useRecentFoodLogs(3);
-  const [request, setRequest] = useState('');
-  const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [msgs, setMsgs] = useThread<Proposal>('vl.thread.diet');
   const [toDiary, setToDiary] = useState(true);
   const [toPlan, setToPlan] = useState(true);
   const prefs = settings.nutritionPrefs ?? DEFAULT_NUTRITION;
@@ -185,15 +192,22 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
     [foodLogs],
   );
 
-  const submit = async () => {
-    const text = request.trim();
-    if (text.length < 5 || !data) return;
-    const change = await ai.run((o) => interpretDietRequest(text, profile, prefs, current, adjust, planSummary, o, athleteMem.text, diarySummary));
-    if (!change) return;
+  const submit = async (text: string) => {
+    if (!data) return;
+    const history = msgs;
+    setMsgs([...history, { role: 'user', text, at: Date.now() }]);
+    const request = threadContext(history, text, describeDiet);
+    const change = await ai.run((o) => interpretDietRequest(request, profile, prefs, current, adjust, planSummary, o, coachMem, diarySummary));
+    if (!change) {
+      setMsgs((m) => [...m, { role: 'coach', text: 'Non sono riuscito a rispondere: riprova o riformula.', at: Date.now() }]);
+      return;
+    }
     const prefChange = change.scope !== 'meals';
     const nextPrefs = prefChange ? applyDietChange(prefs, change, text) : prefs;
     const nextAdjust = prefChange ? adjust + change.kcalDelta : adjust;
-    const target = userNutrition(profile, { ...settings, kcalAdjust: nextAdjust, nutritionPrefs: nextPrefs });
+    // con l'aggiornamento settimanale attivo la richiesta del dietologo sposta l'obiettivo di questa settimana
+    const nextWeek = settings.weekCal && prefChange && change.kcalDelta ? { ...settings.weekCal, adjust: settings.weekCal.adjust + change.kcalDelta, target: settings.weekCal.target + change.kcalDelta } : settings.weekCal;
+    const target = userNutrition(profile, { ...settings, kcalAdjust: nextAdjust, nutritionPrefs: nextPrefs, weekCal: nextWeek });
     const pp = planPrefs(nextPrefs, settings.favoriteRecipes ?? []);
     const notes: string[] = [];
     let plan = settings.weekPlan;
@@ -250,21 +264,32 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
       diary.push({ date, meal, before: diaryOn(date).filter((x) => x.meal === meal), after, mode: 'append' });
     }
     if (!plan && !diary.length) {
-      toast.error('Non ho capito cosa cambiare: prova a riformulare la richiesta.');
+      setMsgs((m) => [...m, { role: 'coach', text: 'Non ho capito cosa cambiare: puoi dirmelo in un altro modo?', at: Date.now() }]);
       return;
     }
     const diff = rebuilt || !plan ? [] : planDiff(settings.weekPlan, plan, data);
     const touchedDays = [...new Set(change.mealEdits.map((e) => e.day))];
     setToDiary(true);
     setToPlan(true);
-    setProposal({ change, diary, planChanged: Boolean(plan) && (rebuilt || diff.length > 0 || prefChange), prefChange, prefs: nextPrefs, adjust: nextAdjust, target, plan: plan!, rebuilt, diff, notes, touchedDays });
+    const proposal: Proposal = { change, diary, planChanged: Boolean(plan) && (rebuilt || diff.length > 0 || prefChange), prefChange, prefs: nextPrefs, adjust: nextAdjust, target, plan: plan!, rebuilt, diff, notes, touchedDays };
+    setMsgs((m) => [...m, { role: 'coach', text: change.summary, proposal, at: Date.now() }]);
   };
 
-  const apply = async () => {
+  const apply = async (msg: ThreadMsg<Proposal>) => {
+    const proposal = msg.proposal;
     if (!proposal) return;
     const planOk = proposal.planChanged && (toPlan || proposal.prefChange || !proposal.diary.length);
     if (planOk || proposal.prefChange)
-      await settle(update({ ...(proposal.prefChange ? { nutritionPrefs: proposal.prefs, kcalAdjust: proposal.adjust } : {}), ...(planOk && proposal.plan ? { weekPlan: proposal.plan } : {}) }));
+      await settle(
+        update({
+          ...(proposal.prefChange ? { nutritionPrefs: proposal.prefs, kcalAdjust: proposal.adjust } : {}),
+          // calorie chieste al dietologo: valgono subito per questa settimana
+          ...(proposal.prefChange && settings.weekCal && proposal.adjust !== adjust
+            ? { weekCal: { ...settings.weekCal, adjust: settings.weekCal.adjust + (proposal.adjust - adjust), target: settings.weekCal.target + (proposal.adjust - adjust) } }
+            : {}),
+          ...(planOk && proposal.plan ? { weekPlan: proposal.plan } : {}),
+        }),
+      );
     const diaryOk = toDiary && proposal.diary.length > 0 && uid;
     if (diaryOk) {
       // un salvataggio per giorno: il pasto viene sostituito (modifica) o integrato (già mangiato)
@@ -275,8 +300,7 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
       }
       await Promise.all([...byDate].map(([date, entries]) => settle(saveFoodLog(uid, { date, entries }))));
     }
-    setProposal(null);
-    setRequest('');
+    setMsgs((m) => m.map((x) => (x === msg ? { ...x, applied: true } : x)));
     toast.success(diaryOk && planOk ? 'Diario e piano aggiornati' : diaryOk ? 'Diario aggiornato' : proposal.prefChange ? 'Dieta aggiornata dal coach' : 'Piano aggiornato');
   };
 
@@ -285,107 +309,14 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
     toast.success('Obiettivi riportati allo standard');
   };
 
-  const preview = proposal?.plan?.days[0]?.meals ?? [];
   const diet = DIETS.find((d) => d.value === prefs.diet);
 
-  return (
-    <div className="space-y-4">
-      <Card variant="elevated" className="p-4">
-        <div className="flex items-center gap-2 text-lg text-fg">
-          <Apple className="h-5 w-5 text-accent-500" aria-hidden /> <SectionTitle help="coach-diet">Il tuo dietologo</SectionTitle>
-        </div>
-        <p className="mt-1 text-sm text-fg-2">
-          Dimmi cosa vuoi cambiare: obiettivo più veloce o più lento, intolleranze, cibi che ami o eviti, tempo per cucinare, numero di pasti, più
-          proteine o meno carboidrati. Adatto calorie, macro, piano settimanale e diario: puoi anche dirmi cosa hai mangiato e lo segno io.
-        </p>
-        <div className="relative mt-3 [&_textarea]:pr-14">
-          <TextArea label="Cosa vuoi cambiare nella tua dieta?" rows={3} value={request} onChange={(e) => setRequest(e.target.value)} />
-          <MicButton size="sm" className="absolute right-2 top-2" onText={(t) => setRequest((r) => appendText(r, t))} />
-        </div>
-        <div className="no-scrollbar -mx-4 mt-2 flex gap-2 overflow-x-auto px-4">
-          {EXAMPLES.map((ex) => (
-            <button
-              key={ex}
-              type="button"
-              onClick={() => setRequest((r) => (r ? `${r}. ${ex}` : ex))}
-              className="h-9 shrink-0 rounded-full border border-line bg-surface-2 px-3 text-sm text-fg-2"
-            >
-              {ex}
-            </button>
-          ))}
-        </div>
-        <div className="mt-3">
-          {ai.busy ? (
-            <AIBusy persona="diet" status={ai.status} onCancel={ai.cancel} />
-          ) : (
-            <Button fullWidth icon={<Sparkles className="h-5 w-5" />} disabled={request.trim().length < 5 || !data} onClick={() => void submit()}>
-              Adatta la mia dieta
-            </Button>
-          )}
-          {ai.error && (
-            <p className="mt-2 text-sm text-danger" role="alert">
-              {ai.error}
-            </p>
-          )}
-        </div>
-        <div className="mt-3">
-          <AINote />
-        </div>
-      </Card>
-
-      <Card className="p-4">
-        <div className="section-title">La tua dieta oggi</div>
-        <div className="grid grid-cols-4 gap-2 text-center">
-          {[
-            ['Kcal', current.target, ''],
-            ['Prot.', current.protein, 'g'],
-            ['Carbo', current.carbs, 'g'],
-            ['Grassi', current.fat, 'g'],
-          ].map(([l, v, u]) => (
-            <div key={String(l)} className="rounded-md bg-surface-2 py-2">
-              <div className="text-lg text-fg">
-                {v}
-                <span className="text-xs text-fg-3">{u}</span>
-              </div>
-              <div className="text-xs uppercase text-fg-3">{l}</div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          <Chip>
-            {diet?.emoji} {diet?.label}
-          </Chip>
-          <Chip>{prefs.meals} pasti</Chip>
-          <Chip>{MACRO_STYLE_LABEL[prefs.style ?? 'standard']}</Chip>
-          {adjust !== 0 && (
-            <Chip tone="info">
-              {adjust > 0 ? '+' : ''}
-              {adjust} kcal
-            </Chip>
-          )}
-          {prefs.allergies && <Chip tone="danger">🚫 {prefs.allergies}</Chip>}
-          {prefs.dislikes && <Chip tone="warning">✕ {prefs.dislikes}</Chip>}
-          {prefs.likes && <Chip tone="success">❤ {prefs.likes}</Chip>}
-        </div>
-        {prefs.summary && <p className="mt-2 text-sm text-fg-2">Ultima modifica: “{prefs.summary}”</p>}
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button size="sm" variant="secondary" icon={<ArrowRight className="h-4 w-4" />} onClick={() => navigate('/food?tab=plan')}>
-            Vedi il piano
-          </Button>
-          {(adjust !== 0 || (prefs.style && prefs.style !== 'standard')) && (
-            <Button size="sm" variant="ghost" icon={<RefreshCw className="h-4 w-4" />} onClick={() => void reset()}>
-              Torna agli obiettivi standard
-            </Button>
-          )}
-        </div>
-      </Card>
-
-      <Modal open={Boolean(proposal)} onClose={() => setProposal(null)} title="Proposta del dietologo">
-        {proposal && (
+  const renderProposal = (proposal: Proposal, active: boolean, msg: ThreadMsg<Proposal>) => {
+    const preview = proposal.plan?.days[0]?.meals ?? [];
+    return (
           <div className="space-y-4">
-            <div className="rounded-lg border border-accent-500/30 bg-accent-glow p-3">
-              <p className="text-base text-fg">{proposal.change.summary}</p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
+            <div>
+              <div className="flex flex-wrap gap-1.5">
                 {(proposal.prefChange ? describeDietChange(proposal.change) : []).map((d) => (
                   <Chip key={d} tone="accent">
                     {d}
@@ -432,7 +363,7 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
                 </ul>
               </div>
             )}
-            {proposal.diary.length > 0 && proposal.planChanged && (
+            {active && proposal.diary.length > 0 && proposal.planChanged && (
               <div className="flex gap-4 text-sm text-fg">
                 <label className="flex items-center gap-2">
                   <input type="checkbox" className="h-5 w-5 accent-[#3ddc84]" checked={toDiary} onChange={(e) => setToDiary(e.target.checked)} /> Modifica il diario
@@ -491,9 +422,11 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
                 {n}
               </p>
             ))}
-            <Button size="lg" fullWidth disabled={!proposal.prefChange && !toDiary && !(toPlan && proposal.planChanged)} onClick={() => void apply()}>
+            {active && (
+            <Button size="lg" fullWidth disabled={!proposal.prefChange && !toDiary && !(toPlan && proposal.planChanged)} onClick={() => void apply(msg)}>
               {proposal.prefChange ? 'Applica alla mia dieta' : proposal.diary.length && !proposal.planChanged ? 'Segna nel diario' : 'Applica'}
             </Button>
+            )}
             <p className="text-xs text-fg-3">
               {proposal.rebuilt
                 ? 'Il piano settimanale verrà rifatto; il diario e le ricette salvate restano.'
@@ -502,8 +435,106 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
                   : 'Il resto del piano resta invariato.'}
             </p>
           </div>
+    );
+  };
+
+
+  return (
+    <div className="space-y-4">
+      <Card variant="elevated" className="p-4">
+        <div className="flex items-center gap-2 text-lg text-fg">
+          <Apple className="h-5 w-5 text-accent-500" aria-hidden /> <SectionTitle help="coach-diet">Il tuo dietologo</SectionTitle>
+        </div>
+        {msgs.length === 0 && (
+          <p className="mt-1 text-sm text-fg-2">
+            Dimmi cosa vuoi cambiare: obiettivo più veloce o più lento, intolleranze, cibi che ami o eviti, tempo per cucinare, numero di pasti, più
+            proteine o meno carboidrati. Adatto calorie, macro, piano settimanale e diario: puoi anche dirmi cosa hai mangiato e lo segno io. Se la
+            proposta non ti convince, rispondimi: la correggo.
+          </p>
         )}
-      </Modal>
+        {msgs.length === 0 && (
+          <div className="no-scrollbar -mx-4 mt-2 flex gap-2 overflow-x-auto px-4">
+            {EXAMPLES.map((ex) => (
+              <button
+                key={ex}
+                type="button"
+                disabled={ai.busy || !data}
+                onClick={() => void submit(ex)}
+                className="h-9 shrink-0 rounded-full border border-line bg-surface-2 px-3 text-sm text-fg-2"
+              >
+                {ex}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="mt-3">
+          <CoachThread
+            msgs={msgs}
+            busy={ai.busy}
+            busyView={<AIBusy persona="diet" status={ai.status} onCancel={ai.cancel} />}
+            placeholder={msgs.length ? 'Rispondi al dietologo…' : 'Cosa vuoi cambiare nella tua dieta?'}
+            onSend={(t) => void submit(t)}
+            onReset={() => setMsgs([])}
+            renderProposal={(proposal, active, msg) => renderProposal(proposal, active, msg)}
+          />
+          {ai.error && (
+            <p className="mt-2 text-sm text-danger" role="alert">
+              {ai.error}
+            </p>
+          )}
+        </div>
+        <div className="mt-3">
+          <AINote />
+        </div>
+      </Card>
+
+      <Card className="p-4">
+        <div className="section-title">La tua dieta oggi</div>
+        <div className="grid grid-cols-4 gap-2 text-center">
+          {[
+            ['Kcal', current.target, ''],
+            ['Prot.', current.protein, 'g'],
+            ['Carbo', current.carbs, 'g'],
+            ['Grassi', current.fat, 'g'],
+          ].map(([l, v, u]) => (
+            <div key={String(l)} className="rounded-md bg-surface-2 py-2">
+              <div className="text-lg text-fg">
+                {v}
+                <span className="text-xs text-fg-3">{u}</span>
+              </div>
+              <div className="text-xs uppercase text-fg-3">{l}</div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <Chip>
+            {diet?.emoji} {diet?.label}
+          </Chip>
+          <Chip>{prefs.meals} pasti</Chip>
+          <Chip>{MACRO_STYLE_LABEL[prefs.style ?? 'standard']}</Chip>
+          {adjust !== 0 && (
+            <Chip tone="info">
+              {adjust > 0 ? '+' : ''}
+              {adjust} kcal
+            </Chip>
+          )}
+          {prefs.allergies && <Chip tone="danger">🚫 {prefs.allergies}</Chip>}
+          {prefs.dislikes && <Chip tone="warning">✕ {prefs.dislikes}</Chip>}
+          {prefs.likes && <Chip tone="success">❤ {prefs.likes}</Chip>}
+        </div>
+        {prefs.summary && <p className="mt-2 text-sm text-fg-2">Ultima modifica: “{prefs.summary}”</p>}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button size="sm" variant="secondary" icon={<ArrowRight className="h-4 w-4" />} onClick={() => navigate('/food?tab=plan')}>
+            Vedi il piano
+          </Button>
+          {(adjust !== 0 || (prefs.style && prefs.style !== 'standard')) && (
+            <Button size="sm" variant="ghost" icon={<RefreshCw className="h-4 w-4" />} onClick={() => void reset()}>
+              Torna agli obiettivi standard
+            </Button>
+          )}
+        </div>
+      </Card>
+
     </div>
   );
 }

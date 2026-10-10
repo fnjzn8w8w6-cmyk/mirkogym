@@ -18,7 +18,7 @@ export async function interpretTrainingRequest(request: string, profile: UserPro
   const prompt = `Sei un personal trainer esperto. Un utente descrive cosa vuole dal suo allenamento. Traduci la richiesta in impostazioni per un generatore di schede.
 Profilo: ${profile.sex === 'm' ? 'uomo' : 'donna'}, ${profile.age} anni, livello ${EXPERIENCE.find((e) => e.value === profile.experience)?.label}, obiettivo ${GOALS.find((g) => g.value === profile.goal)?.label}, ${profile.daysPerWeek} giorni/settimana.
 
-RICHIESTA DELL'UTENTE: """${request.slice(0, 1200)}"""
+RICHIESTA DELL'UTENTE: """${request.slice(-3500)}"""
 
 Valori ammessi:
 - priorities (muscoli da enfatizzare): ${PRIORITY_KEYS.join(', ')}
@@ -188,7 +188,7 @@ Profilo: ${profile.sex === 'm' ? 'uomo' : 'donna'}, ${profile.age} anni, ${profi
 Impostazioni attuali: dieta ${prefs.diet}, ${prefs.meals} pasti, tempo per cucinare ${prefs.cooking}, stile macro ${prefs.style ?? 'standard'}, allergie "${prefs.allergies}", non graditi "${prefs.dislikes}", preferiti "${prefs.likes}".
 Obiettivo attuale: ${target.target} kcal, proteine ${target.protein} g, carboidrati ${target.carbs} g, grassi ${target.fat} g (correzione già applicata ${kcalAdjust} kcal).
 ${memory ? `Storico dell'atleta (contesto, non fare modifiche non richieste):\n${memory.slice(0, 1200)}\n` : ''}
-RICHIESTA DELL'UTENTE: """${request.slice(0, 1200)}"""
+RICHIESTA DELL'UTENTE: """${request.slice(-3500)}"""
 
 Distingui:
 - MODIFICA DI UN PASTO PRECISO (es. "domani a cena mangio una pizza", "sabato pranzo al ristorante", "giovedì a pranzo vorrei qualcosa col pollo"): usa mealEdits e NON cambiare le preferenze.

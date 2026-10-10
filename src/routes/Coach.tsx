@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { useCoachMemory } from '@/hooks/use-training-model';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAthlete } from '@/hooks/use-athlete';
-import { Dumbbell, Library, MessageCircle, RefreshCw, Send, Sparkles } from 'lucide-react';
+import { Dumbbell, Library, MessageCircle, RefreshCw, Send } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { useSchedule } from '@/hooks/use-schedule';
 import { useSessions } from '@/hooks/use-sessions';
@@ -10,8 +10,7 @@ import { TopBar } from '@/components/layout/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { Button, IconButton } from '@/components/ui/Button';
-import { Segmented, TextArea } from '@/components/ui/Input';
-import { Modal } from '@/components/ui/Modal';
+import { Segmented } from '@/components/ui/Input';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
 import { AIBusy, AINote, useAITask } from '@/components/coach/AIBusy';
@@ -25,6 +24,7 @@ import { DietCoach } from '@/components/coach/DietCoach';
 import { groupColor } from '@/lib/analytics';
 import { cn } from '@/lib/cn';
 import { MicButton, appendText } from '@/components/ui/MicButton';
+import { CoachThread, threadContext, useThread, type ThreadMsg } from '@/components/coach/CoachThread';
 import { GoalCard } from '@/components/goal/GoalPlan';
 import { SectionTitle } from '@/components/ui/Help';
 import type { Day } from '@/types';
@@ -153,35 +153,78 @@ function ProgramPreview({ days }: { days: Day[] }) {
   );
 }
 
+type TrainProposal = { prefs: CoachPrefs; days: Day[]; diff: TrainingDiff[]; rebuild: boolean };
+
+const describeTrain = (p: TrainProposal) =>
+  p.rebuild ? 'scheda nuova da zero' : p.diff.length ? p.diff.map((d) => `${d.day}: ${d.before ?? ''} → ${d.after ?? ''}`).join('; ') : 'nessuna modifica alla scheda';
+
+function TrainDiffList({ p }: { p: TrainProposal }) {
+  if (p.rebuild) return <ProgramPreview days={p.days} />;
+  if (!p.diff.length) return <p className="text-sm text-fg-2">Nessuna modifica alla scheda: salvo solo le tue preferenze.</p>;
+  return (
+    <ul className="space-y-1.5">
+      {p.diff.map((d, i) => (
+        <li key={i} className="rounded-md bg-surface p-2 text-sm">
+          <div className="text-xs uppercase text-fg-3">{d.day}</div>
+          <div className="text-fg">
+            {d.kind === 'replace' && (
+              <>
+                <span className="text-fg-3 line-through">{d.before}</span> → <strong>{d.after}</strong>
+              </>
+            )}
+            {d.kind === 'remove' && (
+              <>
+                Tolto: <span className="line-through">{d.before}</span>
+              </>
+            )}
+            {d.kind === 'add' && <>Aggiunto: <strong>{d.after}</strong></>}
+            {(d.kind === 'sets' || d.kind === 'time') && (
+              <>
+                {d.before} → <strong>{d.after}</strong>
+              </>
+            )}
+          </div>
+          {d.reason && <div className="text-xs text-fg-3">{d.reason}</div>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function TrainingCoach({ profile }: { profile: UserProfile }) {
-  const athleteMem = useAthlete();
+  const coachMem = useCoachMemory();
   const { settings, update } = useSettings();
   const { save, days: currentDays } = useSchedule();
   const toast = useToast();
   const ai = useAITask();
-  const [request, setRequest] = useState('');
-  const [proposal, setProposal] = useState<{ prefs: CoachPrefs; days: Day[]; diff: TrainingDiff[]; rebuild: boolean } | null>(null);
+  const [msgs, setMsgs] = useThread<TrainProposal>('vl.thread.train');
   const current = settings.coachPrefs;
 
-  const submit = async () => {
-    const text = request.trim();
-    if (text.length < 5) return;
-    const change = await ai.run((o) => interpretTrainingChange(text, profile, currentDays, current, o, athleteMem.text));
-    if (!change) return;
-    if (change.scope === 'rebuild' || currentDays.length === 0) {
-      setProposal({ prefs: change.prefs, days: generateProgram(profile, change.prefs), diff: [], rebuild: true });
+  const send = async (text: string) => {
+    const history = msgs;
+    setMsgs([...history, { role: 'user', text, at: Date.now() }]);
+    const request = threadContext(history, text, describeTrain);
+    const change = await ai.run((o) => interpretTrainingChange(request, profile, currentDays, current, o, coachMem));
+    if (!change) {
+      setMsgs((m) => [...m, { role: 'coach', text: 'Non sono riuscito a rispondere: riprova o riformula.', at: Date.now() }]);
       return;
     }
-    // Modifiche mirate: il resto della scheda resta com'è
-    const res = applyTrainingChange(currentDays, change, profile);
-    setProposal({ prefs: change.prefs, days: res.days, diff: res.diff, rebuild: false });
+    const proposal: TrainProposal =
+      change.scope === 'rebuild' || currentDays.length === 0
+        ? { prefs: change.prefs, days: generateProgram(profile, change.prefs), diff: [], rebuild: true }
+        : (() => {
+            // Modifiche mirate: il resto della scheda resta com'è
+            const res = applyTrainingChange(currentDays, change, profile);
+            return { prefs: change.prefs, days: res.days, diff: res.diff, rebuild: false };
+          })();
+    setMsgs((m) => [...m, { role: 'coach', text: change.prefs.summary, proposal, at: Date.now() }]);
   };
 
-  const apply = async (prefs: CoachPrefs | null, days: Day[]) => {
-    await settle(save(days));
-    await settle(update({ coachPrefs: prefs ?? undefined }));
-    setProposal(null);
-    setRequest('');
+  const apply = async (msg: ThreadMsg<TrainProposal>) => {
+    if (!msg.proposal) return;
+    await settle(save(msg.proposal.days));
+    await settle(update({ coachPrefs: msg.proposal.prefs }));
+    setMsgs((m) => m.map((x) => (x === msg ? { ...x, applied: true } : x)));
     toast.success('Scheda aggiornata dal coach');
   };
 
@@ -191,33 +234,57 @@ function TrainingCoach({ profile }: { profile: UserProfile }) {
         <div className="flex items-center gap-2 text-lg text-fg">
           <Dumbbell className="h-5 w-5 text-accent-500" aria-hidden /> <SectionTitle help="coach-training">Il tuo personal trainer</SectionTitle>
         </div>
-        <p className="mt-1 text-sm text-fg-2">
-          Scrivi cosa vuoi, come parleresti a un trainer: muscoli da migliorare, dolori, tempo a disposizione, esercizi che non ti piacciono.
-        </p>
-        <div className="relative mt-3 [&_textarea]:pr-14">
-          <TextArea label="Cosa vuoi dal tuo allenamento?" rows={3} value={request} onChange={(e) => setRequest(e.target.value)} />
-          <MicButton size="sm" className="absolute right-2 top-2" onText={(t) => setRequest((r) => appendText(r, t))} />
-        </div>
-        <div className="no-scrollbar -mx-4 mt-2 flex gap-2 overflow-x-auto px-4">
-          {TRAIN_EXAMPLES.map((ex) => (
-            <button
-              key={ex}
-              type="button"
-              onClick={() => setRequest((r) => (r ? `${r}. ${ex}` : ex))}
-              className="h-9 shrink-0 rounded-full border border-line bg-surface-2 px-3 text-sm text-fg-2"
-            >
-              {ex}
-            </button>
-          ))}
-        </div>
+        {msgs.length === 0 && (
+          <>
+            <p className="mt-1 text-sm text-fg-2">
+              Scrivi cosa vuoi, come parleresti a un trainer: muscoli da migliorare, dolori, tempo a disposizione, esercizi che non ti piacciono. Se la
+              proposta non ti convince, rispondigli: la corregge.
+            </p>
+            <div className="no-scrollbar -mx-4 mt-2 flex gap-2 overflow-x-auto px-4">
+              {TRAIN_EXAMPLES.map((ex) => (
+                <button
+                  key={ex}
+                  type="button"
+                  disabled={ai.busy}
+                  onClick={() => void send(ex)}
+                  className="h-9 shrink-0 rounded-full border border-line bg-surface-2 px-3 text-sm text-fg-2"
+                >
+                  {ex}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
         <div className="mt-3">
-          {ai.busy ? (
-            <AIBusy status={ai.status} onCancel={ai.cancel} />
-          ) : (
-            <Button fullWidth icon={<Sparkles className="h-5 w-5" />} disabled={request.trim().length < 5} onClick={submit}>
-              Adatta la mia scheda
-            </Button>
-          )}
+          <CoachThread
+            msgs={msgs}
+            busy={ai.busy}
+            busyView={<AIBusy status={ai.status} onCancel={ai.cancel} />}
+            placeholder={msgs.length ? 'Rispondi al coach…' : 'Cosa vuoi dal tuo allenamento?'}
+            onSend={(t) => void send(t)}
+            onReset={() => setMsgs([])}
+            renderProposal={(p, active, msg) => (
+              <div className="space-y-2">
+                <PrefsChips prefs={p.prefs} />
+                {p.prefs.injuries.length > 0 && active && (
+                  <p className="text-xs text-warning">⚠ Con dolori o infortuni fatti valutare da un medico o fisioterapista: il coach evita i movimenti a rischio ma non fa diagnosi.</p>
+                )}
+                <TrainDiffList p={p} />
+                {active && (
+                  <>
+                    <Button fullWidth onClick={() => void apply(msg)}>
+                      {p.rebuild ? 'Applica la nuova scheda' : 'Applica alla scheda'}
+                    </Button>
+                    {!p.rebuild && (
+                      <button type="button" className="h-9 w-full text-sm text-fg-3" onClick={() => void send('Preferisco una scheda nuova da zero')}>
+                        Preferisco una scheda nuova da zero
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          />
           {ai.error && (
             <p className="mt-2 text-sm text-danger" role="alert">
               {ai.error}
@@ -229,7 +296,7 @@ function TrainingCoach({ profile }: { profile: UserProfile }) {
         </div>
       </Card>
 
-      {current && !proposal && (
+      {current && (
         <Card className="p-4">
           <div className="section-title">Preferenze attive</div>
           <p className="mb-2 text-sm text-fg-2">“{current.request}”</p>
@@ -239,82 +306,16 @@ function TrainingCoach({ profile }: { profile: UserProfile }) {
             size="sm"
             variant="ghost"
             icon={<RefreshCw className="h-4 w-4" />}
-            onClick={() => void apply(null, generateProgram(profile, null))}
+            onClick={async () => {
+              await settle(save(generateProgram(profile, null)));
+              await settle(update({ coachPrefs: undefined }));
+              toast.success('Scheda standard ripristinata');
+            }}
           >
             Torna alla scheda standard
           </Button>
         </Card>
       )}
-
-      <Modal open={Boolean(proposal)} onClose={() => setProposal(null)} title="Proposta del coach">
-        {proposal && (
-          <div className="space-y-4">
-            <div className="rounded-lg border border-accent-500/30 bg-accent-glow p-3">
-              <p className="text-base text-fg">{proposal.prefs.summary}</p>
-              <div className="mt-2">
-                <PrefsChips prefs={proposal.prefs} />
-              </div>
-            </div>
-            {proposal.prefs.injuries.length > 0 && (
-              <p className="text-sm text-warning">
-                ⚠ Con dolori o infortuni fatti valutare da un medico o fisioterapista prima di caricare: il coach evita i movimenti a rischio ma non fa
-                diagnosi.
-              </p>
-            )}
-            {proposal.rebuild ? (
-              <>
-                <ProgramPreview days={proposal.days} />
-                <p className="text-xs text-fg-3">La scheda attuale verrà sostituita con una nuova; lo storico degli allenamenti resta.</p>
-              </>
-            ) : proposal.diff.length === 0 ? (
-              <p className="text-sm text-fg-2">Nessuna modifica necessaria alla scheda: salvo solo le tue preferenze per le prossime schede.</p>
-            ) : (
-              <div>
-                <div className="section-title">Modifiche alla tua scheda</div>
-                <ul className="space-y-2">
-                  {proposal.diff.map((d, i) => (
-                    <li key={i} className="rounded-md bg-surface-2 p-2.5 text-sm">
-                      <div className="text-xs uppercase text-fg-3">{d.day}</div>
-                      <div className="text-base text-fg">
-                        {d.kind === 'replace' && (
-                          <>
-                            <span className="text-fg-3 line-through">{d.before}</span> → <strong>{d.after}</strong>
-                          </>
-                        )}
-                        {d.kind === 'remove' && (
-                          <>
-                            Tolto: <span className="line-through">{d.before}</span>
-                          </>
-                        )}
-                        {d.kind === 'add' && <>Aggiunto: <strong>{d.after}</strong></>}
-                        {(d.kind === 'sets' || d.kind === 'time') && (
-                          <>
-                            {d.before} → <strong>{d.after}</strong>
-                          </>
-                        )}
-                      </div>
-                      {d.reason && <div className="text-xs text-fg-3">{d.reason}</div>}
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-2 text-xs text-fg-3">Tutto il resto della scheda resta invariato. Serie, ripetizioni e recuperi vengono mantenuti.</p>
-              </div>
-            )}
-            <Button size="lg" fullWidth onClick={() => void apply(proposal.prefs, proposal.days)}>
-              {proposal.rebuild ? 'Applica la nuova scheda' : 'Applica le modifiche'}
-            </Button>
-            {!proposal.rebuild && (
-              <Button
-                variant="ghost"
-                fullWidth
-                onClick={() => setProposal({ ...proposal, days: generateProgram(profile, proposal.prefs), diff: [], rebuild: true })}
-              >
-                Preferisco una scheda nuova da zero
-              </Button>
-            )}
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }
@@ -343,7 +344,7 @@ function ChatCoach({ profile }: { profile: UserProfile }) {
       return [];
     }
   });
-  const athlete = useAthlete();
+  const coachMem = useCoachMemory();
   const [input, setInput] = useState(() => new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('q') ?? '');
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -362,7 +363,7 @@ function ChatCoach({ profile }: { profile: UserProfile }) {
     const history = [...messages, { role: 'user' as const, text: q }];
     setMessages(history);
     setInput('');
-    const ctx = `${coachContext(profile, userNutrition(profile, settings), sessions, bodyLogs)}\nMEMORIA DEL COACH (storico completo):\n${athlete.text}`;
+    const ctx = `${coachContext(profile, userNutrition(profile, settings), sessions, bodyLogs)}\nMEMORIA DEL COACH (storico completo):\n${coachMem}`;
     const answer = await ai.run((o) => askCoach(q, messages, ctx, o));
     if (answer) setMessages([...history, { role: 'coach', text: answer }]);
   };

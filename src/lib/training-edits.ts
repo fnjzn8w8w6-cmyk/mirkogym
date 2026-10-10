@@ -77,7 +77,7 @@ ${memory ? `Storico dell'atleta (usalo per scegliere alternative compatibili con
 SCHEDA ATTUALE:
 ${days.map(describeDay).join('\n')}
 
-RICHIESTA DELL'UTENTE: """${request.slice(0, 1200)}"""
+RICHIESTA DELL'UTENTE: """${request.slice(-3500)}"""
 
 Rispondi SOLO con JSON:
 {
