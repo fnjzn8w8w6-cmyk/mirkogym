@@ -262,6 +262,14 @@ export const HELP = {
 
   /* ---------- Coach ---------- */
   'coach-training': { title: 'Coach allenamento', body: ['Chiedi una modifica alla scheda in parole tue (es. "ho male al ginocchio, togli l\'hack squat"): il coach cambia solo quello che serve e ti mostra l\'anteprima.'] },
+  'coach-prefs': {
+    title: 'Preferenze attive',
+    body: [
+      'Sono le cose che il coach ha capito dalle tue richieste: dolori, movimenti o esercizi da evitare, muscoli su cui insistere, tempo massimo.',
+      'Le tiene presenti in ogni nuova proposta. Quando una non vale più (es. il dolore alla spalla è passato) toccala per toglierla.',
+      'Togliere una preferenza non cambia la scheda attuale: se vuoi tornare a un esercizio di prima chiedilo al coach.',
+    ],
+  },
   'coach-diet': { title: 'Dietologo', body: ['Chiedi modifiche alla dieta (es. "domani a cena mangio la pizza"): cambia solo i pasti interessati e ricalcola il resto della giornata.'] },
   'coach-chat': { title: 'Chiedi al coach', body: ['Domande libere su allenamento e alimentazione. Il coach conosce il tuo storico e il tuo obiettivo.'] },
   'coach-checkin': {

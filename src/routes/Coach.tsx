@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useCoachMemory } from '@/hooks/use-training-model';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Dumbbell, Library, MessageCircle, RefreshCw, Send } from 'lucide-react';
+import { Dumbbell, Library, MessageCircle, RefreshCw, Send, X } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { useSchedule } from '@/hooks/use-schedule';
 import { useSessions } from '@/hooks/use-sessions';
@@ -28,6 +28,7 @@ import { CoachThread, threadContext, useThread, type ThreadMsg } from '@/compone
 import { GoalCard } from '@/components/goal/GoalPlan';
 import { SectionTitle } from '@/components/ui/Help';
 import type { Day } from '@/types';
+import { NAME_IT } from '@/lib/exercise-library';
 
 type Tab = 'train' | 'diet' | 'chat';
 
@@ -120,6 +121,40 @@ function PrefsChips({ prefs }: { prefs: CoachPrefs }) {
         <Chip key={i} tone="warning">
           ⚠ {i}
         </Chip>
+      ))}
+    </div>
+  );
+}
+
+/** Preferenze attive modificabili: ogni voce si toglie con la ✕ (es. il dolore alla spalla è passato). */
+function ActivePrefs({ prefs, onRemove }: { prefs: CoachPrefs; onRemove: (next: CoachPrefs, what: string) => void }) {
+  const items: { key: string; label: string; tone: 'accent' | 'danger' | 'info' | 'warning'; next: () => CoachPrefs }[] = [
+    ...prefs.injuries.map((i) => ({ key: `i-${i}`, label: `Dolore: ${i}`, tone: 'warning' as const, next: () => ({ ...prefs, injuries: prefs.injuries.filter((x) => x !== i) }) })),
+    ...prefs.avoidSlots.map((sl) => ({ key: `s-${sl}`, label: `Evita: ${SLOT_LABEL[sl].split(' (')[0]}`, tone: 'danger' as const, next: () => ({ ...prefs, avoidSlots: prefs.avoidSlots.filter((x) => x !== sl) }) })),
+    ...prefs.avoidExercises.map((id) => ({ key: `e-${id}`, label: `Evita: ${NAME_IT[id] ?? id.replace(/_/g, ' ')}`, tone: 'danger' as const, next: () => ({ ...prefs, avoidExercises: prefs.avoidExercises.filter((x) => x !== id) }) })),
+    ...prefs.priorities.map((pr) => ({ key: `p-${pr}`, label: `Insisti: ${pr}`, tone: 'accent' as const, next: () => ({ ...prefs, priorities: prefs.priorities.filter((x) => x !== pr) }) })),
+    ...(prefs.maxMinutes ? [{ key: 'm', label: `Massimo ${prefs.maxMinutes} min`, tone: 'info' as const, next: () => ({ ...prefs, maxMinutes: undefined }) }] : []),
+  ];
+  if (!items.length) return <p className="text-sm text-fg-3">Nessuna preferenza attiva.</p>;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {items.map((it) => (
+        <button
+          key={it.key}
+          type="button"
+          aria-label={`Togli ${it.label}`}
+          onClick={() => onRemove(it.next(), it.label)}
+          className={cn(
+            'inline-flex min-h-[36px] items-center gap-1.5 rounded-full border py-1 pl-3 pr-2 text-sm',
+            it.tone === 'warning' && 'border-warning/40 bg-warning-bg text-warning',
+            it.tone === 'danger' && 'border-danger/40 bg-danger-bg text-danger',
+            it.tone === 'accent' && 'border-accent-500/40 bg-accent-glow text-accent-400',
+            it.tone === 'info' && 'border-info/40 bg-info-bg text-info',
+          )}
+        >
+          <span className="text-left">{it.label}</span>
+          <X className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+        </button>
       ))}
     </div>
   );
@@ -298,9 +333,21 @@ function TrainingCoach({ profile }: { profile: UserProfile }) {
 
       {current && (
         <Card className="p-4">
-          <div className="section-title">Preferenze attive</div>
-          <p className="mb-2 text-sm text-fg-2">“{current.request}”</p>
-          <PrefsChips prefs={current} />
+          <div className="section-title">
+            <SectionTitle help="coach-prefs" isNew>
+              Preferenze attive
+            </SectionTitle>
+          </div>
+          <p className="mb-2 text-sm text-fg-2">Il coach ne tiene conto in ogni proposta. Tocca la ✕ per togliere quelle che non valgono più (es. un dolore passato).</p>
+          <ActivePrefs
+            prefs={current}
+            onRemove={async (next, what) => {
+              await settle(update({ coachPrefs: next }));
+              // anche la conversazione lo sa, così il coach non lo ripropone
+              setMsgs((m) => (m.length ? [...m, { role: 'user', text: `Ho tolto «${what}» dalle preferenze: non vale più, non tenerne conto.`, at: Date.now() }] : m));
+              toast.success(`Tolto: ${what}`);
+            }}
+          />
           <Button
             className="mt-3"
             size="sm"
