@@ -2,12 +2,13 @@
   - alone attorno alle sorgenti luminose (diffusione nelle lenti), su due raggi
   - leggera distorsione a barile dell'obiettivo grandangolare e aberrazione cromatica ai bordi
   - vignettatura, micro-contrasto, grana del sensore piu' visibile nelle ombre
-Uso: python post_foto.py <render.png> <uscita.jpg> [forza 1.0]"""
+Uso: python post_foto.py <render.png> <uscita.jpg> [forza 1.0] [seme della grana: nel video cambia a ogni fotogramma]"""
 import sys
 import numpy as np, cv2
 
 src, dst = sys.argv[1], sys.argv[2]
 k = float(sys.argv[3]) if len(sys.argv) > 3 else 1.0
+seme = int(sys.argv[4]) if len(sys.argv) > 4 else 3
 img = cv2.imread(src, cv2.IMREAD_COLOR).astype(np.float32) / 255.0
 H, W = img.shape[:2]
 lin = img ** 2.2
@@ -36,10 +37,10 @@ img = np.clip(lin, 0, 1) ** (1 / 2.2)
 bl = cv2.GaussianBlur(img, (0, 0), 1.6)
 img = np.clip(img + (img - bl) * 0.35 * k, 0, 1)
 # grana del sensore: piu' forte nelle ombre, leggermente colorata, non pixel per pixel
-rng = np.random.default_rng(3)
+rng = np.random.default_rng(seme)
 g = rng.normal(0, 1, (H, W, 3)).astype(np.float32)
 g = cv2.GaussianBlur(g, (0, 0), 0.7) * np.array([0.8, 1.0, 0.9], np.float32)
 amp = (0.012 + 0.03 * (1 - img.mean(axis=2, keepdims=True))) * k
 img = np.clip(img + g * amp, 0, 1)
-cv2.imwrite(dst, (img * 255 + 0.5).astype(np.uint8), [cv2.IMWRITE_JPEG_QUALITY, 91])
+cv2.imwrite(dst, (img * 255 + 0.5).astype(np.uint8), [cv2.IMWRITE_JPEG_QUALITY, 91] if dst.lower().endswith(('.jpg', '.jpeg')) else [])
 print('sviluppata', dst)
