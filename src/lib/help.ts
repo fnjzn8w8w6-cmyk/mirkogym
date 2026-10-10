@@ -157,6 +157,7 @@ export const HELP = {
     body: [
       'Le foto del check-in settimanale e le foto del giorno, salvate solo nel tuo account. Tocca due foto per confrontarle con il cursore prima/dopo.',
       'Foto del giorno: scatti una foto (anche a fine allenamento) e l\'app ci aggiunge, in una colonna a sinistra, il giorno del percorso, durata, esercizi, serie, peso e i muscoli allenati. Una per giorno: se la rifai sostituisce quella di oggi.',
+      'Con l\'autoscatto appoggi il telefono, scegli 3, 5 o 10 secondi e ti metti in posa: un bip scandisce il conto alla rovescia.',
       'Per condividerla di nuovo tocca la foto nella galleria e poi il tasto di condivisione.',
       'Per confronti affidabili: stesso posto e stessa luce, al mattino a digiuno.',
     ],

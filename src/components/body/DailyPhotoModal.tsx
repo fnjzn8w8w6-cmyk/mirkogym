@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, RefreshCw, Share2 } from 'lucide-react';
+import { Camera, ImagePlus, Share2, Timer } from 'lucide-react';
+import { TimerCamera } from './TimerCamera';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
@@ -28,6 +29,7 @@ export function DailyPhotoModal({ open, onClose, date, photo: saved }: { open: b
   const [card, setCard] = useState<{ blob: Blob; url: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [stored, setStored] = useState(false);
+  const [camera, setCamera] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
 
@@ -136,22 +138,25 @@ export function DailyPhotoModal({ open, onClose, date, photo: saved }: { open: b
             </p>
             <button
               type="button"
-              onClick={() => fileRef.current?.click()}
-              className="flex aspect-[9/16] max-h-[52vh] w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line-strong text-fg-3 hover:text-fg"
+              onClick={() => setCamera(true)}
+              className="flex h-[38vh] w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-accent-500/50 bg-accent-glow"
             >
-              <Camera className="h-10 w-10" aria-hidden />
-              <span className="text-base font-semibold">Scatta o scegli la foto</span>
+              <Timer className="h-10 w-10 text-accent-400" aria-hidden />
+              <span className="text-lg font-semibold text-fg">Scatta con l’autoscatto</span>
+              <span className="text-sm text-fg-2">Appoggia il telefono e mettiti in posa</span>
             </button>
+            <Button variant="secondary" fullWidth icon={<ImagePlus className="h-4 w-4" />} onClick={() => fileRef.current?.click()}>
+              Scegli dalla galleria
+            </Button>
           </>
         ) : (
           <>
             <div className="mx-auto aspect-[9/16] max-h-[60vh] overflow-hidden rounded-lg bg-surface-2">
               {card ? <img src={card.url} alt={`Foto del giorno ${info.number}`} className="h-full w-full object-cover" /> : <p className="py-24 text-center text-sm text-fg-3">Preparo l'immagine…</p>}
             </div>
-            <div className="grid grid-cols-[auto_1fr] gap-2">
-              <Button variant="secondary" icon={<RefreshCw className="h-4 w-4" />} onClick={() => fileRef.current?.click()}>
-                Cambia
-              </Button>
+            <div className="grid grid-cols-[auto_auto_1fr] gap-2">
+              <Button variant="secondary" icon={<Camera className="h-4 w-4" />} onClick={() => setCamera(true)} aria-label="Rifai la foto" />
+              <Button variant="secondary" icon={<ImagePlus className="h-4 w-4" />} onClick={() => fileRef.current?.click()} aria-label="Scegli dalla galleria" />
               <Button loading={busy} disabled={!card} icon={<Share2 className="h-4 w-4" />} onClick={() => void run(true)}>
                 {stored ? 'Condividi' : 'Salva e condividi'}
               </Button>
@@ -164,6 +169,15 @@ export function DailyPhotoModal({ open, onClose, date, photo: saved }: { open: b
           </>
         )}
       </div>
+      <TimerCamera
+        open={camera}
+        onClose={() => setCamera(false)}
+        onShot={(url) => {
+          setCamera(false);
+          setPhoto(url);
+          setStored(false);
+        }}
+      />
     </Modal>
   );
 }
