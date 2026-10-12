@@ -4,11 +4,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        base: '#000000',
-        surface: '#0D0F0E',
-        'surface-2': '#151816',
-        'surface-3': '#222724',
-        onaccent: '#03140A',
+        // colori del tema (variabili in src/index.css): `rgb(... / alfa)` per poter usare bg-surface/50 ecc.
+        base: 'rgb(var(--rgb-base) / <alpha-value>)',
+        surface: 'rgb(var(--rgb-surface) / <alpha-value>)',
+        'surface-2': 'rgb(var(--rgb-surface-2) / <alpha-value>)',
+        'surface-3': 'rgb(var(--rgb-surface-3) / <alpha-value>)',
+        onaccent: 'rgb(var(--rgb-onaccent) / <alpha-value>)',
         violet: { 400: '#C9D1CC', 500: '#7D8A83', 600: '#4B5550' },
         line: {
           subtle: 'var(--border-subtle)',
@@ -22,12 +23,12 @@ export default {
           disabled: 'var(--text-disabled)',
         },
         accent: {
-          400: '#5FE89C',
-          500: '#3DDC84',
-          600: '#2BB56B',
+          400: 'rgb(var(--rgb-accent-400) / <alpha-value>)',
+          500: 'rgb(var(--rgb-accent-500) / <alpha-value>)',
+          600: 'rgb(var(--rgb-accent-600) / <alpha-value>)',
           glow: 'var(--accent-glow)',
         },
-        success: { DEFAULT: '#3DDC84', bg: 'var(--success-bg)' },
+        success: { DEFAULT: 'rgb(var(--rgb-accent-500) / <alpha-value>)', bg: 'var(--success-bg)' },
         warning: { DEFAULT: '#EAB308', bg: 'var(--warning-bg)' },
         danger: { DEFAULT: '#EF4444', bg: 'var(--danger-bg)' },
         info: { DEFAULT: '#3B82F6', bg: 'var(--info-bg)' },

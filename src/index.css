@@ -43,6 +43,17 @@
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
   --shadow-glow: 0 0 24px var(--accent-glow);
 
+  /* stessi colori in canali r g b (per Tailwind con trasparenza) */
+  --rgb-base: 0 0 0;
+  --rgb-surface: 13 15 14;
+  --rgb-surface-2: 21 24 22;
+  --rgb-surface-3: 34 39 36;
+  --rgb-onaccent: 3 20 10;
+  --rgb-accent-400: 95 232 156;
+  --rgb-accent-500: 61 220 132;
+  --rgb-accent-600: 43 181 107;
+  --chart-grid: rgba(255, 255, 255, 0.06);
+
   --nav-h: 74px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);

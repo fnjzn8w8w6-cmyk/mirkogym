@@ -156,8 +156,8 @@ function TodayDiet({ onOpen }: { onOpen: () => void }) {
         </div>
       )}
       <div className="mt-3 grid grid-cols-3">
-        <Ring value={t.protein} target={target.protein} color="#3DDC84" label="Proteine" unit="g" />
-        <Ring value={t.carbs} target={target.carbs} color="#A7B0AB" label="Carbo" unit="g" />
+        <Ring value={t.protein} target={target.protein} color="var(--accent-500)" label="Proteine" unit="g" />
+        <Ring value={t.carbs} target={target.carbs} color="var(--text-secondary)" label="Carbo" unit="g" />
         <Ring value={t.fat} target={target.fat} color="#EAB308" label="Grassi" unit="g" />
       </div>
       {entries.length > 0 && target.target - t.kcal >= 150 && (
@@ -278,7 +278,7 @@ export default function Home() {
         {next && (
           <section
             className="relative overflow-hidden rounded-2xl border border-accent-500/30 p-5 shadow-glow"
-            style={{ background: 'radial-gradient(120% 90% at 100% 0%, rgba(255,255,255,0.10), transparent 60%), radial-gradient(90% 80% at 0% 100%, rgba(61,220,132,0.18), transparent 60%), linear-gradient(#0D0F0E,#0D0F0E)' }}
+            style={{ background: 'radial-gradient(120% 90% at 100% 0%, rgba(255,255,255,0.10), transparent 60%), radial-gradient(90% 80% at 0% 100%, rgb(var(--rgb-accent-500) / 0.18), transparent 60%), linear-gradient(var(--bg-surface),var(--bg-surface))' }}
           >
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-bold uppercase tracking-[0.2em] text-accent-400">

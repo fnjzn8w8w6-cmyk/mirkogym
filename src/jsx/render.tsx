@@ -5,18 +5,18 @@ const TONE: Record<string, string> = {
   warn: '#EAB308',
   danger: '#EF4444',
   info: '#3B82F6',
-  muted: '#7D8781',
+  muted: 'var(--text-tertiary)',
   gold: '#E8C25A',
   silver: '#C9D1CC',
   bronze: '#D08A5A',
 };
-const ACCENT = '#3DDC84';
+const ACCENT = 'var(--accent-500)';
 
 /** Un'icona piena al posto di un'emoji. `badge` = dentro un riquadro verde scuro (icone grandi e isolate). */
 function emojiIcon(e: string, key: string, badge: boolean, onAccent: boolean): ReactNode {
   const I = iconFor(e);
   if (!I) return e;
-  const color = onAccent ? '#03140A' : TONE[EMOJI_TONE[e] ?? EMOJI_TONE[e.replace(/️/g, '')]] ?? ACCENT;
+  const color = onAccent ? 'rgb(var(--rgb-onaccent))' : TONE[EMOJI_TONE[e] ?? EMOJI_TONE[e.replace(/️/g, '')]] ?? ACCENT;
   const icon = createElement(I, { weight: 'fill', color, size: badge ? '0.62em' : '1.15em', 'aria-hidden': true, style: { display: 'inline-block', verticalAlign: '-0.18em', flexShrink: 0 } });
   if (!badge) return createElement(Fragment, { key }, icon);
   return createElement(
@@ -24,7 +24,7 @@ function emojiIcon(e: string, key: string, badge: boolean, onAccent: boolean): R
     {
       key,
       'aria-hidden': true,
-      style: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '1.5em', height: '1.5em', borderRadius: '0.38em', background: '#11261A', verticalAlign: 'middle' },
+      style: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '1.5em', height: '1.5em', borderRadius: '0.38em', background: 'rgb(var(--rgb-accent-500) / 0.16)', verticalAlign: 'middle' },
     },
     icon,
   );
