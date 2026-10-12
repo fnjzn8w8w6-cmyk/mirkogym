@@ -99,6 +99,12 @@ export default defineConfig({
             options: { cacheName: 'wasm' },
           },
           {
+            // Riconoscimento del corpo nelle foto (MediaPipe): libreria e modelli scaricati una volta sola
+            urlPattern: /^https:\/\/(cdn\.jsdelivr\.net\/npm\/@mediapipe\/|storage\.googleapis\.com\/mediapipe-models\/)/,
+            handler: 'CacheFirst',
+            options: { cacheName: 'body-models', expiration: { maxEntries: 10 }, cacheableResponse: { statuses: [0, 200] } },
+          },
+          {
             // Foto dei prodotti Open Food Facts
             urlPattern: /^https:\/\/images\.openfoodfacts\.org\//,
             handler: 'CacheFirst',

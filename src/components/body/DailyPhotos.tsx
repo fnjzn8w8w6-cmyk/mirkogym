@@ -10,6 +10,7 @@ import { useCheckIns } from '@/hooks/use-checkins';
 import { checkInPhoto } from '@/components/coach/CheckInHistory';
 import { cn } from '@/lib/cn';
 import type { ProgressPhoto } from '@/types';
+import type { BodyResult } from '@/lib/body-align';
 import { ReelModal } from './ReelModal';
 import { DailyPhotoModal } from './DailyPhotoModal';
 import { CompareModal } from './ProgressPhotos';
@@ -19,7 +20,7 @@ const fmtLong = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString(
 
 /** Foto giornaliere (indipendenti dal check-in): scatto, reel, elenco con data e foto a schermo intero. */
 export function DailyPhotos() {
-  const { photos: all, images, remove } = usePhotos();
+  const { photos: all, images, body, remove } = usePhotos();
   const { checkIns } = useCheckIns();
   // le foto dei check-in stanno nel loro elenco
   const photos = useMemo(() => {
@@ -71,7 +72,7 @@ export function DailyPhotos() {
         </>
       )}
 
-      <PhotoList open={list} photos={photos} onClose={() => setList(false)} onOpen={setView} loadImages={images} />
+      <PhotoList open={list} photos={photos} onClose={() => setList(false)} onOpen={setView} loadImages={images} body={body} />
       <PhotoViewer
         photo={view}
         onClose={() => setView(null)}
@@ -94,7 +95,21 @@ export function DailyPhotos() {
 type Load = (d: string) => Promise<{ front: string; side?: string } | null>;
 
 /** Elenco di tutte le foto con data di scatto; «Confronta» per scegliere due foto. */
-function PhotoList({ open, photos, onClose, onOpen, loadImages }: { open: boolean; photos: ProgressPhoto[]; onClose: () => void; onOpen: (p: ProgressPhoto) => void; loadImages: Load }) {
+function PhotoList({
+  open,
+  photos,
+  onClose,
+  onOpen,
+  loadImages,
+  body,
+}: {
+  open: boolean;
+  photos: ProgressPhoto[];
+  onClose: () => void;
+  onOpen: (p: ProgressPhoto) => void;
+  loadImages: Load;
+  body: (p: ProgressPhoto) => Promise<BodyResult | null>;
+}) {
   const [comparing, setComparing] = useState(false);
   const [pick, setPick] = useState<string[]>([]);
   const [pair, setPair] = useState<[ProgressPhoto, ProgressPhoto] | null>(null);
@@ -166,7 +181,7 @@ function PhotoList({ open, photos, onClose, onOpen, loadImages }: { open: boolea
           )}
         </div>
       </Modal>
-      <CompareModal pair={pair} load={loadImages} onClose={() => setPair(null)} />
+      <CompareModal pair={pair} load={loadImages} body={body} onClose={() => setPair(null)} />
     </>
   );
 }

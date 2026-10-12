@@ -97,7 +97,8 @@ async function pickEncoder(): Promise<{ codec: 'avc'; config: VideoEncoderConfig
 export async function renderReel(
   photos: ReelPhoto[],
   summary: ReelSummary,
-  load: (date: string) => Promise<string | null>,
+  /** foto da mostrare: `frame` a tutto schermo nel timelapse, `panel` (3:4) per apertura, confronto e numeri */
+  load: (id: string, use: 'frame' | 'panel') => Promise<string | null>,
   onProgress: (p: ReelProgress) => void,
   isCancelled: () => boolean = () => false,
 ): Promise<{ blob: Blob; ext: 'mp4' | 'webm' }> {
@@ -113,7 +114,7 @@ export async function renderReel(
   const get = (i: number) => {
     const f = frames[i];
     if (!f) return Promise.resolve(null);
-    if (!cache.has(f.id)) cache.set(f.id, load(f.id).then((src) => (src ? loadImage(src) : null)));
+    if (!cache.has(f.id)) cache.set(f.id, load(f.id, 'frame').then((src) => (src ? loadImage(src) : null)));
     if (!maps.has(f.id)) maps.set(f.id, f.muscles && f.session ? loadImage(f.muscles) : Promise.resolve(null));
     return cache.get(f.id)!;
   };
@@ -122,11 +123,9 @@ export async function renderReel(
   };
   const logo = await loadImage(`${import.meta.env.BASE_URL}icons/icon-512.png`);
   prefetch(0);
-  const first = await get(0);
   const lastIdx = frames.length - 1;
-  const last = await get(lastIdx);
-  // la prima e l'ultima servono anche alla fine: restano in memoria
-  const keep = new Set([frames[0].id, frames[lastIdx].id]);
+  const panel = (id: string) => load(id, 'panel').then((src) => (src ? loadImage(src) : null));
+  const [first, last] = await Promise.all([panel(frames[0].id), panel(frames[lastIdx].id)]);
 
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -276,7 +275,7 @@ export async function renderReel(
         shownMap = (await maps.get(frames[i].id)) ?? null;
         // libera le foto già passate (tranne la prima e l'ultima)
         const prev = frames[i - 1];
-        if (prev && !keep.has(prev.id)) {
+        if (prev) {
           cache.delete(prev.id);
           maps.delete(prev.id);
         }

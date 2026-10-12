@@ -1,4 +1,4 @@
-import { forwardRef, useId, useState, type InputHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { forwardRef, useId, useState, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -90,7 +90,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function 
 interface ToggleProps {
   checked: boolean;
   onChange: (v: boolean) => void;
-  label: string;
+  label: ReactNode;
   description?: string;
   disabled?: boolean;
 }

@@ -3,10 +3,13 @@ import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { SwitchCamera, Timer, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { ghostFromMask } from '@/lib/body-align';
+import { NewBadge } from '@/components/ui/Help';
 
 const TIMERS = [0, 3, 5, 10] as const;
 const TIMER_KEY = 'vl.camera.timer';
 const FACING_KEY = 'vl.camera.facing';
+const GHOST_KEY = 'vl.camera.ghost';
 
 const readNum = (k: string, def: number) => {
   try {
@@ -41,8 +44,9 @@ function beep(ctx: AudioContext | null, last: boolean) {
 /**
  * Fotocamera dentro l'app con autoscatto: appoggi il telefono, scegli 3/5/10 secondi e ti metti in posa.
  * Restituisce la foto come data URL JPEG (lato lungo max 1000 px).
+ * `ghost`: sagoma del corpo dell'ultima foto, sovrapposta all'anteprima per metterti alla stessa distanza e nella stessa posa.
  */
-export function TimerCamera({ open, onClose, onShot }: { open: boolean; onClose: () => void; onShot: (dataUrl: string) => void }) {
+export function TimerCamera({ open, onClose, onShot, ghost }: { open: boolean; onClose: () => void; onShot: (dataUrl: string) => void; ghost?: string | null }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioRef = useRef<AudioContext | null>(null);
@@ -51,6 +55,21 @@ export function TimerCamera({ open, onClose, onShot }: { open: boolean; onClose:
   const [count, setCount] = useState<number | null>(null);
   const [flash, setFlash] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [outline, setOutline] = useState<string | null>(null);
+  const [showGhost, setShowGhost] = useState(() => readNum(GHOST_KEY, 1) === 1);
+
+  // contorno della sagoma (una volta per foto)
+  useEffect(() => {
+    setOutline(null);
+    if (!open || !ghost) return;
+    let alive = true;
+    const img = new Image();
+    img.onload = () => void ghostFromMask(ghost, img.width * 2, img.height * 2).then((u) => alive && setOutline(u), () => undefined);
+    img.src = ghost;
+    return () => {
+      alive = false;
+    };
+  }, [open, ghost]);
 
   // avvia/ferma la fotocamera
   useEffect(() => {
@@ -142,6 +161,9 @@ export function TimerCamera({ open, onClose, onShot }: { open: boolean; onClose:
         autoPlay
         className={cn('absolute inset-0 h-full w-full object-cover', facing === 'user' && '-scale-x-100')}
       />
+      {outline && showGhost && (
+        <img src={outline} alt="" aria-hidden className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-90 drop-shadow-[0_0_4px_rgba(0,0,0,0.6)]" />
+      )}
       {flash && <div className="pointer-events-none absolute inset-0 bg-white/80" />}
 
       <div className="relative z-10 flex items-center justify-between px-4" style={{ paddingTop: 'calc(var(--safe-top) + 10px)' }}>
@@ -181,6 +203,22 @@ export function TimerCamera({ open, onClose, onShot }: { open: boolean; onClose:
           <SwitchCamera className="h-6 w-6" />
         </button>
       </div>
+
+      {outline && (
+        <button
+          type="button"
+          aria-pressed={showGhost}
+          onClick={() => {
+            setShowGhost(!showGhost);
+            write(GHOST_KEY, showGhost ? '0' : '1');
+          }}
+          className="relative z-10 mx-auto mt-3 flex items-center gap-2 rounded-full bg-black/55 px-3 py-1.5 text-sm text-white"
+        >
+          <span>{showGhost ? 'Mettiti dentro la sagoma dell’ultima foto' : 'Sagoma dell’ultima foto'}</span>
+          <span className={cn('rounded-full px-2 py-0.5 text-xs font-bold', showGhost ? 'bg-accent-500 text-black' : 'bg-white/20 text-white')}>{showGhost ? 'ON' : 'OFF'}</span>
+          <NewBadge className="ml-0" />
+        </button>
+      )}
 
       {count != null && count > 0 && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center" aria-live="assertive">

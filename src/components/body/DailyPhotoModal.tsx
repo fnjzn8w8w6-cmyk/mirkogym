@@ -20,7 +20,7 @@ import { daysBetween, fromISODate, toISODate, todayISO } from '@/lib/date-utils'
  */
 export function DailyPhotoModal({ open, onClose, date, photo: saved }: { open: boolean; onClose: () => void; date?: string; photo?: string | null }) {
   const toast = useToast();
-  const { photos, save } = usePhotos();
+  const { photos, save, body } = usePhotos();
   const { sessions, groupOf } = useSessions();
   const { bodyLogs } = useBodyLogs();
   const day = date ?? todayISO();
@@ -29,6 +29,7 @@ export function DailyPhotoModal({ open, onClose, date, photo: saved }: { open: b
   const [busy, setBusy] = useState(false);
   const [stored, setStored] = useState(false);
   const [camera, setCamera] = useState(false);
+  const [ghost, setGhost] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
 
@@ -38,6 +39,19 @@ export function DailyPhotoModal({ open, onClose, date, photo: saved }: { open: b
     setStored(Boolean(saved));
     setCard(null);
   }, [open, saved]);
+
+  // sagoma dell'ultima foto del giorno per l'autoscatto (riconosciuta sul telefono la prima volta)
+  const lastDaily = photos.find((p) => p.kind === 'daily' || p.daily);
+  useEffect(() => {
+    if (!camera || !lastDaily) return;
+    let alive = true;
+    void body(lastDaily)
+      .then((r) => alive && setGhost(r?.mask ?? null))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [camera, lastDaily, body]);
 
   // dati del giorno: allenamento (l'ultimo di quel giorno), peso, giorno del percorso
   const info = useMemo(() => {
@@ -164,6 +178,7 @@ export function DailyPhotoModal({ open, onClose, date, photo: saved }: { open: b
       </div>
       <TimerCamera
         open={camera}
+        ghost={ghost}
         onClose={() => setCamera(false)}
         onShot={(url) => {
           setCamera(false);

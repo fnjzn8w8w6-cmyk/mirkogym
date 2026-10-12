@@ -368,10 +368,21 @@ export interface ProgressPhoto {
   hasSide?: boolean;
   /** foto del giorno (con allenamento e muscoli sovrapposti quando la condividi) */
   daily?: boolean;
+  /** posizione del corpo riconosciuta sul telefono (null = analizzata, corpo non trovato) */
+  body?: BodyPoints | null;
   createdAt: number;
+}
+/** Centro delle spalle e delle anche, in frazioni della foto (0…1): servono ad allineare il corpo tra le foto. */
+export interface BodyPoints {
+  sx: number;
+  sy: number;
+  hx: number;
+  hy: number;
 }
 /** Immagini complete (caricate solo quando servono). */
 export interface PhotoImages {
   front: string;
   side?: string;
+  /** sagoma del corpo (PNG trasparente, bianco dove c'è il corpo) per lo sfondo neutro */
+  mask?: string;
 }

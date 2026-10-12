@@ -15,7 +15,7 @@ import {
   type DocumentReference,
   type Unsubscribe,
 } from 'firebase/firestore';
-import type { ActiveSession, BackupFile, BodyLog, Day, FoodLog, Mesocycle, PhotoImages, ProgressPhoto, Schedule, Session, Settings, UserRecipe } from '@/types';
+import type { ActiveSession, BackupFile, BodyLog, BodyPoints, Day, FoodLog, Mesocycle, PhotoImages, ProgressPhoto, Schedule, Session, Settings, UserRecipe } from '@/types';
 import type { CheckIn } from './checkin';
 import type { Food } from './foods';
 import { db } from './firebase';
@@ -218,6 +218,12 @@ export const getPhotoImages = async (uid: string, id: string): Promise<PhotoImag
   const d = await getDoc(ref);
   return d.exists() ? (d.data() as PhotoImages) : null;
 };
+/** Salva il corpo riconosciuto in una foto (posizione nei dati, sagoma insieme alle immagini). */
+export const savePhotoBody = (uid: string, id: string, body: BodyPoints | null, mask?: string) =>
+  Promise.all([
+    setDoc(doc(photosCol(uid), id), { body }, { merge: true }),
+    ...(mask ? [setDoc(doc(photoImagesCol(uid), id), { mask }, { merge: true })] : []),
+  ]);
 export const deletePhoto = (uid: string, id: string) => Promise.all([deleteDoc(doc(photosCol(uid), id)), deleteDoc(doc(photoImagesCol(uid), id))]);
 /** Archivio completo dei check-in settimanali (uno per documento, dal più recente). */
 export function subscribeCheckIns(uid: string, cb: (c: CheckIn[]) => void, onError: OnError): Unsubscribe {

@@ -7,7 +7,11 @@ import { useToast } from '@/components/ui/Toast';
 import { photoId, usePhotos } from '@/hooks/use-photos';
 import { useSessions } from '@/hooks/use-sessions';
 import { useBodyLogs } from '@/hooks/use-body-logs';
-import { renderReel, reelSeconds, type ReelPhoto, type ReelSummary } from '@/lib/reel';
+import { pickFrames, renderReel, reelSeconds, type ReelPhoto, type ReelSummary } from '@/lib/reel';
+import { composeBody, type BodyTarget } from '@/lib/body-align';
+import { loadImage } from '@/lib/share-card';
+import { Toggle } from '@/components/ui/Input';
+import { NewBadge } from '@/components/ui/Help';
 import { shareFile } from '@/lib/share-card';
 import { sessionSetCount, sessionTonnage } from '@/lib/analytics';
 import { daysBetween, fromISODate, toISODate, todayISO } from '@/lib/date-utils';
@@ -22,6 +26,11 @@ const PERIODS: { value: Period; label: string }[] = [
   { value: '90', label: '90 g' },
   { value: '30', label: '30 g' },
 ];
+
+const NEUTRAL_KEY = 'vl.reel.neutral';
+// dove sta il corpo: a destra della colonna dei dati nel timelapse, al centro nei riquadri 3:4
+const FRAME: BodyTarget = { torso: 1920 * 0.2, x: 1080 * 0.6, y: 1920 * 0.52 };
+const PANEL: BodyTarget = { torso: 1000 * 0.25, x: 375, y: 1000 * 0.38 };
 
 /** Valore del diario "Corpo" più vicino a una data (entro `maxDays` giorni). */
 function nearest(logs: BodyLog[], date: string, field: 'weight' | 'bodyFat', maxDays: number): number | null {
@@ -38,12 +47,20 @@ function nearest(logs: BodyLog[], date: string, field: 'weight' | 'bodyFat', max
 /** Reel dei progressi: un video con tutte le foto, il confronto primo/ultimo giorno e i numeri del percorso. */
 export function ReelModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const toast = useToast();
-  const { photos, images } = usePhotos();
+  const { photos, images, body } = usePhotos();
   const { sessions, groupOf } = useSessions();
   const mapRef = useRef<HTMLDivElement>(null);
   const { bodyLogs } = useBodyLogs();
   const [period, setPeriod] = useState<Period>('tutto');
   const [progress, setProgress] = useState<number | null>(null);
+  const [phase, setPhase] = useState<'body' | 'video'>('video');
+  const [neutral, setNeutral] = useState(() => {
+    try {
+      return localStorage.getItem(NEUTRAL_KEY) !== '0';
+    } catch {
+      return true;
+    }
+  });
   const [video, setVideo] = useState<{ blob: Blob; url: string; ext: string } | null>(null);
   const [sharing, setSharing] = useState(false);
   const cancel = useRef(false);
@@ -96,10 +113,35 @@ export function ReelModal({ open, onClose }: { open: boolean; onClose: () => voi
       // manichino di ogni giorno con i muscoli allenati
       const svg = mapRef.current?.querySelector('svg');
       const list: ReelPhoto[] = data.list.map((p) => ({ ...p, muscles: svg && p.session ? muscleMapFor(svg, dayIntensity(p.session, groupOf)) : null }));
+      // sfondo scuro: prima si riconosce il corpo nelle foto del video (salvato: la volta dopo è immediato)
+      const byId = new Map(photos.map((p) => [photoId(p), p]));
+      const used = neutral ? pickFrames(list) : [];
+      if (neutral) {
+        setPhase('body');
+        for (let i = 0; i < used.length; i++) {
+          if (cancel.current) throw new Error('Annullato');
+          const p = byId.get(used[i].id);
+          if (p) await body(p).catch(() => null);
+          setProgress((i + 1) / used.length);
+        }
+        setPhase('video');
+        setProgress(0);
+      }
+      const load = async (id: string, use: 'frame' | 'panel') => {
+        const src = (await images(id))?.front ?? null;
+        const p = byId.get(id);
+        if (!src || !neutral || !p) return src;
+        const info = await body(p).catch(() => null);
+        if (!info?.mask) return src;
+        const [img, mask] = await Promise.all([loadImage(src), loadImage(info.mask)]);
+        if (!img) return src;
+        const [w, h, target] = use === 'frame' ? [1080, 1920, FRAME] : [750, 1000, PANEL];
+        return composeBody(img, { body: info.body, mask }, { w, h, bg: 'dark', target }).toDataURL('image/jpeg', 0.9);
+      };
       const res = await renderReel(
         list,
         data.summary,
-        async (id) => (await images(id))?.front ?? null,
+        load,
         (p) => setProgress(p.value),
         () => cancel.current,
       );
@@ -108,6 +150,7 @@ export function ReelModal({ open, onClose }: { open: boolean; onClose: () => voi
       if (!cancel.current) toast.error(e instanceof Error && e.message !== 'Annullato' ? 'Non sono riuscito a creare il video su questo telefono' : 'Creazione annullata');
     } finally {
       setProgress(null);
+      setPhase('video');
     }
   };
 
@@ -160,7 +203,9 @@ export function ReelModal({ open, onClose }: { open: boolean; onClose: () => voi
         ) : progress != null ? (
           <div className="py-6 text-center">
             <Clapperboard className="mx-auto h-10 w-10 text-accent-400" aria-hidden />
-            <p className="mt-3 text-base font-semibold text-fg">Creo il tuo reel… {Math.round(progress * 100)}%</p>
+            <p className="mt-3 text-base font-semibold text-fg">
+              {phase === 'body' ? 'Riconosco il corpo nelle foto…' : 'Creo il tuo reel…'} {Math.round(progress * 100)}%
+            </p>
             <div className="mx-auto mt-3 h-2 max-w-xs overflow-hidden rounded-full bg-surface-3" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
               <div className="h-full bg-accent-500 transition-[width]" style={{ width: `${progress * 100}%` }} />
             </div>
@@ -176,6 +221,25 @@ export function ReelModal({ open, onClose }: { open: boolean; onClose: () => voi
               sollevati e cambio di peso.
             </p>
             <Segmented<Period> label="Periodo del reel" value={period} options={PERIODS} onChange={setPeriod} />
+            <div className="rounded-md bg-surface-2 px-3">
+              <Toggle
+                checked={neutral}
+                onChange={(v) => {
+                  setNeutral(v);
+                  try {
+                    localStorage.setItem(NEUTRAL_KEY, v ? '1' : '0');
+                  } catch {
+                    /* navigazione privata */
+                  }
+                }}
+                label={
+                  <>
+                    Sfondo scuro e corpo allineato <NewBadge />
+                  </>
+                }
+                description="Il corpo ha la stessa grandezza e posizione in tutte le foto. La prima volta il telefono scarica i modelli (circa 30 MB)."
+              />
+            </div>
             {n >= 2 ? (
               <p className="text-sm text-fg-3">
                 {n} foto · video di circa {reelSeconds(Math.min(n, 140))} secondi
