@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { PhotoImages, ProgressPhoto } from '@/types';
 import { deletePhoto, getPhotoImages, newPhotoId, savePhoto, savePhotoBody, settle, subscribePhotos } from '@/lib/firestore';
-import { analyseBody, type BodyResult } from '@/lib/body-align';
+import { analyseBody, MASK_VERSION, type BodyResult } from '@/lib/body-align';
 import { useData } from './data-context';
 
 /** Foto dei progressi (metadati in tempo reale, immagini su richiesta). `id` = codice della foto. */
@@ -31,10 +31,12 @@ function ensureBody(uid: string, photo: ProgressPhoto): Promise<BodyResult | nul
     r = (async () => {
       const im = await loadImages(uid, id);
       if (!im) return null;
-      if (photo.body !== undefined) return { body: photo.body, mask: im.mask };
+      if (photo.body !== undefined && (photo.maskV ?? 1) >= MASK_VERSION) return { body: photo.body, mask: im.mask };
       const res = await analyseBody(im.front);
-      memo.set(key, Promise.resolve({ ...im, ...(res.mask ? { mask: res.mask } : {}) }));
-      await settle(savePhotoBody(uid, id, res.body, res.mask));
+      const rest: PhotoImages = { ...im };
+      delete rest.mask;
+      memo.set(key, Promise.resolve(res.mask ? { ...rest, mask: res.mask } : rest));
+      await settle(savePhotoBody(uid, id, res.body, MASK_VERSION, res.mask));
       return res;
     })();
     bodies.set(key, r);

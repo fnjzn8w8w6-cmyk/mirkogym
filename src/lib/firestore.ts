@@ -2,6 +2,7 @@ import {
   Timestamp,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocFromCache,
@@ -219,10 +220,11 @@ export const getPhotoImages = async (uid: string, id: string): Promise<PhotoImag
   return d.exists() ? (d.data() as PhotoImages) : null;
 };
 /** Salva il corpo riconosciuto in una foto (posizione nei dati, sagoma insieme alle immagini). */
-export const savePhotoBody = (uid: string, id: string, body: BodyPoints | null, mask?: string) =>
+export const savePhotoBody = (uid: string, id: string, body: BodyPoints | null, maskV: number, mask?: string) =>
   Promise.all([
-    setDoc(doc(photosCol(uid), id), { body }, { merge: true }),
-    ...(mask ? [setDoc(doc(photoImagesCol(uid), id), { mask }, { merge: true })] : []),
+    setDoc(doc(photosCol(uid), id), { body, maskV }, { merge: true }),
+    // senza corpo riconosciuto la sagoma vecchia (se c'era) si toglie
+    setDoc(doc(photoImagesCol(uid), id), { mask: mask ?? deleteField() }, { merge: true }),
   ]);
 export const deletePhoto = (uid: string, id: string) => Promise.all([deleteDoc(doc(photosCol(uid), id)), deleteDoc(doc(photoImagesCol(uid), id))]);
 /** Archivio completo dei check-in settimanali (uno per documento, dal più recente). */

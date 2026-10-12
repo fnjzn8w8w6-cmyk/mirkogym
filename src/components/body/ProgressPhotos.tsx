@@ -13,6 +13,7 @@ const BG_KEY = 'vl.compare.bg';
 const BGS: { value: PhotoBackground; label: string }[] = [
   { value: 'orig', label: 'Originale' },
   { value: 'dark', label: 'Scuro' },
+  { value: 'blur', label: 'Sfocato' },
   { value: 'light', label: 'Chiaro' },
 ];
 const read = (k: string) => {

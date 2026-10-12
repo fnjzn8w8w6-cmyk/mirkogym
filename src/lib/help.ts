@@ -170,7 +170,7 @@ export const HELP = {
       'Foto del giorno: scatti una foto (anche con l\'autoscatto) e l\'app ci aggiunge giorno, allenamento, peso e muscoli allenati. Puoi farne più di una al giorno: restano tutte.',
       '«Apri la lista delle foto»: tutte le foto con la data di scatto; toccane una per vederla grande, condividerla o eliminarla. Con «Confronta» scegli due foto per il prima/dopo.',
       'Reel: con almeno 2 foto l\'app crea un video con tutte le foto in sequenza, il confronto tra il primo e l\'ultimo giorno e i numeri del percorso.',
-      'Corpo allineato e sfondo scuro: il telefono riconosce il tuo corpo in ogni foto e lo mette alla stessa grandezza e posizione, al posto della stanza uno sfondo scuro (nel confronto puoi scegliere anche chiaro o originale). Le foto non escono dal telefono e l\'originale resta sempre salvato. La prima volta scarica i modelli (circa 30 MB).',
+      'Corpo allineato e sfondo scuro: il telefono riconosce il tuo corpo in ogni foto e lo mette alla stessa grandezza e posizione, al posto della stanza uno sfondo scuro con la grana e la luce della foto (nel confronto puoi scegliere anche sfocato, cioè la stanza vera sfocata come in un ritratto, chiaro o originale). Le foto non escono dal telefono e l\'originale resta sempre salvato. La prima volta scarica i modelli (circa 30 MB).',
       'Sagoma nell\'autoscatto: sopra la fotocamera vedi il contorno del tuo corpo nell\'ultima foto. Mettiti dentro la sagoma per scattare alla stessa distanza e nella stessa posa; puoi spegnerla toccando ON/OFF.',
     ],
   },

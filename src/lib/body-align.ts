@@ -12,7 +12,10 @@ const WASM = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VERSION}/wa
 const POSE_MODEL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
 const SEG_MODEL = 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/1/selfie_multiclass_256x256.tflite';
 
-export type PhotoBackground = 'orig' | 'dark' | 'light';
+export type PhotoBackground = 'orig' | 'dark' | 'light' | 'blur';
+
+/** Versione del ritaglio: le foto analizzate con una versione più vecchia si rianalizzano. */
+export const MASK_VERSION = 2;
 
 export interface BodyResult {
   body: BodyPoints | null;
@@ -47,11 +50,61 @@ function loadTools(): Promise<Tools> {
 
 const canvas = (w: number, h: number) => Object.assign(document.createElement('canvas'), { width: w, height: h });
 
-/** Lato lungo della sagoma salvata: piccola (pochi KB), si ingrandisce con i bordi ammorbiditi. */
-const MASK_SIDE = 480;
-
 // una foto alla volta: i modelli non sono rientranti
 let queue: Promise<unknown> = Promise.resolve();
+
+/** Media su un quadrato (2r+1)² per ogni punto, con l'immagine integrale (veloce anche a 1000 px). */
+function boxMean(src: Float32Array, w: number, h: number, r: number): Float32Array {
+  const W = w + 1;
+  const sum = new Float64Array(W * (h + 1));
+  for (let y = 0; y < h; y++) {
+    let row = 0;
+    for (let x = 0; x < w; x++) {
+      row += src[y * w + x];
+      sum[(y + 1) * W + x + 1] = sum[y * W + x + 1] + row;
+    }
+  }
+  const out = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const y0 = Math.max(0, y - r);
+    const y1 = Math.min(h, y + r + 1);
+    for (let x = 0; x < w; x++) {
+      const x0 = Math.max(0, x - r);
+      const x1 = Math.min(w, x + r + 1);
+      out[y * w + x] = (sum[y1 * W + x1] - sum[y0 * W + x1] - sum[y1 * W + x0] + sum[y0 * W + x0]) / ((y1 - y0) * (x1 - x0));
+    }
+  }
+  return out;
+}
+
+/**
+ * Filtro guidato (He et al.): la sagoma grezza del modello (bassa risoluzione) segue i contorni veri della foto,
+ * così il bordo non "sborda" sullo sfondo (niente alone chiaro intorno al corpo).
+ */
+function guidedFilter(I: Float32Array, p: Float32Array, w: number, h: number, r: number, eps: number): Float32Array {
+  const n = w * h;
+  const Ip = new Float32Array(n);
+  const II = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    Ip[i] = I[i] * p[i];
+    II[i] = I[i] * I[i];
+  }
+  const mI = boxMean(I, w, h, r);
+  const mP = boxMean(p, w, h, r);
+  const mIp = boxMean(Ip, w, h, r);
+  const mII = boxMean(II, w, h, r);
+  const a = new Float32Array(n);
+  const b = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    a[i] = (mIp[i] - mI[i] * mP[i]) / (mII[i] - mI[i] * mI[i] + eps);
+    b[i] = mP[i] - a[i] * mI[i];
+  }
+  const mA = boxMean(a, w, h, r);
+  const mB = boxMean(b, w, h, r);
+  const q = new Float32Array(n);
+  for (let i = 0; i < n; i++) q[i] = mA[i] * I[i] + mB[i];
+  return q;
+}
 
 /** Riconosce il corpo in una foto (data URL). */
 export function analyseBody(src: string): Promise<BodyResult> {
@@ -70,24 +123,44 @@ export function analyseBody(src: string): Promise<BodyResult> {
     const m = r.confidenceMasks?.[0];
     let mask: string | undefined;
     if (m) {
-      // canale 0 = sfondo: la sagoma è tutto il resto, con un passaggio morbido sui bordi
+      // canale 0 = sfondo: probabilità del corpo = 1 − sfondo, portata alla grandezza della foto
       const f = m.getAsFloat32Array();
-      const full = canvas(m.width, m.height);
-      const fc = full.getContext('2d')!;
-      const id = fc.createImageData(m.width, m.height);
-      let on = 0;
-      for (let i = 0; i < f.length; i++) {
-        const p = Math.min(1, Math.max(0, (1 - f[i] - 0.25) / 0.5));
-        if (p > 0.5) on++;
-        id.data[i * 4] = id.data[i * 4 + 1] = id.data[i * 4 + 2] = 255;
-        id.data[i * 4 + 3] = Math.round(p * 255);
+      const raw = canvas(m.width, m.height);
+      const rc = raw.getContext('2d')!;
+      const rd = rc.createImageData(m.width, m.height);
+      for (let i = 0; i < f.length; i++) rd.data[i * 4 + 3] = Math.round((1 - f[i]) * 255);
+      rc.putImageData(rd, 0, 0);
+      const w = img.width;
+      const h = img.height;
+      const big = canvas(w, h);
+      const bc = big.getContext('2d', { willReadFrequently: true })!;
+      bc.drawImage(raw, 0, 0, w, h);
+      const pd = bc.getImageData(0, 0, w, h).data;
+      bc.clearRect(0, 0, w, h);
+      bc.drawImage(img, 0, 0, w, h);
+      const id = bc.getImageData(0, 0, w, h).data;
+      const n = w * h;
+      const P = new Float32Array(n);
+      const G = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        P[i] = pd[i * 4 + 3] / 255;
+        G[i] = (0.299 * id[i * 4] + 0.587 * id[i * 4 + 1] + 0.114 * id[i * 4 + 2]) / 255;
       }
-      fc.putImageData(id, 0, 0);
-      if (on / f.length > 0.02) {
-        const k = Math.min(1, MASK_SIDE / Math.max(m.width, m.height));
-        const small = canvas(Math.round(m.width * k), Math.round(m.height * k));
-        small.getContext('2d')!.drawImage(full, 0, 0, small.width, small.height);
-        mask = small.toDataURL('image/png');
+      const q = guidedFilter(G, P, w, h, Math.max(4, Math.round(Math.max(w, h) / 160)), 4e-3);
+      const out = bc.createImageData(w, h);
+      let on = 0;
+      for (let i = 0; i < n; i++) {
+        // la rifinitura vale solo vicino al contorno: lontano dal corpo niente "peli" presi da alberi o mobili
+        const v = P[i] < 0.12 ? 0 : P[i] > 0.88 ? 1 : q[i];
+        // un po' più stretta della sagoma grezza: meglio perdere un filo di bordo che prendere il muro
+        const a = Math.min(1, Math.max(0, (v - 0.3) / 0.5));
+        if (a > 0.5) on++;
+        out.data[i * 4] = out.data[i * 4 + 1] = out.data[i * 4 + 2] = 255;
+        out.data[i * 4 + 3] = Math.round(a * 255);
+      }
+      if (on / n > 0.02) {
+        bc.putImageData(out, 0, 0);
+        mask = big.toDataURL('image/png');
       }
     }
     r.close();
@@ -125,12 +198,90 @@ export function pairTarget(items: { img: { width: number; height: number }; body
   return { torso: ref.torso, x: w / 2, y: ref.y };
 }
 
-function background(ctx: CanvasRenderingContext2D, w: number, h: number, bg: 'dark' | 'light') {
-  const g = ctx.createRadialGradient(w / 2, h * 0.42, 0, w / 2, h * 0.42, Math.max(w, h) * 0.75);
-  g.addColorStop(0, bg === 'dark' ? '#2b302e' : '#f1f3f2');
-  g.addColorStop(1, bg === 'dark' ? '#0f1110' : '#c9cecb');
+/**
+ * Riempie i buchi di un livello semitrasparente con i colori vicini (convoluzione normalizzata):
+ * sfocato e poi ridisegnato su sé stesso finché è pieno, il colore resta quello della parte visibile.
+ */
+function fillFrom(layer: HTMLCanvasElement, blur: number): HTMLCanvasElement {
+  const c = canvas(layer.width, layer.height);
+  const x = c.getContext('2d')!;
+  x.filter = `blur(${blur}px)`;
+  x.drawImage(layer, 0, 0);
+  x.filter = 'none';
+  for (let i = 0; i < 7; i++) x.drawImage(c, 0, 0);
+  return c;
+}
+
+/** Colore medio di un livello (per dare allo sfondo la luce della foto). */
+function meanColor(layer: HTMLCanvasElement): [number, number, number] {
+  const c = canvas(1, 1);
+  const x = c.getContext('2d', { willReadFrequently: true })!;
+  x.drawImage(layer, 0, 0, 1, 1);
+  const d = x.getImageData(0, 0, 1, 1).data;
+  return d[3] ? [d[0], d[1], d[2]] : [40, 44, 42];
+}
+
+// grana fotografica (uguale su sfondo e corpo: lo sfondo non sembra più "disegnato")
+let noise: HTMLCanvasElement | null = null;
+function grain(ctx: CanvasRenderingContext2D, w: number, h: number, amount: number) {
+  if (!noise) {
+    noise = canvas(256, 256);
+    const x = noise.getContext('2d')!;
+    const d = x.createImageData(256, 256);
+    for (let i = 0; i < d.data.length; i += 4) {
+      const v = 128 + (Math.random() + Math.random() + Math.random() - 1.5) * 90;
+      d.data[i] = d.data[i + 1] = d.data[i + 2] = v;
+      d.data[i + 3] = 255;
+    }
+    x.putImageData(d, 0, 0);
+  }
+  ctx.save();
+  ctx.globalCompositeOperation = 'overlay';
+  ctx.globalAlpha = amount;
+  ctx.fillStyle = ctx.createPattern(noise, 'repeat')!;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+}
+
+const mix = (a: number[], b: number[], t: number) => a.map((v, i) => Math.round(v * (1 - t) + b[i] * t));
+const rgb = (c: number[]) => `rgb(${c[0]},${c[1]},${c[2]})`;
+
+/** Sfondo da studio con la luce della foto: centro più chiaro, bordi scuri. */
+function studio(ctx: CanvasRenderingContext2D, w: number, h: number, bg: 'dark' | 'light', tint: number[]) {
+  const cx = w / 2;
+  const cy = h * 0.4;
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.8);
+  if (bg === 'dark') {
+    g.addColorStop(0, rgb(mix([44, 47, 46], tint, 0.18)));
+    g.addColorStop(0.55, rgb(mix([24, 26, 25], tint, 0.1)));
+    g.addColorStop(1, rgb([9, 10, 10]));
+  } else {
+    g.addColorStop(0, rgb(mix([238, 240, 239], tint, 0.08)));
+    g.addColorStop(0.6, rgb(mix([214, 218, 216], tint, 0.1)));
+    g.addColorStop(1, rgb(mix([168, 173, 170], tint, 0.12)));
+  }
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
+}
+
+/** Riquadro del corpo nella sagoma (frazioni 0…1), letto in piccolo. */
+function maskBox(mask: HTMLImageElement) {
+  const S = 64;
+  const c = canvas(S, S);
+  const x = c.getContext('2d', { willReadFrequently: true })!;
+  x.drawImage(mask, 0, 0, S, S);
+  const d = x.getImageData(0, 0, S, S).data;
+  let x0 = S;
+  let x1 = -1;
+  let y1 = -1;
+  for (let y = 0; y < S; y++)
+    for (let i = 0; i < S; i++)
+      if (d[(y * S + i) * 4 + 3] > 128) {
+        x0 = Math.min(x0, i);
+        x1 = Math.max(x1, i);
+        y1 = Math.max(y1, y);
+      }
+  return x1 < 0 ? null : { x0: x0 / S, x1: (x1 + 1) / S, bottom: (y1 + 1) / S };
 }
 
 /**
@@ -169,17 +320,79 @@ export function composeBody(
     ctx.drawImage(img, dx, dy, img.width * k, img.height * k);
     return out;
   }
-  background(ctx, w, h, bg);
-  // corpo ritagliato con la sagoma (bordi ammorbiditi)
+  const mask = info.mask!;
+  const iw = img.width;
+  const ih = img.height;
+  // lavoro alla risoluzione della foto, poi si sposta tutto insieme
+  const person = canvas(iw, ih);
+  const pc = person.getContext('2d')!;
+  pc.drawImage(img, 0, 0);
+  pc.globalCompositeOperation = 'destination-in';
+  pc.drawImage(mask, 0, 0, iw, ih);
+  // bordo pulito: i punti di confine prendono il colore del corpo vicino, non quello del muro dietro
+  const core = canvas(iw, ih);
+  const cc = core.getContext('2d')!;
+  cc.drawImage(person, 0, 0);
+  cc.globalCompositeOperation = 'destination-in';
+  cc.drawImage(person, 0, 0); // alfa al quadrato: solo l'interno sicuro
+  cc.drawImage(person, 0, 0);
+  const inside = fillFrom(core, Math.max(2, Math.round(iw / 250)));
+  const clean = canvas(iw, ih);
+  const kc = clean.getContext('2d')!;
+  kc.drawImage(inside, 0, 0);
+  kc.drawImage(core, 0, 0);
+  kc.globalCompositeOperation = 'destination-in';
+  kc.drawImage(mask, 0, 0, iw, ih);
+  // sfondo della stanza senza il corpo (per la luce dello sfondo e per lo sfocato)
+  const room = canvas(iw, ih);
+  const rc = room.getContext('2d')!;
+  rc.drawImage(img, 0, 0);
+  rc.globalCompositeOperation = 'destination-out';
+  rc.filter = `blur(${Math.max(3, Math.round(iw / 120))}px)`;
+  rc.drawImage(mask, 0, 0, iw, ih);
+  rc.drawImage(mask, 0, 0, iw, ih);
+  rc.filter = 'none';
+  const tint = meanColor(room);
+
+  if (bg === 'blur') {
+    // effetto ritratto: la stanza vera, molto sfocata e un po' più scura
+    // la stanza segue il corpo (stessa posizione e grandezza); dove non arriva, la stessa stanza a tutto riquadro
+    const filled = fillFrom(room, Math.max(8, Math.round(iw / 40)));
+    const c = Math.max(w / iw, h / ih);
+    ctx.filter = `blur(${Math.round(Math.max(w, h) / 45)}px) brightness(0.62) saturate(0.85)`;
+    ctx.drawImage(filled, (w - iw * c) / 2 - 40, (h - ih * c) / 2 - 40, iw * c + 80, ih * c + 80);
+    ctx.drawImage(filled, dx, dy, iw * k, ih * k);
+    ctx.filter = 'none';
+    const v = ctx.createRadialGradient(w / 2, h * 0.45, Math.min(w, h) * 0.3, w / 2, h * 0.45, Math.max(w, h) * 0.75);
+    v.addColorStop(0, 'rgba(0,0,0,0)');
+    v.addColorStop(1, 'rgba(0,0,0,0.45)');
+    ctx.fillStyle = v;
+    ctx.fillRect(0, 0, w, h);
+  } else studio(ctx, w, h, bg, tint);
+
+  // ombra morbida a terra, se i piedi sono nella foto
+  const box = maskBox(mask);
+  if (box && box.bottom < 0.97 && bg !== 'blur') {
+    const fx = dx + ((box.x0 + box.x1) / 2) * iw * k;
+    const fy = dy + box.bottom * ih * k;
+    const fw = (box.x1 - box.x0) * iw * k * 0.75;
+    ctx.save();
+    ctx.filter = `blur(${Math.round(fw / 10)}px)`;
+    ctx.fillStyle = bg === 'dark' ? 'rgba(0,0,0,0.65)' : 'rgba(0,0,0,0.28)';
+    ctx.beginPath();
+    ctx.ellipse(fx, fy - fw * 0.02, fw / 2, fw * 0.07, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  const back = canvas(w, h);
+  back.getContext('2d')!.drawImage(out, 0, 0);
+  // corpo
   const layer = canvas(w, h);
   const lc = layer.getContext('2d')!;
-  lc.drawImage(img, dx, dy, img.width * k, img.height * k);
-  lc.globalCompositeOperation = 'destination-in';
-  lc.filter = `blur(${Math.max(1, Math.round(k * 1.5))}px)`;
-  lc.drawImage(info.mask!, dx, dy, img.width * k, img.height * k);
-  lc.filter = 'none';
+  lc.drawImage(clean, dx, dy, iw * k, ih * k);
   // dove la foto taglia il corpo (di solito i piedi) sfuma invece di finire di netto
-  const edge = dy + img.height * k;
+  const edge = dy + ih * k;
   if (edge < h + 2) {
     const g = lc.createLinearGradient(0, edge - h * 0.1, 0, edge);
     g.addColorStop(0, 'rgba(0,0,0,0)');
@@ -189,6 +402,22 @@ export function composeBody(
     lc.fillRect(0, edge - h * 0.1, w, h - edge + h * 0.1);
   }
   ctx.drawImage(layer, 0, 0);
+  // un filo della luce dello sfondo sui bordi del corpo (come in una foto vera) e grana su tutto
+  const wrap = canvas(w, h);
+  const wc = wrap.getContext('2d')!;
+  const wr = Math.max(2, Math.round(w / 300));
+  wc.filter = `blur(${wr * 3}px)`;
+  wc.drawImage(back, 0, 0);
+  wc.globalCompositeOperation = 'destination-out';
+  wc.filter = `blur(${wr}px)`;
+  wc.drawImage(layer, 0, 0);
+  wc.filter = 'none';
+  wc.globalCompositeOperation = 'destination-in';
+  wc.drawImage(layer, 0, 0);
+  ctx.globalAlpha = 0.5;
+  ctx.drawImage(wrap, 0, 0);
+  ctx.globalAlpha = 1;
+  grain(ctx, w, h, bg === 'light' ? 0.05 : 0.08);
   return out;
 }
 
