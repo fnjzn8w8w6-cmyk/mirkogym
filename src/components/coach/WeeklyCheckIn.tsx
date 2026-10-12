@@ -9,7 +9,7 @@ import { ChevronRight, ClipboardCheck, Sparkles } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { useSessions } from '@/hooks/use-sessions';
 import { useAthlete, useRecentFoodLogs } from '@/hooks/use-athlete';
-import { usePhotos } from '@/hooks/use-photos';
+import { photoId, usePhotos } from '@/hooks/use-photos';
 import { useCyclingDays, useLearnedFavorites, useProposals } from '@/hooks/use-habits';
 import { useSchedule } from '@/hooks/use-schedule';
 import { weekTargets } from '@/lib/habits';
@@ -117,6 +117,7 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
   const result = useMemo(() => evaluate(answers, stats, deloadAvailable), [answers, stats, deloadAvailable]);
 
   const photosApi = usePhotos();
+  const checkInPhotoId = useRef<string | null>(null);
   const proposals = useProposals();
   const learned = useLearnedFavorites();
   const { days, save: saveSchedule } = useSchedule();
@@ -154,6 +155,7 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
 
   const start = () => {
     touched.current = false;
+    checkInPhotoId.current = null;
     setStep('ask');
     setSummary(null);
     setAnswers(diaryAdherence ? { ...DEFAULT_ANSWERS, adherence: diaryAdherence.value } : DEFAULT_ANSWERS);
@@ -170,8 +172,9 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
     let photoNote = '';
     if (front) {
       const today = toISODate(new Date());
-      const prevMeta = photosApi.photos.find((x) => x.date < today);
-      const prevImg = prevMeta ? await photosApi.images(prevMeta.date).catch(() => null) : null;
+      // confronto con la foto del check-in precedente (non con le foto del giorno)
+      const prevMeta = photosApi.photos.find((x) => x.date < today && x.kind !== 'daily' && !x.daily);
+      const prevImg = prevMeta ? await photosApi.images(photoId(prevMeta)).catch(() => null) : null;
       const weight = bodyLogs.find((b) => b.weight != null)?.weight ?? profile.weightKg;
       const phase = settings.goalPlan?.phases[settings.goalPlan.current];
       const pr = await ai.run((o) =>
@@ -183,8 +186,8 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
         ),
       );
       // la foto si salva comunque, anche se la stima non è riuscita
-      await photosApi.save(
-        { date: today, thumb: await thumbOf(front), weight, ...(pr ? { bodyFat: pr.bodyFat, low: pr.low, high: pr.high, comment: pr.comment, ...(pr.regions ? { regions: pr.regions } : {}) } : {}), hasSide: Boolean(side), createdAt: Date.now() },
+      checkInPhotoId.current = await photosApi.save(
+        { date: today, kind: 'checkin', thumb: await thumbOf(front), weight, ...(pr ? { bodyFat: pr.bodyFat, low: pr.low, high: pr.high, comment: pr.comment, ...(pr.regions ? { regions: pr.regions } : {}) } : {}), hasSide: Boolean(side), createdAt: Date.now() },
         { front, ...(side ? { side } : {}) },
       );
       if (pr) {
@@ -212,7 +215,7 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
       points: result.points,
       weight: realWeight(bodyLogs, profile.weightKg),
       kcalTarget: userNutrition(profile, settings).target,
-      ...(front ? { photoDate: toISODate(new Date()) } : {}),
+      ...(front ? { photoDate: toISODate(new Date()), ...(checkInPhotoId.current ? { photoId: checkInPhotoId.current } : {}) } : {}),
       ...(photoRes ? { bodyFat: photoRes.bodyFat, photoComment: photoRes.comment } : {}),
       ...(proposals.some((p) => picked[p.id]) ? { applied: proposals.filter((p) => picked[p.id]).map((p) => `${p.emoji} ${p.title}`) } : {}),
     };

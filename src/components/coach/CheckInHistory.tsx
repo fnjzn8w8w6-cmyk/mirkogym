@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, ClipboardCheck } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Chip } from '@/components/ui/Chip';
-import { usePhotos } from '@/hooks/use-photos';
+import { photoId, usePhotos } from '@/hooks/use-photos';
 import { formatTonnage } from '@/lib/analytics';
 import type { CheckIn } from '@/lib/checkin';
 import { QUESTIONS } from './checkin-questions';
@@ -13,8 +13,10 @@ const kg = (n: number) => `${n.toFixed(1).replace('.', ',')} kg`;
 const isoOf = (t: number) => new Date(t).toLocaleDateString('sv-SE');
 
 /** Foto del check-in: quella salvata con il check-in, oppure una foto (non del giorno) dello stesso giorno. */
-export function checkInPhoto<P extends { date: string; daily?: boolean }>(c: CheckIn, photos: P[]): P | undefined {
-  return c.photoDate ? photos.find((p) => p.date === c.photoDate) : photos.find((p) => p.date === isoOf(c.date) && !p.daily);
+export function checkInPhoto<P extends { id?: string; date: string; daily?: boolean; kind?: string }>(c: CheckIn, photos: P[]): P | undefined {
+  if (c.photoId) return photos.find((p) => p.id === c.photoId);
+  const day = c.photoDate ?? isoOf(c.date);
+  return photos.find((p) => p.date === day && (p.kind === 'checkin' || (!p.kind && !p.daily)));
 }
 
 /**
@@ -80,7 +82,7 @@ function Detail({ c, checkIns, onBack }: { c: CheckIn; checkIns: CheckIn[]; onBa
     setFull(null);
     if (!photo) return;
     let alive = true;
-    void images(photo.date).then((i) => alive && i && setFull(i.front));
+    void images(photoId(photo)).then((i) => alive && i && setFull(i.front));
     return () => {
       alive = false;
     };

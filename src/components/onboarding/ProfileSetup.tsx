@@ -364,7 +364,7 @@ export function ProfileSetup() {
                   setPhotoOpen(false);
                   // la prima foto resta nella galleria dei progressi: servirà per il confronto prima/dopo
                   await photosApi.save(
-                    { date: todayISO(), thumb: await thumbOf(imgs.front), ...(profile ? { weight: profile.weightKg } : {}), bodyFat: bf, low: r.low, high: r.high, comment: `Prima foto · ${r.notes}`, hasSide: Boolean(imgs.side), createdAt: Date.now() },
+                    { date: todayISO(), kind: 'bf', thumb: await thumbOf(imgs.front), ...(profile ? { weight: profile.weightKg } : {}), bodyFat: bf, low: r.low, high: r.high, comment: `Prima foto · ${r.notes}`, hasSide: Boolean(imgs.side), createdAt: Date.now() },
                     imgs,
                   );
                 }}

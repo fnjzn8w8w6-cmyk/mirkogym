@@ -1,130 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Camera, Clapperboard, Share2, Trash2 } from 'lucide-react';
-import { ReelModal } from './ReelModal';
-import { DailyPhotoModal } from './DailyPhotoModal';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { usePhotos } from '@/hooks/use-photos';
-import { cn } from '@/lib/cn';
-import { NewBadge, SectionTitle } from '@/components/ui/Help';
+import { photoId } from '@/hooks/use-photos';
 import type { PhotoImages, ProgressPhoto } from '@/types';
 
 const fmt = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
 
-/**
- * Galleria delle foto + confronto prima/dopo con cursore.
- * kind "daily": foto del giorno (con reel e condivisione); "checkin": foto del check-in e della massa grassa da foto.
- */
-export function ProgressPhotos({ kind = 'daily' }: { kind?: 'daily' | 'checkin' }) {
-  const navigate = useNavigate();
-  const { photos: all, images, remove } = usePhotos();
-  const photos = all.filter((p) => (kind === 'daily' ? p.daily : !p.daily));
-  const [pick, setPick] = useState<string[]>([]);
-  const [compare, setCompare] = useState<[ProgressPhoto, ProgressPhoto] | null>(null);
-  const [toDelete, setToDelete] = useState<string | null>(null);
-  // foto del giorno: nuova (date null) o già salvata da condividere di nuovo
-  const [daily, setDaily] = useState<{ date?: string; photo?: string } | null>(null);
-  const [reel, setReel] = useState(false);
-  const reshare = async (date: string) => {
-    const imgs = await images(date);
-    if (imgs) setDaily({ date, photo: imgs.front });
-  };
-
-  const toggle = (d: string) => setPick((p) => (p.includes(d) ? p.filter((x) => x !== d) : [...p.slice(-1), d]));
-  const openCompare = () => {
-    const sel = photos.filter((p) => pick.includes(p.date)).sort((a, b) => a.date.localeCompare(b.date));
-    if (sel.length === 2) setCompare([sel[0], sel[1]]);
-  };
-
-  return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between">
-        <h2 className="section-title !mb-0">
-          <SectionTitle help="body-photos">{kind === 'daily' ? 'Foto del giorno' : 'Foto del check-in'}</SectionTitle>
-        </h2>
-        <span className="text-xs text-fg-3">{photos.length} foto</span>
-      </div>
-      {kind === 'daily' && (
-      <div className="mt-3 space-y-2">
-        <Button fullWidth variant="secondary" className="whitespace-nowrap" icon={<Camera className="h-4 w-4" />} onClick={() => setDaily({})}>
-          Foto del giorno <NewBadge className="ml-1" />
-        </Button>
-        <Button fullWidth variant="secondary" className="whitespace-nowrap" icon={<Clapperboard className="h-4 w-4" />} onClick={() => setReel(true)}>
-          Crea il reel <NewBadge className="ml-1" />
-        </Button>
-      </div>
-      )}
-      {photos.length === 0 ? (
-        <div className="mt-2 text-sm text-fg-2">
-          {kind === 'daily' ? (
-            <p>Scatta una foto al giorno, sempre nella stessa posa: l'app ci aggiunge giorno, allenamento e muscoli, e con tutte le foto crea il reel.</p>
-          ) : (
-            <>
-              <p>Qui trovi le foto aggiunte al check-in settimanale e quelle di «BF da foto»: il coach stima la massa grassa e la confronta con la volta prima.</p>
-              <Button className="mt-3" size="sm" variant="secondary" onClick={() => navigate('/body?tab=checkin&checkin=1')}>
-                📸 Fai il check-in con la foto
-              </Button>
-            </>
-          )}
-        </div>
-      ) : (
-        <>
-          <p className="mt-3 text-xs text-fg-3">{kind === 'daily' ? 'Tocca una foto per condividerla, due per confrontarle.' : 'Tocca due foto per confrontarle.'}</p>
-          <div className="-mx-1 mt-2 flex gap-2 overflow-x-auto px-1 pb-1">
-            {photos.map((p) => (
-              <button
-                key={p.date}
-                type="button"
-                onClick={() => toggle(p.date)}
-                aria-pressed={pick.includes(p.date)}
-                className={cn('w-20 shrink-0 overflow-hidden rounded-md border-2 text-left', pick.includes(p.date) ? 'border-accent-500' : 'border-transparent')}
-              >
-                <img src={p.thumb} alt={`Foto del ${fmt(p.date)}`} className="aspect-[3/4] w-full object-cover" />
-                <div className="bg-surface-2 px-1 py-0.5 text-[11px] leading-tight">
-                  <div className="font-semibold text-fg">{fmt(p.date)}</div>
-                  <div className="text-fg-3">
-                    {p.bodyFat != null ? `${p.bodyFat}%` : '—'}
-                    {p.weight ? ` · ${p.weight} kg` : ''}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-          {photos[0]?.comment && <p className="mt-2 text-sm text-fg-2">🧐 {photos[0].comment}</p>}
-          <div className={cn('mt-3 grid gap-2', kind === 'daily' ? 'grid-cols-[1fr_auto_auto]' : 'grid-cols-[1fr_auto]')}>
-            <Button size="sm" disabled={pick.length !== 2} onClick={openCompare}>
-              Confronta prima / dopo
-            </Button>
-            {kind === 'daily' && (
-              <Button size="sm" variant="secondary" disabled={pick.length !== 1} icon={<Share2 className="h-4 w-4" />} onClick={() => void reshare(pick[0])} aria-label="Condividi la foto selezionata" />
-            )}
-            <Button size="sm" variant="ghost" disabled={pick.length !== 1} icon={<Trash2 className="h-4 w-4" />} onClick={() => setToDelete(pick[0])} aria-label="Elimina la foto selezionata" />
-          </div>
-        </>
-      )}
-
-      <ReelModal open={reel} onClose={() => setReel(false)} />
-      <DailyPhotoModal open={daily != null} onClose={() => setDaily(null)} date={daily?.date} photo={daily?.photo} />
-      <CompareModal pair={compare} load={images} onClose={() => setCompare(null)} />
-      <ConfirmDialog
-        open={Boolean(toDelete)}
-        title="Eliminare la foto?"
-        message={toDelete ? `La foto del ${fmt(toDelete)} verrà eliminata definitivamente.` : ''}
-        confirmLabel="Elimina"
-        onCancel={() => setToDelete(null)}
-        onConfirm={async () => {
-          if (toDelete) await remove(toDelete);
-          setPick([]);
-          setToDelete(null);
-        }}
-      />
-    </Card>
-  );
-}
-
+/** Confronto prima/dopo di due foto con il cursore. */
 export function CompareModal({ pair, load, onClose }: { pair: [ProgressPhoto, ProgressPhoto] | null; load: (d: string) => Promise<PhotoImages | null>; onClose: () => void }) {
   const [imgs, setImgs] = useState<[string, string] | null>(null);
   const [pos, setPos] = useState(50);
@@ -133,7 +14,7 @@ export function CompareModal({ pair, load, onClose }: { pair: [ProgressPhoto, Pr
     setPos(50);
     if (!pair) return;
     let alive = true;
-    void Promise.all([load(pair[0].date), load(pair[1].date)]).then(([a, b]) => alive && a && b && setImgs([a.front, b.front]));
+    void Promise.all([load(photoId(pair[0])), load(photoId(pair[1]))]).then(([a, b]) => alive && a && b && setImgs([a.front, b.front]));
     return () => {
       alive = false;
     };

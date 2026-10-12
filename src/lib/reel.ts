@@ -14,6 +14,8 @@ const H = 1920;
 const FPS = 30;
 
 export interface ReelPhoto {
+  /** codice della foto (per caricarla) */
+  id: string;
   date: string;
   /** giorno del percorso (1 = prima foto) */
   day: number;
@@ -111,9 +113,9 @@ export async function renderReel(
   const get = (i: number) => {
     const f = frames[i];
     if (!f) return Promise.resolve(null);
-    if (!cache.has(f.date)) cache.set(f.date, load(f.date).then((src) => (src ? loadImage(src) : null)));
-    if (!maps.has(f.date)) maps.set(f.date, f.muscles && f.session ? loadImage(f.muscles) : Promise.resolve(null));
-    return cache.get(f.date)!;
+    if (!cache.has(f.id)) cache.set(f.id, load(f.id).then((src) => (src ? loadImage(src) : null)));
+    if (!maps.has(f.id)) maps.set(f.id, f.muscles && f.session ? loadImage(f.muscles) : Promise.resolve(null));
+    return cache.get(f.id)!;
   };
   const prefetch = (i: number) => {
     for (let k = i; k < Math.min(frames.length, i + 6); k++) void get(k);
@@ -124,7 +126,7 @@ export async function renderReel(
   const lastIdx = frames.length - 1;
   const last = await get(lastIdx);
   // la prima e l'ultima servono anche alla fine: restano in memoria
-  const keep = new Set([frames[0].date, frames[lastIdx].date]);
+  const keep = new Set([frames[0].id, frames[lastIdx].id]);
 
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -271,12 +273,12 @@ export async function renderReel(
         lapseIdx = i;
         prefetch(i + 1);
         shown = await get(i);
-        shownMap = (await maps.get(frames[i].date)) ?? null;
+        shownMap = (await maps.get(frames[i].id)) ?? null;
         // libera le foto già passate (tranne la prima e l'ultima)
         const prev = frames[i - 1];
-        if (prev && !keep.has(prev.date)) {
-          cache.delete(prev.date);
-          maps.delete(prev.date);
+        if (prev && !keep.has(prev.id)) {
+          cache.delete(prev.id);
+          maps.delete(prev.id);
         }
       }
       return drawLapse(i);

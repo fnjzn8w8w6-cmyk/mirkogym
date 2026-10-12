@@ -193,15 +193,23 @@ export function subscribeRecentFoodLogs(uid: string, from: string, cb: (l: FoodL
   );
 }
 export function subscribePhotos(uid: string, cb: (p: ProgressPhoto[]) => void, onError: OnError): Unsubscribe {
-  return onSnapshot(photosCol(uid), (snap) => cb(snap.docs.map((d) => d.data() as ProgressPhoto).sort((a, b) => b.date.localeCompare(a.date))), onError);
+  return onSnapshot(
+    photosCol(uid),
+    (snap) => cb(snap.docs.map((d) => ({ ...(d.data() as ProgressPhoto), id: d.id })).sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt)),
+    onError,
+  );
 }
-export const savePhoto = (uid: string, meta: ProgressPhoto, images: PhotoImages) =>
-  Promise.all([setDoc(doc(photosCol(uid), meta.date), clean(meta)), setDoc(doc(photoImagesCol(uid), meta.date), clean(images))]);
-export const getPhotoImages = async (uid: string, date: string): Promise<PhotoImages | null> => {
-  const d = await getDoc(doc(photoImagesCol(uid), date));
+/** Codice nuovo per una foto: più foto nello stesso giorno non si sovrascrivono. */
+export const newPhotoId = (date: string) => `${date}-${Date.now().toString(36)}`;
+export const savePhoto = (uid: string, meta: ProgressPhoto, images: PhotoImages) => {
+  const id = meta.id ?? newPhotoId(meta.date);
+  return Promise.all([setDoc(doc(photosCol(uid), id), clean({ ...meta, id })), setDoc(doc(photoImagesCol(uid), id), clean(images))]).then(() => id);
+};
+export const getPhotoImages = async (uid: string, id: string): Promise<PhotoImages | null> => {
+  const d = await getDoc(doc(photoImagesCol(uid), id));
   return d.exists() ? (d.data() as PhotoImages) : null;
 };
-export const deletePhoto = (uid: string, date: string) => Promise.all([deleteDoc(doc(photosCol(uid), date)), deleteDoc(doc(photoImagesCol(uid), date))]);
+export const deletePhoto = (uid: string, id: string) => Promise.all([deleteDoc(doc(photosCol(uid), id)), deleteDoc(doc(photoImagesCol(uid), id))]);
 /** Archivio completo dei check-in settimanali (uno per documento, dal più recente). */
 export function subscribeCheckIns(uid: string, cb: (c: CheckIn[]) => void, onError: OnError): Unsubscribe {
   return onSnapshot(checkInsCol(uid), (snap) => cb(snap.docs.map((d) => d.data() as CheckIn).sort((a, b) => b.date - a.date)), onError);

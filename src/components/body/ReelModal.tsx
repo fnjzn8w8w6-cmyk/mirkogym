@@ -4,7 +4,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Segmented } from '@/components/ui/Input';
 import { useToast } from '@/components/ui/Toast';
-import { usePhotos } from '@/hooks/use-photos';
+import { photoId, usePhotos } from '@/hooks/use-photos';
 import { useSessions } from '@/hooks/use-sessions';
 import { useBodyLogs } from '@/hooks/use-body-logs';
 import { renderReel, reelSeconds, type ReelPhoto, type ReelSummary } from '@/lib/reel';
@@ -59,12 +59,14 @@ export function ReelModal({ open, onClose }: { open: boolean; onClose: () => voi
   }, [open]);
 
   const data = useMemo(() => {
-    const all = [...photos].sort((a, b) => a.date.localeCompare(b.date));
+    // foto giornaliere (non quelle del check-in), in ordine di scatto
+    const all = photos.filter((p) => p.kind !== 'checkin').sort((a, b) => a.date.localeCompare(b.date) || a.createdAt - b.createdAt);
     const firstEver = all[0]?.date;
     const from = period === 'tutto' ? '' : toISODate(Date.now() - (Number(period) - 1) * 86400000);
     const sel = all.filter((p) => p.date >= from && p.date <= todayISO());
     if (!firstEver || sel.length < 2) return { list: [] as Omit<ReelPhoto, 'muscles'>[], summary: null as ReelSummary | null };
     const list: Omit<ReelPhoto, 'muscles'>[] = sel.map((p) => ({
+      id: photoId(p),
       date: p.date,
       day: daysBetween(fromISODate(p.date), fromISODate(firstEver)) + 1,
       weight: p.weight ?? nearest(bodyLogs, p.date, 'weight', 3),
@@ -97,7 +99,7 @@ export function ReelModal({ open, onClose }: { open: boolean; onClose: () => voi
       const res = await renderReel(
         list,
         data.summary,
-        async (date) => (await images(date))?.front ?? null,
+        async (id) => (await images(id))?.front ?? null,
         (p) => setProgress(p.value),
         () => cancel.current,
       );

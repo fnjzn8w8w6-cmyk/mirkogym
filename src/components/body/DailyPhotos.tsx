@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { NewBadge, SectionTitle } from '@/components/ui/Help';
-import { usePhotos } from '@/hooks/use-photos';
+import { photoId, usePhotos } from '@/hooks/use-photos';
 import { useCheckIns } from '@/hooks/use-checkins';
 import { checkInPhoto } from '@/components/coach/CheckInHistory';
 import { cn } from '@/lib/cn';
@@ -23,8 +23,8 @@ export function DailyPhotos() {
   const { checkIns } = useCheckIns();
   // le foto dei check-in stanno nel loro elenco
   const photos = useMemo(() => {
-    const taken = new Set(checkIns.map((c) => checkInPhoto(c, all)?.date).filter(Boolean));
-    return all.filter((p) => !taken.has(p.date));
+    const taken = new Set(checkIns.map((c) => checkInPhoto(c, all)).filter(Boolean).map((p) => photoId(p!)));
+    return all.filter((p) => !taken.has(photoId(p)) && p.kind !== 'checkin');
   }, [all, checkIns]);
   const [daily, setDaily] = useState<{ date?: string; photo?: string } | null>(null);
   const [reel, setReel] = useState(false);
@@ -53,7 +53,7 @@ export function DailyPhotos() {
         <>
           <div className="mt-3 grid grid-cols-4 gap-2">
             {photos.slice(0, 4).map((p) => (
-              <button key={p.date} type="button" onClick={() => setView(p)} className="overflow-hidden rounded-md bg-surface-2 text-left" aria-label={`Apri la foto del ${fmt(p.date)}`}>
+              <button key={photoId(p)} type="button" onClick={() => setView(p)} className="overflow-hidden rounded-md bg-surface-2 text-left" aria-label={`Apri la foto del ${fmt(p.date)}`}>
                 <img src={p.thumb} alt="" className="aspect-[3/4] w-full object-cover" />
                 <span className="block truncate px-1 py-0.5 text-[11px] font-semibold text-fg">{fmt(p.date).replace(/ \d{4}$/, '')}</span>
               </button>
@@ -106,7 +106,8 @@ function PhotoList({ open, photos, onClose, onOpen, loadImages }: { open: boolea
   }, [open]);
   const tap = (p: ProgressPhoto) => {
     if (!comparing) return onOpen(p);
-    setPick((s) => (s.includes(p.date) ? s.filter((x) => x !== p.date) : [...s.slice(-1), p.date]));
+    const id = photoId(p);
+    setPick((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s.slice(-1), id]));
   };
   return (
     <>
@@ -120,12 +121,12 @@ function PhotoList({ open, photos, onClose, onOpen, loadImages }: { open: boolea
           </div>
           <ul className="grid grid-cols-3 gap-2">
             {photos.map((p) => (
-              <li key={p.date}>
+              <li key={photoId(p)}>
                 <button
                   type="button"
                   onClick={() => tap(p)}
-                  aria-pressed={comparing ? pick.includes(p.date) : undefined}
-                  className={cn('w-full overflow-hidden rounded-md border-2 bg-surface-2 text-left', comparing && pick.includes(p.date) ? 'border-accent-500' : 'border-transparent')}
+                  aria-pressed={comparing ? pick.includes(photoId(p)) : undefined}
+                  className={cn('w-full overflow-hidden rounded-md border-2 bg-surface-2 text-left', comparing && pick.includes(photoId(p)) ? 'border-accent-500' : 'border-transparent')}
                 >
                   <img src={p.thumb} alt={`Foto del ${fmt(p.date)}`} className="aspect-[3/4] w-full object-cover" />
                   <span className="block px-1.5 py-1 text-xs leading-tight">
@@ -144,7 +145,7 @@ function PhotoList({ open, photos, onClose, onOpen, loadImages }: { open: boolea
               fullWidth
               disabled={pick.length !== 2}
               onClick={() => {
-                const sel = photos.filter((p) => pick.includes(p.date)).sort((a, b) => a.date.localeCompare(b.date));
+                const sel = photos.filter((p) => pick.includes(photoId(p))).sort((a, b) => a.date.localeCompare(b.date) || a.createdAt - b.createdAt);
                 if (sel.length === 2) setPair([sel[0], sel[1]]);
               }}
             >
@@ -178,7 +179,7 @@ function PhotoViewer({
     setFull(null);
     if (!photo) return;
     let alive = true;
-    void loadImages(photo.date).then((i) => alive && i && setFull(i.front));
+    void loadImages(photoId(photo)).then((i) => alive && i && setFull(i.front));
     return () => {
       alive = false;
     };
@@ -210,7 +211,7 @@ function PhotoViewer({
         onCancel={() => setConfirm(false)}
         onConfirm={async () => {
           setConfirm(false);
-          await onDelete(photo.date);
+          await onDelete(photoId(photo));
         }}
       />
     </>

@@ -20,7 +20,7 @@ import { daysBetween, fromISODate, toISODate, todayISO } from '@/lib/date-utils'
  */
 export function DailyPhotoModal({ open, onClose, date, photo: saved }: { open: boolean; onClose: () => void; date?: string; photo?: string | null }) {
   const toast = useToast();
-  const { photos, save, images } = usePhotos();
+  const { photos, save } = usePhotos();
   const { sessions, groupOf } = useSessions();
   const { bodyLogs } = useBodyLogs();
   const day = date ?? todayISO();
@@ -81,21 +81,19 @@ export function DailyPhotoModal({ open, onClose, date, photo: saved }: { open: b
     }
   };
 
-  /** Salva nella galleria (una foto al giorno: i dati già presenti, es. la massa grassa, restano). */
+  /** Salva nella galleria come foto nuova: più foto nello stesso giorno restano tutte. */
   const store = async () => {
     if (!photo || stored) return;
-    const prev = photos.find((p) => p.date === day);
-    const prevImgs = prev?.hasSide ? await images(day) : null;
     await save(
       {
-        ...(prev ?? {}),
         date: day,
+        kind: 'daily',
         thumb: await thumbOf(photo),
         ...(info.weight != null ? { weight: info.weight } : {}),
         daily: true,
-        createdAt: prev?.createdAt ?? Date.now(),
+        createdAt: Date.now(),
       },
-      { front: photo, ...(prevImgs?.side ? { side: prevImgs.side } : {}) },
+      { front: photo },
     );
     setStored(true);
   };

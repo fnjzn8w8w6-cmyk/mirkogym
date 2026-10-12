@@ -349,8 +349,12 @@ export interface UserRecipe {
 
 /** Foto settimanale dei progressi (metadati + miniatura). */
 export interface ProgressPhoto {
-  /** YYYY-MM-DD (anche id del documento) */
+  /** codice della foto (id del documento): più foto nello stesso giorno. Le foto vecchie usano la data. */
+  id?: string;
+  /** YYYY-MM-DD (giorno dello scatto) */
   date: string;
+  /** di dove viene: foto del giorno, check-in o stima della massa grassa da foto */
+  kind?: 'daily' | 'checkin' | 'bf';
   /** miniatura JPEG come data URL (~10 KB) */
   thumb: string;
   weight?: number;

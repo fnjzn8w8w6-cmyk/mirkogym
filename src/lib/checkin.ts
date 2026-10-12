@@ -66,6 +66,8 @@ export interface CheckIn {
   kcalTarget?: number;
   /** foto del check-in (data della galleria) e stima della massa grassa */
   photoDate?: string;
+  /** codice della foto del check-in */
+  photoId?: string;
   bodyFat?: number;
   photoComment?: string;
   /** proposte del coach accettate */

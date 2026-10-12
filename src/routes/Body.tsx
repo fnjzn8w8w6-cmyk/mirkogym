@@ -125,7 +125,7 @@ export default function Body() {
           // la foto finisce anche nella galleria dei progressi (per il confronto prima/dopo)
           const w = latestWeight;
           await photosApi.save(
-            { date: todayISO(), thumb: await thumbOf(imgs.front), ...(w != null ? { weight: w } : {}), bodyFat: bf, low: r.low, high: r.high, comment: `Stima da foto: ${r.notes}`, hasSide: Boolean(imgs.side), createdAt: Date.now() },
+            { date: todayISO(), kind: 'bf', thumb: await thumbOf(imgs.front), ...(w != null ? { weight: w } : {}), bodyFat: bf, low: r.low, high: r.high, comment: `Stima da foto: ${r.notes}`, hasSide: Boolean(imgs.side), createdAt: Date.now() },
             imgs,
           );
           await save({
