@@ -31,7 +31,7 @@ import {
 import { MacroBar, MacroLine, RecipeImage, fmtNum, useRecipes } from './shared';
 import { RecipeEditor } from './RecipeEditor';
 import { useFoodLog, useMyRecipes } from '@/hooks/use-food';
-import { todayISO } from '@/lib/date-utils';
+import { mondayISO, todayISO } from '@/lib/date-utils';
 import type { DiaryMeal, UserRecipe } from '@/types';
 import { RecipeDetail } from './RecipeDetail';
 import { useCyclingDays, useLearnedFavorites } from '@/hooks/use-habits';
@@ -264,7 +264,8 @@ function DayPills({ value, onChange, plan, target, cycling }: { value: number; o
 export function WhyKcal({ base, day }: { base: Nutrition; day?: Nutrition & { delta?: number } }) {
   const { settings } = useSettings();
   const [open, setOpen] = useState(false);
-  const real = settings.metabolism;
+  // metabolismo reale solo se è quello usato davvero per la settimana
+  const real = settings.weekCal?.tdee != null && settings.weekCal.week === mondayISO() ? settings.metabolism : null;
   const adj = real ? 0 : (settings.kcalAdjust ?? 0);
   const total = day?.target ?? base.target;
   const delta = day?.delta ?? 0;

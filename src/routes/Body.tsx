@@ -27,7 +27,7 @@ import { MuscleWeekCard } from '@/components/body/MuscleWeek';
 import { useRecentFoodLogs } from '@/hooks/use-athlete';
 import { useSessions } from '@/hooks/use-sessions';
 import { userNutrition } from '@/lib/coach';
-import { completeDays, waterEvents, weightTrend } from '@/lib/body-model';
+import { completeDays, METABOLISM_RELIABLE_DAYS, waterEvents, weightTrend } from '@/lib/body-model';
 import { SectionTitle } from '@/components/ui/Help';
 import { ProgressPhotos } from '@/components/body/ProgressPhotos';
 
@@ -290,14 +290,20 @@ function MetabolismLine() {
       <SectionTitle help="body-metabolism" isNew className="text-xs font-bold uppercase tracking-wider text-fg-3">
         Il tuo metabolismo
       </SectionTitle>
-      {m ? (
+      {m && m.days >= METABOLISM_RELIABLE_DAYS ? (
         <p className="mt-1">
           🔥 <strong className="font-display text-fg">{m.tdee.toLocaleString('it-IT')} kcal</strong> al giorno (±{m.sd}), dal diario di {m.days} giornate complete. Si
           aggiorna ogni giorno.
         </p>
+      ) : m ? (
+        <p className="mt-1">
+          ⏳ Stima provvisoria: <strong className="font-display text-fg">{m.tdee.toLocaleString('it-IT')} kcal</strong> al giorno (±{m.sd}). Diventa affidabile con{' '}
+          {METABOLISM_RELIABLE_DAYS} giornate complete nel diario (ora {m.days}/{METABOLISM_RELIABLE_DAYS}): fino ad allora le calorie seguono la formula.
+        </p>
       ) : (
         <p className="mt-1">
-          Per calcolarlo dai tuoi dati servono 7 giornate complete nel diario negli ultimi 21 giorni (ora {Math.min(complete, 7)}/7) e qualche pesata. Fino ad allora uso la formula.
+          Per calcolarlo dai tuoi dati servono 7 giornate complete nel diario negli ultimi 21 giorni (ora {Math.min(complete, 7)}/7) e pesate su almeno 10 giorni. Fino ad allora
+          uso la formula.
         </p>
       )}
     </div>

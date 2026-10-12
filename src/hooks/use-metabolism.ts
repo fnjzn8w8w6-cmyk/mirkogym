@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useSettings } from './use-settings';
 import { useBodyLogs } from './use-body-logs';
 import { useRecentFoodLogs } from './use-athlete';
-import { estimateMetabolism, smoothMetabolism } from '@/lib/body-model';
+import { estimateMetabolism, METABOLISM_RELIABLE_DAYS, smoothMetabolism } from '@/lib/body-model';
 import { tdee } from '@/lib/metabolism';
 import { settle } from '@/lib/firestore';
 import { mondayISO, todayISO } from '@/lib/date-utils';
@@ -26,8 +26,14 @@ export function useMetabolismSync() {
     const today = todayISO();
     if (settings.metabolism?.date === today) return;
     const m = estimateMetabolism(foodLogs, bodyLogs, tdee(p));
-    if (!m) return;
-    const value = smoothMetabolism(settings.metabolism, m.tdee, today);
+    if (!m) {
+      // dati non più sufficienti (es. calcolo più prudente): si torna alla formula
+      if (settings.metabolism) void settle(update({ metabolism: null }));
+      return;
+    }
+    // finché la stima è provvisoria segue subito i dati; poi si muove piano (max 50 kcal al giorno)
+    const prev = settings.metabolism && settings.metabolism.days >= METABOLISM_RELIABLE_DAYS ? settings.metabolism : null;
+    const value = smoothMetabolism(prev, m.tdee, today);
     void settle(update({ metabolism: { tdee: value, date: today, days: m.days, sd: m.sd } }));
   }, [p, foodLogs, bodyLogs, settings.metabolism, update]);
 }

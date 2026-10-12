@@ -1,3 +1,4 @@
+import { METABOLISM_RELIABLE_DAYS } from '@/lib/body-model';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { HUNGER_WORDS, LevelScale } from '@/components/ui/LevelScale';
 import { ClipboardCheck, Sparkles } from 'lucide-react';
@@ -108,9 +109,10 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
     }
     return weekStats(sessions, bodyLogs, profile, Date.now(), {
       expectedRate: rate,
-      diary: est && !settings.metabolism ? { ...est, desired, current } : null,
+      diary: est && !(settings.metabolism && settings.metabolism.days >= METABOLISM_RELIABLE_DAYS) ? { ...est, desired, current } : null,
       goalLine,
-      metabolism: settings.metabolism?.tdee ?? null,
+      // solo quando la stima è affidabile (prima le calorie seguono ancora la formula)
+      metabolism: settings.metabolism && settings.metabolism.days >= METABOLISM_RELIABLE_DAYS ? settings.metabolism.tdee : null,
     });
   }, [sessions, bodyLogs, profile, settings, foodLogs]);
   const deloadAvailable = Boolean(meso.mesocycle) && !meso.isDeloadWeek;

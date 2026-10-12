@@ -137,20 +137,41 @@ export interface Metabolism {
   confidence: number;
 }
 
+/** Giornate complete del diario dopo cui la stima del metabolismo è affidabile (prima è provvisoria). */
+export const METABOLISM_RELIABLE_DAYS = 14;
+
 /**
- * Calorie consumate davvero = calorie medie mangiate − variazione del peso reale × 7700.
- * Si fonde con la formula finché i dati sono pochi (≥ 7 giornate complete negli ultimi 21 giorni).
+ * Pendenza robusta delle pesate (kg/giorno): mediana delle pendenze tra coppie di pesate a ≥ 3 giorni di distanza.
+ * Una pesata "gonfia" (acqua, sale, ciclo) non sposta il risultato, a differenza della tendenza che parte dalla prima pesata.
+ */
+export function robustSlope(points: { t: number; w: number }[]): number | null {
+  const slopes: number[] = [];
+  for (let i = 0; i < points.length; i++)
+    for (let j = i + 1; j < points.length; j++) {
+      const dt = (points[j].t - points[i].t) / DAY;
+      if (dt >= 3) slopes.push((points[j].w - points[i].w) / dt);
+    }
+  return slopes.length ? median(slopes) : null;
+}
+
+/**
+ * Calorie consumate davvero = calorie medie mangiate − variazione del peso × 7700.
+ * La variazione del peso è una pendenza robusta delle pesate (non risente di una pesata gonfia d'acqua).
+ * Si fonde con la formula finché i dati sono pochi (≥ 7 giornate complete negli ultimi 21 giorni, pesate su almeno 10 giorni).
  */
 export function estimateMetabolism(foodLogs: FoodLog[], logs: BodyLog[], formulaTdee: number, now = Date.now()): Metabolism | null {
   const from = toISODate(new Date(now - 21 * DAY));
   const days = completeDays(foodLogs).filter((d) => d.date >= from);
-  const tr = weightTrend(logs, now).filter((p) => p.date >= from);
-  const weighs = tr.filter((p) => p.weight != null);
-  if (days.length < 7 || weighs.length < 4 || tr.length < 7) return null;
-  const slope = (tr[tr.length - 1].trend - tr[0].trend) / ((tr[tr.length - 1].t - tr[0].t) / DAY); // kg/giorno
+  const weighs = weightTrend(logs, now)
+    .filter((p) => p.date >= from && p.weight != null)
+    .map((p) => ({ t: p.t, w: p.weight! }));
+  if (days.length < 7 || weighs.length < 4) return null;
+  if ((weighs[weighs.length - 1].t - weighs[0].t) / DAY < 10) return null;
+  const slope = robustSlope(weighs);
+  if (slope == null) return null;
   const intake = avg(days.map((d) => d.kcal));
   const est = intake - slope * 7700;
-  const confidence = Math.min(1, days.length / 14);
+  const confidence = Math.min(1, days.length / METABOLISM_RELIABLE_DAYS);
   const tdee = Math.round((confidence * est + (1 - confidence) * formulaTdee) / 10) * 10;
   return { tdee: Math.max(1200, Math.min(5000, tdee)), sd: Math.round(250 / Math.sqrt(days.length / 7) / 10) * 10, days: days.length, confidence };
 }
