@@ -18,7 +18,7 @@ export async function compressPhoto(file: File, maxSide = 720, quality = 0.72): 
 }
 
 /** Miniatura da un data URL già compresso. */
-export async function thumbOf(dataUrl: string, maxSide = 200): Promise<string> {
+export async function thumbOf(dataUrl: string, maxSide = 320): Promise<string> {
   const img = new Image();
   img.src = dataUrl;
   await img.decode();
@@ -27,7 +27,7 @@ export async function thumbOf(dataUrl: string, maxSide = 200): Promise<string> {
   c.width = Math.round(img.width * k);
   c.height = Math.round(img.height * k);
   c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
-  return c.toDataURL('image/jpeg', 0.6);
+  return c.toDataURL('image/jpeg', 0.7);
 }
 
 const b64 = (dataUrl: string) => dataUrl.split(',')[1] ?? '';

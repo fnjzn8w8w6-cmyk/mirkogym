@@ -18,23 +18,31 @@ export function CompareModal({ pair, load, onClose }: { pair: [ProgressPhoto, Pr
   const box = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   useEffect(() => {
-    setImgs(null);
-    setLowRes(false);
     setPos(50);
-    if (!pair) return;
+    setLowRes(false);
+    if (!pair) return setImgs(null);
+    // subito le miniature, poi ogni foto diventa nitida appena arriva
+    setImgs([pair[0].thumb, pair[1].thumb]);
     let alive = true;
-    const full = (p: ProgressPhoto) =>
-      Promise.race([
-        load(photoId(p)).then((i) => i?.front ?? null).catch(() => null),
-        new Promise<null>((r) => setTimeout(() => r(null), 8000)),
-      ]);
-    void Promise.all([full(pair[0]), full(pair[1])]).then(([a, b]) => {
-      if (!alive) return;
-      setLowRes(!a || !b);
-      setImgs([a ?? pair[0].thumb, b ?? pair[1].thumb]);
-    });
+    let pending = 2;
+    let failed = false;
+    pair.forEach((p, i) =>
+      void load(photoId(p))
+        .catch(() => null)
+        .then((r) => {
+          pending--;
+          if (!alive) return;
+          if (r) setImgs((cur) => (cur ? (i === 0 ? [r.front, cur[1]] : [cur[0], r.front]) : cur));
+          else failed = true;
+          // l'avviso resta solo se una foto non è arrivata
+          if (pending === 0) setLowRes(failed);
+        }),
+    );
+    // avviso solo se dopo un bel po' non è ancora arrivato niente
+    const t = window.setTimeout(() => alive && pending > 0 && setLowRes(true), 20000);
     return () => {
       alive = false;
+      window.clearTimeout(t);
     };
   }, [pair, load]);
   if (!pair) return null;
@@ -90,7 +98,7 @@ export function CompareModal({ pair, load, onClose }: { pair: [ProgressPhoto, Pr
             className="sr-only"
           />
           <p className="mt-2 text-center text-xs text-fg-3">Trascina la linea a destra e a sinistra sulla foto.</p>
-          {lowRes && <p className="mt-1 text-center text-xs text-warning">Non riesco a scaricare le foto grandi (connessione?): ti mostro le miniature.</p>}
+          {lowRes && <p className="mt-1 text-center text-xs text-warning">Le foto in alta qualità stanno arrivando lentamente (connessione?): intanto vedi le anteprime.</p>}
           <div className="mt-3 grid grid-cols-2 gap-2 text-center">
             <div className="rounded-md bg-surface-2 py-2">
               <div className="font-display text-lg font-extrabold text-fg">{d(a.weight, b.weight)} kg</div>

@@ -102,8 +102,20 @@ function PhotoList({ open, photos, onClose, onOpen, loadImages }: { open: boolea
     if (!open) {
       setComparing(false);
       setPick([]);
+      return;
     }
-  }, [open]);
+    // scarica in anticipo le foto grandi (una alla volta, dalle più recenti): aprirle poi è immediato
+    let alive = true;
+    void (async () => {
+      for (const p of photos.slice(0, 12)) {
+        if (!alive) return;
+        await loadImages(photoId(p)).catch(() => null);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [open, photos, loadImages]);
   const tap = (p: ProgressPhoto) => {
     if (!comparing) return onOpen(p);
     const id = photoId(p);

@@ -4,6 +4,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocFromCache,
   getDocs,
   onSnapshot,
   query,
@@ -205,8 +206,16 @@ export const savePhoto = (uid: string, meta: ProgressPhoto, images: PhotoImages)
   const id = meta.id ?? newPhotoId(meta.date);
   return Promise.all([setDoc(doc(photosCol(uid), id), clean({ ...meta, id })), setDoc(doc(photoImagesCol(uid), id), clean(images))]).then(() => id);
 };
+/** Le foto non cambiano mai: prima la copia salvata sul telefono (istantanea), poi internet. */
 export const getPhotoImages = async (uid: string, id: string): Promise<PhotoImages | null> => {
-  const d = await getDoc(doc(photoImagesCol(uid), id));
+  const ref = doc(photoImagesCol(uid), id);
+  try {
+    const c = await getDocFromCache(ref);
+    if (c.exists()) return c.data() as PhotoImages;
+  } catch {
+    /* non ancora sul telefono */
+  }
+  const d = await getDoc(ref);
   return d.exists() ? (d.data() as PhotoImages) : null;
 };
 export const deletePhoto = (uid: string, id: string) => Promise.all([deleteDoc(doc(photosCol(uid), id)), deleteDoc(doc(photoImagesCol(uid), id))]);
