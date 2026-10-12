@@ -125,7 +125,7 @@ export function ProgressPhotos({ kind = 'daily' }: { kind?: 'daily' | 'checkin' 
   );
 }
 
-function CompareModal({ pair, load, onClose }: { pair: [ProgressPhoto, ProgressPhoto] | null; load: (d: string) => Promise<PhotoImages | null>; onClose: () => void }) {
+export function CompareModal({ pair, load, onClose }: { pair: [ProgressPhoto, ProgressPhoto] | null; load: (d: string) => Promise<PhotoImages | null>; onClose: () => void }) {
   const [imgs, setImgs] = useState<[string, string] | null>(null);
   const [pos, setPos] = useState(50);
   useEffect(() => {

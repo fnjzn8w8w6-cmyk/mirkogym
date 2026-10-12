@@ -32,7 +32,7 @@ import { useSessions } from '@/hooks/use-sessions';
 import { userNutrition } from '@/lib/coach';
 import { completeDays, METABOLISM_RELIABLE_DAYS, waterEvents, weightTrend } from '@/lib/body-model';
 import { SectionTitle } from '@/components/ui/Help';
-import { ProgressPhotos } from '@/components/body/ProgressPhotos';
+import { DailyPhotos } from '@/components/body/DailyPhotos';
 
 type BodyTab = 'muscles' | 'weight' | 'checkin';
 
@@ -155,8 +155,7 @@ export default function Body() {
         ) : tab === 'checkin' ? (
           <>
             {settings.profile && <WeeklyCheckIn profile={settings.profile} autoOpen={params.get('checkin') === '1'} />}
-            <ProgressPhotos kind="checkin" />
-            <ProgressPhotos kind="daily" />
+            <DailyPhotos />
           </>
         ) : bodyLogs.length === 0 ? (
           <EmptyState

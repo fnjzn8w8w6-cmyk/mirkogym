@@ -5,7 +5,7 @@ import { QUESTIONS } from './checkin-questions';
 import { CheckInHistory } from './CheckInHistory';
 import { useCheckIns } from '@/hooks/use-checkins';
 import { realWeight } from '@/lib/body-model';
-import { ClipboardCheck, Sparkles } from 'lucide-react';
+import { ChevronRight, ClipboardCheck, Sparkles } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { useSessions } from '@/hooks/use-sessions';
 import { useAthlete, useRecentFoodLogs } from '@/hooks/use-athlete';
@@ -299,16 +299,19 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
           {due ? 'Fai il check-in' : 'Rifai il check-in'}
         </Button>
         {archive.checkIns.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-x-4">
-            <button type="button" onClick={() => setHistoryOpen(archive.checkIns[0].date)} className="h-10 text-sm font-semibold text-accent-400">
-              Apri l'ultimo check-in
-            </button>
-            {archive.checkIns.length > 1 && (
-              <button type="button" onClick={() => setHistoryOpen('list')} className="h-10 text-sm font-semibold text-accent-400">
-                Tutti i check-in ({archive.checkIns.length}) <NewBadge className="ml-1" />
-              </button>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={() => setHistoryOpen('list')}
+            className="mt-3 flex w-full items-center gap-3 rounded-md border border-line bg-surface-2 px-3 py-3 text-left"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block text-base font-semibold text-fg">Apri la lista dei check-in</span>
+              <span className="block text-sm text-fg-3">
+                {archive.checkIns.length} check-in · ultimo il {new Date(archive.checkIns[0].date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}
+              </span>
+            </span>
+            <ChevronRight className="h-5 w-5 shrink-0 text-fg-3" aria-hidden />
+          </button>
         )}
       </Card>
 
