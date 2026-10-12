@@ -94,7 +94,7 @@ export function Modal({ open, onClose, title, variant = 'sheet', children, foote
             )}
             <div
               className="flex-1 overflow-y-auto overscroll-contain px-5 pb-5"
-              onPointerDownCapture={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
             >
               {children}
             </div>

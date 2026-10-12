@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, ClipboardCheck } from 'lucide-react';
+import { Camera, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Modal } from '@/components/ui/Modal';
 import { Chip } from '@/components/ui/Chip';
 import { photoId, usePhotos } from '@/hooks/use-photos';
@@ -24,7 +26,17 @@ export function checkInPhoto<P extends { id?: string; date: string; daily?: bool
  * (risposte, numeri della settimana, analisi del coach, foto e modifiche applicate).
  * `open`: 'list' = elenco, numero = data del check-in da aprire.
  */
-export function CheckInHistory({ checkIns, open, onClose }: { checkIns: CheckIn[]; open: number | 'list' | null; onClose: () => void }) {
+export function CheckInHistory({
+  checkIns,
+  open,
+  onClose,
+  onDelete,
+}: {
+  checkIns: CheckIn[];
+  open: number | 'list' | null;
+  onClose: () => void;
+  onDelete: (c: CheckIn, photoId?: string) => Promise<void>;
+}) {
   const [view, setView] = useState<number | 'list'>('list');
   useEffect(() => {
     if (open != null) setView(open);
@@ -34,34 +46,25 @@ export function CheckInHistory({ checkIns, open, onClose }: { checkIns: CheckIn[
   return (
     <Modal open={open != null} onClose={onClose} title={selected ? 'Check-in' : 'I tuoi check-in'}>
       {selected ? (
-        <Detail c={selected} checkIns={checkIns} onBack={checkIns.length > 1 ? () => setView('list') : undefined} />
+        <Detail
+          c={selected}
+          checkIns={checkIns}
+          onBack={checkIns.length > 1 ? () => setView('list') : undefined}
+          onDelete={async (photo) => {
+            await onDelete(selected, photo);
+            if (checkIns.length > 1) setView('list');
+            else onClose();
+          }}
+        />
       ) : (
-        <ul className="space-y-2">
-          {checkIns.map((c, i) => {
-            const prev = checkIns[i + 1];
-            const dw = c.weight != null && prev?.weight != null ? c.weight - prev.weight : null;
+        <ul className="divide-y divide-line-subtle overflow-hidden rounded-md border border-line-subtle bg-surface-2">
+          {checkIns.map((c) => {
             const ph = checkInPhoto(c, photos);
             return (
               <li key={c.date}>
-                <button type="button" onClick={() => setView(c.date)} className="flex w-full items-center gap-3 rounded-md border border-line-subtle bg-surface-2 p-3 text-left">
-                  {ph ? (
-                    <img src={ph.thumb} alt="" className="h-20 w-16 shrink-0 rounded-md object-cover" />
-                  ) : (
-                    <span className="flex h-20 w-16 shrink-0 items-center justify-center rounded-md bg-surface-3 text-fg-3" aria-hidden>
-                      <ClipboardCheck className="h-6 w-6" />
-                    </span>
-                  )}
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-base font-semibold text-fg">{shortDate(c.date)}</span>
-                    <span className="mt-0.5 block text-sm text-fg-3">
-                      {c.stats.sessions}/{c.stats.planned} allenamenti
-                      {c.weight != null ? ` · ${kg(c.weight)}` : ''}
-                      {dw != null ? ` (${dw > 0 ? '+' : ''}${dw.toFixed(1).replace('.', ',')})` : ''}
-                      {c.kcalChange ? ` · ${c.kcalChange > 0 ? '+' : ''}${c.kcalChange} kcal` : ''}
-                      {c.deload ? ' · scarico' : ''}
-                    </span>
-                    <span className="mt-1 line-clamp-2 block text-sm text-fg-2">{c.summary}</span>
-                  </span>
+                <button type="button" onClick={() => setView(c.date)} className="flex min-h-[56px] w-full items-center gap-3 px-4 py-3 text-left">
+                  <span className="min-w-0 flex-1 text-base font-semibold text-fg first-letter:uppercase">{longDate(c.date)}</span>
+                  {ph && <Camera className="h-4 w-4 shrink-0 text-fg-3" aria-label="Con foto" />}
                   <ChevronRight className="h-5 w-5 shrink-0 text-fg-3" aria-hidden />
                 </button>
               </li>
@@ -73,9 +76,10 @@ export function CheckInHistory({ checkIns, open, onClose }: { checkIns: CheckIn[
   );
 }
 
-function Detail({ c, checkIns, onBack }: { c: CheckIn; checkIns: CheckIn[]; onBack?: () => void }) {
+function Detail({ c, checkIns, onBack, onDelete }: { c: CheckIn; checkIns: CheckIn[]; onBack?: () => void; onDelete: (photoId?: string) => Promise<void> }) {
   const { photos, images } = usePhotos();
   const photo = checkInPhoto(c, photos);
+  const [confirm, setConfirm] = useState(false);
   // foto a piena risoluzione (la miniatura si vede subito, poi arriva quella grande)
   const [full, setFull] = useState<string | null>(null);
   useEffect(() => {
@@ -165,6 +169,20 @@ function Detail({ c, checkIns, onBack }: { c: CheckIn; checkIns: CheckIn[]; onBa
           </ul>
         </section>
       )}
+      <Button variant="ghost" fullWidth icon={<Trash2 className="h-4 w-4" />} onClick={() => setConfirm(true)} className="text-danger">
+        Elimina questo check-in
+      </Button>
+      <ConfirmDialog
+        open={confirm}
+        title="Eliminare il check-in?"
+        message={`Il check-in del ${shortDate(c.date)}${photo ? ' e la sua foto verranno eliminati' : ' verrà eliminato'} definitivamente.`}
+        confirmLabel="Elimina"
+        onCancel={() => setConfirm(false)}
+        onConfirm={async () => {
+          setConfirm(false);
+          await onDelete(photo ? photoId(photo) : undefined);
+        }}
+      />
     </div>
   );
 }

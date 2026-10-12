@@ -318,7 +318,15 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
         )}
       </Card>
 
-      <CheckInHistory checkIns={archive.checkIns} open={historyOpen} onClose={() => setHistoryOpen(null)} />
+      <CheckInHistory
+        checkIns={archive.checkIns}
+        open={historyOpen}
+        onClose={() => setHistoryOpen(null)}
+        onDelete={async (c, photo) => {
+          await archive.remove(c, photo);
+          toast.success('Check-in eliminato');
+        }}
+      />
       <Modal open={open} onClose={() => !saving && setOpen(false)} title="Check-in settimanale" dismissible={!saving}>
         {step === 'ask' ? (
           <div className="space-y-4">

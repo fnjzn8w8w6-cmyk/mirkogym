@@ -215,6 +215,7 @@ export function subscribeCheckIns(uid: string, cb: (c: CheckIn[]) => void, onErr
   return onSnapshot(checkInsCol(uid), (snap) => cb(snap.docs.map((d) => d.data() as CheckIn).sort((a, b) => b.date - a.date)), onError);
 }
 export const saveCheckIn = (uid: string, c: CheckIn) => setDoc(doc(checkInsCol(uid), String(c.date)), clean(c));
+export const deleteCheckIn = (uid: string, date: number) => deleteDoc(doc(checkInsCol(uid), String(date)));
 export const saveFoodLog = (uid: string, log: FoodLog) =>
   setDoc(doc(foodLogsCol(uid), log.date), clean({ date: log.date, entries: log.entries, updatedAt: Timestamp.now() }), { merge: true });
 export const saveDayRecap = (uid: string, date: string, recap: NonNullable<FoodLog['recap']>) =>
