@@ -8,14 +8,14 @@ import { photoId, usePhotos } from '@/hooks/use-photos';
 import { useSessions } from '@/hooks/use-sessions';
 import { useBodyLogs } from '@/hooks/use-body-logs';
 import { pickFrames, renderReel, reelSeconds, type ReelPhoto, type ReelSummary } from '@/lib/reel';
-import { composeBody, type BodyTarget } from '@/lib/body-align';
+import { composeBody, groupTarget, type BodyTarget, type PhotoBackground } from '@/lib/body-align';
 import { loadImage } from '@/lib/share-card';
 import { Toggle } from '@/components/ui/Input';
 import { NewBadge } from '@/components/ui/Help';
 import { shareFile } from '@/lib/share-card';
 import { sessionSetCount, sessionTonnage } from '@/lib/analytics';
 import { daysBetween, fromISODate, toISODate, todayISO } from '@/lib/date-utils';
-import type { BodyLog } from '@/types';
+import type { BodyLog, BodyPoints } from '@/types';
 import { MuscleFigure } from '@/components/library/MuscleFigure';
 import { dayIntensity, muscleMapFor } from '@/lib/daily-card';
 
@@ -27,7 +27,30 @@ const PERIODS: { value: Period; label: string }[] = [
   { value: '30', label: '30 g' },
 ];
 
-const NEUTRAL_KEY = 'vl.reel.neutral';
+const ALIGN_KEY = 'vl.reel.align';
+const BG_KEY = 'vl.reel.bg';
+/** vecchio interruttore unico (sfondo scuro + allineamento): spento = sfondo originale */
+const OLD_KEY = 'vl.reel.neutral';
+type ReelBg = Extract<PhotoBackground, 'orig' | 'dark' | 'blur'>;
+const BGS: { value: ReelBg; label: string }[] = [
+  { value: 'orig', label: 'Originale' },
+  { value: 'dark', label: 'Scuro' },
+  { value: 'blur', label: 'Sfocato' },
+];
+const read = (k: string) => {
+  try {
+    return localStorage.getItem(k);
+  } catch {
+    return null;
+  }
+};
+const write = (k: string, v: string) => {
+  try {
+    localStorage.setItem(k, v);
+  } catch {
+    /* navigazione privata */
+  }
+};
 // dove sta il corpo: a destra della colonna dei dati nel timelapse, al centro nei riquadri 3:4
 const FRAME: BodyTarget = { torso: 1920 * 0.2, x: 1080 * 0.6, y: 1920 * 0.52 };
 const PANEL: BodyTarget = { torso: 1000 * 0.25, x: 375, y: 1000 * 0.38 };
@@ -54,12 +77,12 @@ export function ReelModal({ open, onClose }: { open: boolean; onClose: () => voi
   const [period, setPeriod] = useState<Period>('tutto');
   const [progress, setProgress] = useState<number | null>(null);
   const [phase, setPhase] = useState<'body' | 'video'>('video');
-  const [neutral, setNeutral] = useState(() => {
-    try {
-      return localStorage.getItem(NEUTRAL_KEY) !== '0';
-    } catch {
-      return true;
-    }
+  // corpo allineato e sfondo, scelti separatamente (predefiniti: allineato su sfondo scuro)
+  const [align, setAlign] = useState(() => read(ALIGN_KEY) !== '0');
+  const [bg, setBg] = useState<ReelBg>(() => {
+    const v = read(BG_KEY);
+    if (BGS.some((b) => b.value === v)) return v as ReelBg;
+    return read(OLD_KEY) === '0' ? 'orig' : 'dark';
   });
   const [video, setVideo] = useState<{ blob: Blob; url: string; ext: string } | null>(null);
   const [sharing, setSharing] = useState(false);
@@ -113,30 +136,40 @@ export function ReelModal({ open, onClose }: { open: boolean; onClose: () => voi
       // manichino di ogni giorno con i muscoli allenati
       const svg = mapRef.current?.querySelector('svg');
       const list: ReelPhoto[] = data.list.map((p) => ({ ...p, muscles: svg && p.session ? muscleMapFor(svg, dayIntensity(p.session, groupOf)) : null }));
-      // sfondo scuro: prima si riconosce il corpo nelle foto del video (salvato: la volta dopo è immediato)
+      // allineamento o sfondo: prima si riconosce il corpo nelle foto del video (salvato: la volta dopo è immediato)
       const byId = new Map(photos.map((p) => [photoId(p), p]));
-      const used = neutral ? pickFrames(list) : [];
-      if (neutral) {
+      const edit = align || bg !== 'orig';
+      const used = edit ? pickFrames(list) : [];
+      const found: { img: { width: number; height: number }; body: BodyPoints | null }[] = [];
+      if (edit) {
         setPhase('body');
         for (let i = 0; i < used.length; i++) {
           if (cancel.current) throw new Error('Annullato');
           const p = byId.get(used[i].id);
-          if (p) await body(p).catch(() => null);
+          const info = p ? await body(p).catch(() => null) : null;
+          // grandezza della foto: serve a calcolare quanto ingrandire con lo sfondo originale
+          const src = info?.body && bg === 'orig' ? (await images(used[i].id))?.front : null;
+          const img = src ? await loadImage(src) : null;
+          if (img && info) found.push({ img: { width: img.width, height: img.height }, body: info.body });
           setProgress((i + 1) / used.length);
         }
         setPhase('video');
         setProgress(0);
       }
+      const origFrame = groupTarget(found, 1080, 1920);
+      const origPanel = groupTarget(found, 750, 1000);
       const load = async (id: string, use: 'frame' | 'panel') => {
         const src = (await images(id))?.front ?? null;
         const p = byId.get(id);
-        if (!src || !neutral || !p) return src;
+        if (!src || !edit || !p) return src;
         const info = await body(p).catch(() => null);
-        if (!info?.mask) return src;
-        const [img, mask] = await Promise.all([loadImage(src), loadImage(info.mask)]);
+        if (!info) return src;
+        const [img, mask] = await Promise.all([loadImage(src), info.mask ? loadImage(info.mask) : Promise.resolve(null)]);
         if (!img) return src;
-        const [w, h, target] = use === 'frame' ? [1080, 1920, FRAME] : [750, 1000, PANEL];
-        return composeBody(img, { body: info.body, mask }, { w, h, bg: 'dark', target }).toDataURL('image/jpeg', 0.9);
+        const [w, h, fixed] = use === 'frame' ? [1080, 1920, FRAME] : [750, 1000, PANEL];
+        // sfondo originale: si ingrandisce il meno possibile; scuro/sfocato: corpo sempre nello stesso punto
+        const target = bg === 'orig' ? (use === 'frame' ? origFrame : origPanel) : fixed;
+        return composeBody(img, { body: info.body, mask }, { w, h, bg, target: align ? target : null }).toDataURL('image/jpeg', 0.9);
       };
       const res = await renderReel(
         list,
@@ -223,23 +256,32 @@ export function ReelModal({ open, onClose }: { open: boolean; onClose: () => voi
             <Segmented<Period> label="Periodo del reel" value={period} options={PERIODS} onChange={setPeriod} />
             <div className="rounded-md bg-surface-2 px-3">
               <Toggle
-                checked={neutral}
+                checked={align}
                 onChange={(v) => {
-                  setNeutral(v);
-                  try {
-                    localStorage.setItem(NEUTRAL_KEY, v ? '1' : '0');
-                  } catch {
-                    /* navigazione privata */
-                  }
+                  setAlign(v);
+                  write(ALIGN_KEY, v ? '1' : '0');
                 }}
                 label={
                   <>
-                    Sfondo scuro e corpo allineato <NewBadge />
+                    Allinea il corpo <NewBadge />
                   </>
                 }
-                description="Il corpo ha la stessa grandezza e posizione in tutte le foto. La prima volta il telefono scarica i modelli (circa 30 MB)."
+                description="Stessa grandezza e posizione del corpo in tutte le foto."
               />
             </div>
+            <div>
+              <div className="mb-1 text-xs font-semibold uppercase text-fg-3">Sfondo</div>
+              <Segmented<ReelBg>
+                label="Sfondo del reel"
+                value={bg}
+                options={BGS}
+                onChange={(v) => {
+                  setBg(v);
+                  write(BG_KEY, v);
+                }}
+              />
+            </div>
+            {(align || bg !== 'orig') && <p className="text-xs text-fg-3">La prima volta il telefono scarica i modelli per riconoscere il corpo (circa 30 MB), poi restano salvati.</p>}
             {n >= 2 ? (
               <p className="text-sm text-fg-3">
                 {n} foto · video di circa {reelSeconds(Math.min(n, 140))} secondi

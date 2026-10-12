@@ -190,6 +190,17 @@ function coverTorso(img: { width: number; height: number }, b: BodyPoints, w: nu
   return { torso: Math.hypot(sx - hx, sy - hy), x: (sx + hx) / 2, y: (sy + hy) / 2 };
 }
 
+/**
+ * Per lo sfondo originale (più foto): la foto con il corpo più grande fa da riferimento (grandezza e posizione),
+ * così le foto si ingrandiscono il meno possibile e restano quasi intere.
+ */
+export function groupTarget(items: { img: { width: number; height: number }; body: BodyPoints | null | undefined }[], w: number, h: number): BodyTarget | null {
+  const t = items.filter((i) => i.body).map((i) => coverTorso(i.img, i.body!, w, h));
+  if (!t.length) return null;
+  // la foto più vicina resta com'è (nessun bordo da riempire), le altre si portano su di lei
+  return t.reduce((a, b) => (b.torso > a.torso ? b : a));
+}
+
 /** Per il confronto: il corpo più grande dei due fa da riferimento, centrato in orizzontale. */
 export function pairTarget(items: { img: { width: number; height: number }; body: BodyPoints | null | undefined }[], w: number, h: number): BodyTarget | null {
   const t = items.filter((i) => i.body).map((i) => coverTorso(i.img, i.body!, w, h));
