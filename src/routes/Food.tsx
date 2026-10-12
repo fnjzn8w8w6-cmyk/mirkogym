@@ -6,7 +6,6 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { FoodDiary } from '@/components/food/FoodDiary';
 import { NutritionPlanner, RecipesTab } from '@/components/food/NutritionPlanner';
 import { DietAnalysis } from '@/components/food/DietAnalysis';
-import { WeeklyCheckIn } from '@/components/coach/WeeklyCheckIn';
 import { useEffectiveProfile } from '@/hooks/use-effective-profile';
 
 type Tab = 'diary' | 'plan' | 'recipes' | 'analysis';
@@ -42,7 +41,7 @@ export default function Food() {
           ) : tab === 'diary' ? (
             <FoodDiary profile={profile} />
           ) : tab === 'plan' ? (
-            <NutritionPlanner profile={profile} header={<WeeklyCheckIn profile={profile} autoOpen={params.get('checkin') === '1'} />} />
+            <NutritionPlanner profile={profile} />
           ) : tab === 'analysis' ? (
             <DietAnalysis profile={profile} />
           ) : (

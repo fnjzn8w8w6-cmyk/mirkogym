@@ -14,10 +14,14 @@ import type { PhotoImages, ProgressPhoto } from '@/types';
 
 const fmt = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
 
-/** Galleria delle foto settimanali + confronto prima/dopo con cursore. */
-export function ProgressPhotos() {
+/**
+ * Galleria delle foto + confronto prima/dopo con cursore.
+ * kind "daily": foto del giorno (con reel e condivisione); "checkin": foto del check-in e della massa grassa da foto.
+ */
+export function ProgressPhotos({ kind = 'daily' }: { kind?: 'daily' | 'checkin' }) {
   const navigate = useNavigate();
-  const { photos, images, remove } = usePhotos();
+  const { photos: all, images, remove } = usePhotos();
+  const photos = all.filter((p) => (kind === 'daily' ? p.daily : !p.daily));
   const [pick, setPick] = useState<string[]>([]);
   const [compare, setCompare] = useState<[ProgressPhoto, ProgressPhoto] | null>(null);
   const [toDelete, setToDelete] = useState<string | null>(null);
@@ -39,10 +43,11 @@ export function ProgressPhotos() {
     <Card className="p-4">
       <div className="flex items-center justify-between">
         <h2 className="section-title !mb-0">
-          <SectionTitle help="body-photos">Foto dei progressi</SectionTitle>
+          <SectionTitle help="body-photos">{kind === 'daily' ? 'Foto del giorno' : 'Foto del check-in'}</SectionTitle>
         </h2>
         <span className="text-xs text-fg-3">{photos.length} foto</span>
       </div>
+      {kind === 'daily' && (
       <div className="mt-3 space-y-2">
         <Button fullWidth variant="secondary" className="whitespace-nowrap" icon={<Camera className="h-4 w-4" />} onClick={() => setDaily({})}>
           Foto del giorno <NewBadge className="ml-1" />
@@ -51,16 +56,23 @@ export function ProgressPhotos() {
           Crea il reel <NewBadge className="ml-1" />
         </Button>
       </div>
+      )}
       {photos.length === 0 ? (
         <div className="mt-2 text-sm text-fg-2">
-          <p>Scatta la foto del giorno per seguire i cambiamenti e condividerli, oppure aggiungila al check-in settimanale: il coach stima la massa grassa e la confronta con quella precedente.</p>
-          <Button className="mt-3" size="sm" variant="secondary" onClick={() => navigate('/food?tab=plan&checkin=1')}>
-            📸 Fai il check-in con la foto
-          </Button>
+          {kind === 'daily' ? (
+            <p>Scatta una foto al giorno, sempre nella stessa posa: l'app ci aggiunge giorno, allenamento e muscoli, e con tutte le foto crea il reel.</p>
+          ) : (
+            <>
+              <p>Qui trovi le foto aggiunte al check-in settimanale e quelle di «BF da foto»: il coach stima la massa grassa e la confronta con la volta prima.</p>
+              <Button className="mt-3" size="sm" variant="secondary" onClick={() => navigate('/body?tab=checkin&checkin=1')}>
+                📸 Fai il check-in con la foto
+              </Button>
+            </>
+          )}
         </div>
       ) : (
         <>
-          <p className="mt-3 text-xs text-fg-3">Tocca una foto per condividerla, due per confrontarle.</p>
+          <p className="mt-3 text-xs text-fg-3">{kind === 'daily' ? 'Tocca una foto per condividerla, due per confrontarle.' : 'Tocca due foto per confrontarle.'}</p>
           <div className="-mx-1 mt-2 flex gap-2 overflow-x-auto px-1 pb-1">
             {photos.map((p) => (
               <button
@@ -82,11 +94,13 @@ export function ProgressPhotos() {
             ))}
           </div>
           {photos[0]?.comment && <p className="mt-2 text-sm text-fg-2">🧐 {photos[0].comment}</p>}
-          <div className="mt-3 grid grid-cols-[1fr_auto_auto] gap-2">
+          <div className={cn('mt-3 grid gap-2', kind === 'daily' ? 'grid-cols-[1fr_auto_auto]' : 'grid-cols-[1fr_auto]')}>
             <Button size="sm" disabled={pick.length !== 2} onClick={openCompare}>
               Confronta prima / dopo
             </Button>
-            <Button size="sm" variant="secondary" disabled={pick.length !== 1} icon={<Share2 className="h-4 w-4" />} onClick={() => void reshare(pick[0])} aria-label="Condividi la foto selezionata" />
+            {kind === 'daily' && (
+              <Button size="sm" variant="secondary" disabled={pick.length !== 1} icon={<Share2 className="h-4 w-4" />} onClick={() => void reshare(pick[0])} aria-label="Condividi la foto selezionata" />
+            )}
             <Button size="sm" variant="ghost" disabled={pick.length !== 1} icon={<Trash2 className="h-4 w-4" />} onClick={() => setToDelete(pick[0])} aria-label="Elimina la foto selezionata" />
           </div>
         </>

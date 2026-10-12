@@ -128,7 +128,7 @@ export default function Profile() {
           </h2>
           <Card className="divide-y divide-line-subtle">
             {!bodyweight && (
-              <button type="button" onClick={() => navigate('/body')} className="flex w-full items-center gap-2 p-4 text-left text-sm text-warning">
+              <button type="button" onClick={() => navigate('/body?tab=weight')} className="flex w-full items-center gap-2 p-4 text-left text-sm text-warning">
                 Registra il tuo peso corporeo in "Corpo" per calcolare i ranghi.
                 <ChevronRight className="ml-auto h-4 w-4" aria-hidden />
               </button>

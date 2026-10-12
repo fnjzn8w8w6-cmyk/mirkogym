@@ -6,11 +6,15 @@ import { useRecentFoodLogs } from '@/hooks/use-athlete';
 import { useSessions } from '@/hooks/use-sessions';
 import { useDayTarget } from '@/hooks/use-habits';
 import { cn } from '@/lib/cn';
-import { fromISODate, toISODate, todayISO } from '@/lib/date-utils';
+import { fromISODate, mondayISO, toISODate, todayISO } from '@/lib/date-utils';
 import { sumMacros } from '@/lib/foods';
 import { dayNutrition } from '@/lib/habits';
 import type { UserProfile } from '@/lib/metabolism';
-import type { DiaryMeal } from '@/types';
+import type { DiaryMeal, FoodLog } from '@/types';
+import { useSettings } from '@/hooks/use-settings';
+import { settle } from '@/lib/firestore';
+import { analyzeDietDay, analyzeDietWeek, dietDayData, dietWeekData, type DietDay } from '@/lib/analysis';
+import { PeriodAnalysis } from '@/components/coach/PeriodAnalysis';
 import { entryMacros } from './FoodDiary';
 import { MacroBar } from './shared';
 
@@ -108,6 +112,8 @@ export function DietAnalysis({ profile }: { profile: UserProfile }) {
 
   return (
     <div className="space-y-4">
+      <DietCoachAnalysis profile={profile} />
+      <div className="text-xs font-bold uppercase tracking-wider text-fg-3">Andamento</div>
       <Segmented<`${Period}`>
         label="Periodo"
         value={`${period}`}
@@ -121,7 +127,7 @@ export function DietAnalysis({ profile }: { profile: UserProfile }) {
 
       {n === 0 ? (
         <Card className="p-4 text-center text-sm text-fg-2">
-          Nessuna giornata completa nel diario in questo periodo. Registra cosa mangi e qui vedrai l'andamento.
+          I grafici partono dalla prima giornata completa già conclusa (quella di oggi conta da domani). Intanto puoi analizzare la giornata di oggi qui sopra.
         </Card>
       ) : (
         <>
@@ -240,5 +246,97 @@ export function DietAnalysis({ profile }: { profile: UserProfile }) {
         </>
       )}
     </div>
+  );
+}
+
+const MEAL_LABEL: Record<DiaryMeal, string> = { colazione: 'Colazione', pranzo: 'Pranzo', cena: 'Cena', spuntini: 'Spuntini' };
+
+/** Analisi del dietologo: una giornata (oggi o l'ultima registrata) o la settimana in corso. Solo dieta. */
+function DietCoachAnalysis({ profile }: { profile: UserProfile }) {
+  const { settings, update } = useSettings();
+  const { sessions } = useSessions();
+  const dayT = useDayTarget(profile);
+  const logs = useRecentFoodLogs(15);
+  const today = todayISO();
+  const week = mondayISO();
+  const prevWeek = toISODate(fromISODate(week).getTime() - 7 * 86400000);
+  const trainedOn = useMemo(() => new Set(sessions.map((s) => toISODate(s.date))), [sessions]);
+
+  const toDay = useMemo(
+    () =>
+      (l: FoodLog): DietDay | null => {
+        if (!dayT) return null;
+        const wd = (fromISODate(l.date).getDay() + 6) % 7;
+        const trained = trainedOn.has(l.date) ? true : l.date < today ? false : undefined;
+        const t = dayNutrition(dayT.base, wd, dayT.cycling, trained);
+        const m = sumMacros(l.entries.map(entryMacros));
+        return {
+          date: l.date,
+          target: { kcal: t.target, protein: t.protein, carbs: t.carbs, fat: t.fat },
+          eaten: { kcal: m.kcal, protein: m.protein, carbs: m.carbs, fat: m.fat },
+          training: trained ?? null,
+          meals: MEALS.map(({ key }) => {
+            const es = l.entries.filter((e) => e.meal === key);
+            return { meal: MEAL_LABEL[key], items: es.map((e) => `${e.name} ${e.unit === 'g' ? `${Math.round(e.qty)} g` : `×${e.qty}`}`), kcal: es.reduce((a, e) => a + entryMacros(e).kcal, 0) };
+          }).filter((x) => x.items.length),
+          complete: l.recap?.complete,
+          hunger: l.recap?.hunger,
+          cheat: l.recap?.cheat,
+          note: l.recap?.note,
+        };
+      },
+    [dayT, trainedOn, today],
+  );
+
+  const logged = logs.filter((l) => l.entries.length).sort((a, b) => b.date.localeCompare(a.date));
+  const dayLog = logged.find((l) => l.date === today) ?? logged[0];
+  const weekLogs = logged.filter((l) => l.date >= week).sort((a, b) => a.date.localeCompare(b.date));
+  const saved = settings.dietAnalysis ?? {};
+  const kcalOf = (l: FoodLog) => Math.round(sumMacros(l.entries.map(entryMacros)).kcal);
+  if (!dayT) return null;
+
+  return (
+    <PeriodAnalysis
+      title="Analisi del dietologo"
+      help="diet-analysis-ai"
+      persona="diet"
+      modes={[
+        {
+          key: 'day',
+          label: 'Giornata',
+          subject: dayLog ? `${dayLog.date === today ? 'Oggi' : fromISODate(dayLog.date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })} · ${kcalOf(dayLog)} kcal registrate` : null,
+          action: dayLog?.date === today ? 'Analizza la giornata di oggi' : "Analizza l'ultima giornata",
+          saved: saved.day,
+          // cambia quando aggiungi qualcosa al diario
+          ref: dayLog ? `${dayLog.date}:${dayLog.entries.length}:${kcalOf(dayLog)}` : null,
+          intro: dayLog
+            ? 'Il dietologo guarda cosa hai mangiato nella giornata rispetto all’obiettivo (calorie, proteine, carboidrati, grassi) e ti dice cosa sistemare, anche cosa mangiare nel resto della giornata.'
+            : 'Registra i pasti nel Diario: poi il dietologo potrà analizzare la giornata.',
+          run: (o) => analyzeDietDay(dietDayData(toDay(dayLog!)!), profile, o),
+          save: (a) => settle(update({ dietAnalysis: { ...saved, day: a } })),
+        },
+        {
+          key: 'week',
+          label: 'Settimana',
+          subject: `Settimana dal ${fromISODate(week).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })} · ${weekLogs.length} ${weekLogs.length === 1 ? 'giorno registrato' : 'giorni registrati'}`,
+          action: 'Analizza la settimana',
+          saved: saved.week,
+          ref: weekLogs.length ? `${week}:${weekLogs.map((l) => `${l.date}-${l.entries.length}`).join(',')}` : null,
+          intro: weekLogs.length
+            ? 'Il dietologo guarda i giorni registrati da lunedì a oggi: medie, giorni in obiettivo, proteine, cibi più frequenti, fame e sgarri. Non giudica la settimana come finita.'
+            : 'Registra i pasti nel Diario: poi il dietologo potrà analizzare la settimana.',
+          run: (o) =>
+            analyzeDietWeek(
+              dietWeekData(
+                weekLogs.map((l) => toDay(l)!).filter(Boolean),
+                logged.filter((l) => l.date >= prevWeek && l.date < week).map((l) => toDay(l)!).filter(Boolean),
+              ),
+              profile,
+              o,
+            ),
+          save: (a) => settle(update({ dietAnalysis: { ...saved, week: a } })),
+        },
+      ]}
+    />
   );
 }

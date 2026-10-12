@@ -1,72 +1,72 @@
-import { RefreshCw } from 'lucide-react';
-import { useCoachMemory } from '@/hooks/use-training-model';
+import { useMemo } from 'react';
+import { useTrainingMemory, useTrainingModel } from '@/hooks/use-training-model';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { useSettings } from '@/hooks/use-settings';
 import { useSessions } from '@/hooks/use-sessions';
+import { useSchedule } from '@/hooks/use-schedule';
 import { useAthlete } from '@/hooks/use-athlete';
-import { analyzeAthlete } from '@/lib/coach';
+import { analyzeSession, analyzeTrainingWeek, sessionData, trainingWeekData } from '@/lib/analysis';
+import { mondayISO, toISODate } from '@/lib/date-utils';
 import { settle } from '@/lib/firestore';
 import { cn } from '@/lib/cn';
-import { SectionTitle } from '@/components/ui/Help';
-import { AIBusy, AINote, AIPersona, useAITask } from './AIBusy';
+import { AINote } from './AIBusy';
+import { PeriodAnalysis } from './PeriodAnalysis';
 
-/** Analisi del coach: osservazioni calcolate (sempre) + resoconto AI salvato, aggiornabile. */
+/** Analisi del coach sull'allenamento: ultima sessione o settimana in corso (solo allenamento) + osservazioni calcolate. */
 export function CoachAnalysis() {
   const { settings, update } = useSettings();
-  const { sessions } = useSessions();
+  const { sessions, nameOf, groupOf } = useSessions();
+  const { days } = useSchedule();
   const { report } = useAthlete();
-  const text = useCoachMemory();
-  const ai = useAITask();
-  const saved = settings.coachAnalysis;
-  const newSince = saved ? sessions.filter((s) => s.date > saved.at).length : sessions.length;
-
-  const run = async () => {
-    if (!settings.profile) return;
-    const out = await ai.run((o) => analyzeAthlete(text, settings.profile!, o));
-    if (out) await settle(update({ coachAnalysis: { text: out, at: Date.now(), sessions: sessions.length } }));
-  };
+  const { ideal } = useTrainingModel();
+  const memory = useTrainingMemory();
+  const profile = settings.profile;
+  const last = useMemo(() => [...sessions].sort((a, b) => b.date - a.date)[0], [sessions]);
+  const lastDay = last ? days.find((d) => d.id === last.dayId) : undefined;
+  const lastName = lastDay ? `${lastDay.name}${lastDay.subtitle ? ` · ${lastDay.subtitle}` : ''}` : 'Allenamento';
+  const week = mondayISO();
+  const saved = settings.trainAnalysis ?? {};
+  const insights = report.insights.filter((i) => i.area !== 'diet');
 
   return (
     <div className="space-y-4">
-      <Card className="border-violet-500/40 p-4" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(13,15,14,0.95))' }}>
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="font-display text-lg font-extrabold text-fg">
-            <SectionTitle help="train-analysis">Analisi del coach</SectionTitle>
-          </h2>
-          {saved && <span className="text-xs text-fg-3">{new Date(saved.at).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</span>}
-        </div>
-        {ai.busy ? (
-          <div className="mt-3">
-            <AIBusy status={ai.status} onCancel={ai.cancel} />
-          </div>
-        ) : saved ? (
-          <p className="mt-3 whitespace-pre-line text-base leading-relaxed text-fg">{saved.text}</p>
-        ) : (
-          <div className="mt-2 text-center">
-            <AIPersona />
-            <p className="text-sm text-fg-2">
-              Il coach legge tutte le sessioni, i resoconti, le note e il diario e ti dice concretamente come stai andando e cosa migliorare.
-            </p>
-          </div>
-        )}
-        {ai.error && (
-          <p className="mt-2 text-sm text-danger" role="alert">
-            {ai.error}
-          </p>
-        )}
-        {!ai.busy && (
-          <Button className="mt-3" fullWidth icon={<RefreshCw className="h-5 w-5" />} onClick={() => void run()} disabled={!settings.profile}>
-            {saved ? `Aggiorna analisi${newSince ? ` (${newSince} ${newSince === 1 ? 'sessione nuova' : 'sessioni nuove'})` : ''}` : 'Analizza il mio storico'}
-          </Button>
-        )}
-      </Card>
+      <PeriodAnalysis
+        title="Analisi del coach"
+        help="train-analysis"
+        modes={[
+          {
+            key: 'session',
+            label: 'Sessione',
+            subject: last ? `${new Date(last.date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })} · ${lastName}` : null,
+            action: "Analizza l'ultima sessione",
+            saved: saved.session,
+            ref: last?.id ?? null,
+            intro: last
+              ? "Il coach guarda l'ultimo allenamento esercizio per esercizio e lo confronta con le volte precedenti: cosa è andato bene, cosa migliorare e i carichi per la prossima volta."
+              : 'Fai il primo allenamento: poi il coach potrà analizzarlo.',
+            run: (o) => analyzeSession(sessionData(last!, sessions, lastName, nameOf, groupOf), memory, profile!, o),
+            save: (a) => settle(update({ trainAnalysis: { ...saved, session: a } })),
+          },
+          {
+            key: 'week',
+            label: 'Settimana',
+            subject: `Settimana dal ${new Date(`${week}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })} · oggi è ${new Date().toLocaleDateString('it-IT', { weekday: 'long' })}`,
+            action: 'Analizza la settimana',
+            saved: saved.week,
+            // la settimana cambia quando aggiungi una sessione: l'analisi va rifatta
+            ref: profile ? `${week}:${sessions.filter((s) => toISODate(s.date) >= week).length}` : null,
+            intro: 'Il coach guarda la settimana in corso fino a oggi: allenamenti fatti e mancanti, serie per muscolo e cosa fare nei giorni che restano. Non giudica la settimana come finita.',
+            run: (o) => analyzeTrainingWeek(trainingWeekData(sessions, days, groupOf, ideal), memory, profile!, o),
+            save: (a) => settle(update({ trainAnalysis: { ...saved, week: a } })),
+          },
+        ]}
+      />
 
       <Card className="p-4">
         <h2 className="section-title">Cosa vede il coach nei tuoi dati</h2>
-        {report.insights.length ? (
+        {insights.length ? (
           <ul className="space-y-2">
-            {report.insights.map((i) => (
+            {insights.map((i) => (
               <li key={i.text} className={cn('rounded-md px-3 py-2 text-sm', i.tone === 'good' ? 'bg-accent-glow text-fg' : i.tone === 'bad' ? 'bg-danger-bg text-fg' : 'bg-surface-2 text-fg-2')}>
                 {i.emoji} {i.text}
               </li>

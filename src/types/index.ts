@@ -135,6 +135,7 @@ import type { Lang } from '@/lib/exercise-i18n';
 import type { WeekPlan } from '@/lib/recipes';
 import type { Food, Macros } from '@/lib/foods';
 import type { CheckIn } from '@/lib/checkin';
+import type { SavedAnalysis } from '@/lib/analysis';
 import type { GoalPlan } from '@/lib/goal-plan';
 
 export interface Settings {
@@ -167,6 +168,9 @@ export interface Settings {
   questsDone?: string[];
   /** Ultima analisi completa del coach (tab Analisi). */
   coachAnalysis?: { text: string; at: number; sessions: number };
+  /** analisi del coach: ultima sessione e settimana di allenamento; giornata e settimana di dieta */
+  trainAnalysis?: { session?: SavedAnalysis; week?: SavedAnalysis };
+  dietAnalysis?: { day?: SavedAnalysis; week?: SavedAnalysis };
   /** Correzione calorica giornaliera (kcal): usata quando il metabolismo reale non è ancora calcolabile. */
   kcalAdjust?: number;
   /** Aggiornamento settimanale delle calorie: un solo calcolo, fisso per tutta la settimana. */

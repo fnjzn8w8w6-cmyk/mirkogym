@@ -68,11 +68,22 @@ export const HELP = {
     title: 'Esercizi',
     body: ['L\'ultima sessione contro la media di tutte, il volume per gruppo muscolare e, per ogni esercizio, l\'ultima volta contro la precedente.'],
   },
+  'diet-analysis-ai': {
+    title: 'Analisi del dietologo',
+    body: [
+      'Solo alimentazione (l\'allenamento ha la sua analisi in Allenamento → Analisi).',
+      'Giornata: oggi (o l\'ultima giornata registrata) rispetto all\'obiettivo, con idee concrete per il resto della giornata.',
+      'Settimana: i giorni registrati da lunedì a oggi, con medie, giorni in obiettivo, proteine, fame e sgarri.',
+      'Le calorie obiettivo non cambiano qui: le aggiorna l\'app ogni lunedì.',
+    ],
+  },
   'train-analysis': {
     title: 'Analisi',
     body: [
-      'Il coach legge tutto lo storico (sessioni, resoconti, note, diario, obiettivo) e ti scrive cosa va bene, cosa migliorare e 3 azioni concrete.',
-      'L\'analisi resta salvata: aggiornala quando hai fatto nuove sessioni.',
+      'Solo allenamento (la dieta ha la sua analisi in Dieta → Analisi).',
+      'Sessione: l\'ultimo allenamento esercizio per esercizio, confrontato con le volte precedenti, con i carichi per la prossima volta.',
+      'Settimana: la settimana in corso fino a oggi (allenamenti fatti e mancanti, serie per muscolo). Se è lunedì non dice che sei calato: guarda cosa resta da fare.',
+      'Ogni analisi resta salvata; quando ci sono dati nuovi ti avvisa di aggiornarla.',
     ],
   },
   'session-suggestion': {

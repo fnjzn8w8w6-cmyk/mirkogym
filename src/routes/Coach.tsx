@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useCoachMemory } from '@/hooks/use-training-model';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Dumbbell, Library, MessageCircle, RefreshCw, Send, X } from 'lucide-react';
+import { Dumbbell, MessageCircle, RefreshCw, Send, X } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { useSchedule } from '@/hooks/use-schedule';
 import { useSessions } from '@/hooks/use-sessions';
@@ -9,7 +9,7 @@ import { useBodyLogs } from '@/hooks/use-body-logs';
 import { TopBar } from '@/components/layout/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
-import { Button, IconButton } from '@/components/ui/Button';
+import { Button } from '@/components/ui/Button';
 import { Segmented } from '@/components/ui/Input';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
@@ -25,7 +25,6 @@ import { groupColor } from '@/lib/analytics';
 import { cn } from '@/lib/cn';
 import { MicButton, appendText } from '@/components/ui/MicButton';
 import { CoachThread, threadContext, useThread, type ThreadMsg } from '@/components/coach/CoachThread';
-import { GoalCard } from '@/components/goal/GoalPlan';
 import { SectionTitle } from '@/components/ui/Help';
 import type { Day } from '@/types';
 import { NAME_IT } from '@/lib/exercise-library';
@@ -39,7 +38,8 @@ export default function Coach() {
   const tab: Tab = raw === 'chat' || raw === 'diet' ? raw : 'train';
   // Vecchi collegamenti alla nutrizione: ora è nella pagina Dieta
   useEffect(() => {
-    if (raw === 'food' || raw === 'recipes') navigate(`/food?tab=${raw === 'food' ? 'plan' : 'recipes'}${params.get('checkin') ? '&checkin=1' : ''}`, { replace: true });
+    if (raw === 'food' || raw === 'recipes')
+      navigate(params.get('checkin') ? '/body?tab=checkin&checkin=1' : `/food?tab=${raw === 'food' ? 'plan' : 'recipes'}`, { replace: true });
   }, [raw, navigate, params]);
   const profile = useEffectiveProfile();
 
@@ -49,18 +49,8 @@ export default function Coach() {
         title="Coach"
         subtitle="Personal trainer e dietologo su misura"
         large
-        right={
-          <IconButton label="Libreria esercizi" onClick={() => navigate('/exercises')} className="-mr-2">
-            <Library className="h-6 w-6" />
-          </IconButton>
-        }
       />
       <div className="page pt-3">
-        {profile && tab !== 'chat' && (
-          <div className="mb-3">
-            <GoalCard compact />
-          </div>
-        )}
         <Segmented<Tab>
           label="Sezione coach"
           value={tab}

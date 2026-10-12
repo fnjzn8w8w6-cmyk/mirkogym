@@ -340,7 +340,7 @@ export default function Home() {
 
         {/* Peso + mesociclo */}
         <div className="grid grid-cols-2 gap-3">
-          <Card interactive className="p-4" onClick={() => navigate('/body')} role="link" aria-label="Apri corpo">
+          <Card interactive className="p-4" onClick={() => navigate('/body?tab=weight')} role="link" aria-label="Apri corpo">
             <span className="text-xs font-bold uppercase tracking-wider text-fg-3">
               <SectionTitle help="home-weight">Peso</SectionTitle>
             </span>
@@ -391,7 +391,7 @@ export default function Home() {
           <Card
             interactive
             className="flex items-center gap-3 border-accent-500/50 p-4"
-            onClick={() => navigate('/food?tab=plan&checkin=1')}
+            onClick={() => navigate('/body?tab=checkin&checkin=1')}
             role="link"
             aria-label="Fai il check-in settimanale"
           >
@@ -419,7 +419,7 @@ export default function Home() {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate('/food?tab=plan&checkin=1');
+                  navigate('/body?tab=checkin&checkin=1');
                 }}
                 className="w-full rounded-md border border-accent-500/40 bg-accent-glow px-3 py-2 text-left text-sm text-fg"
               >

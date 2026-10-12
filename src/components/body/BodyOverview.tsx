@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Info, RefreshCw, TrendingDown } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronDown, Info, RefreshCw, TrendingDown } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { useBodyLogs } from '@/hooks/use-body-logs';
 import { Card } from '@/components/ui/Card';
@@ -120,6 +120,8 @@ export function WeekCaloriesCard() {
   const dayT = useDayTarget(prof);
   const w = settings.weekCal;
   const [why, setWhy] = useState(false);
+  // chiuso di base: una riga di riepilogo, si apre con un tocco
+  const [open, setOpen] = useState(false);
   if (!prof || !w || w.week !== mondayISO() || !dayT) return null;
   const weight = bodyLogs.find((b) => b.weight != null)?.weight ?? prof.weightKg;
   const delta = w.prevTarget != null && !w.undone ? w.target - w.prevTarget : 0;
@@ -129,13 +131,21 @@ export function WeekCaloriesCard() {
   const monday = fromISODate(w.week).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
   return (
     <Card className={cn('p-4', changed ? 'border-accent-500/40' : '')}>
-      <div className="flex items-center justify-between gap-2">
-        <div className="section-title !mb-0 flex items-center gap-1.5 text-accent-400">
-          <RefreshCw className="h-4 w-4" aria-hidden />
-          <SectionTitle help="body-weekcal" isNew>
-            Aggiornamento settimanale
-          </SectionTitle>
-        </div>
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center gap-3 text-left">
+        <RefreshCw className="h-5 w-5 shrink-0 text-accent-400" aria-hidden />
+        <span className="min-w-0 flex-1">
+          <span className="block text-xs font-bold uppercase tracking-wider text-fg-3">Calorie di questa settimana</span>
+          <span className="block text-base font-semibold text-fg">
+            {nf(w.target)} kcal
+            {changed ? <span className="text-accent-400"> ({delta > 0 ? '+' : ''}{delta})</span> : <span className="font-normal text-fg-3"> · {w.undone ? 'annullato' : w.prevTarget == null ? 'fissate' : 'confermate'}</span>}
+          </span>
+        </span>
+        <ChevronDown className={cn('h-5 w-5 shrink-0 text-fg-3 transition-transform', open && 'rotate-180')} aria-hidden />
+      </button>
+      {open && (
+      <>
+      <div className="mt-3 section-title !mb-0 flex items-center gap-1.5">
+        <SectionTitle help="body-weekcal">Aggiornamento settimanale</SectionTitle>
       </div>
       <div className="mt-2 text-lg font-bold text-fg">
         {changed ? (
@@ -181,6 +191,8 @@ export function WeekCaloriesCard() {
           Annulla
         </Button>
       </div>
+      </>
+      )}
     </Card>
   );
 }
@@ -266,7 +278,7 @@ const MEASURES: [keyof NonNullable<BodyLog['circumferences']>, string][] = [
 ];
 
 /** Ultime misurazioni (circonferenze) con la variazione rispetto alla precedente. */
-export function Measurements({ logs }: { logs: BodyLog[] }) {
+export function Measurements({ logs, compact }: { logs: BodyLog[]; compact?: boolean }) {
   const rows = MEASURES.map(([k, label]) => {
     const withK = logs.filter((l) => l.circumferences?.[k] != null);
     const cur = withK[0]?.circumferences?.[k];
@@ -274,6 +286,27 @@ export function Measurements({ logs }: { logs: BodyLog[] }) {
     return { label, cur, delta: cur != null && prev != null ? cur - prev : null, good: k === 'waist' ? -1 : 1 };
   }).filter((r) => r.cur != null);
   if (!rows.length) return null;
+  if (compact)
+    return (
+      <div className="mt-3 border-t border-line-subtle pt-3">
+        <div className="text-xs font-bold uppercase tracking-wider text-fg-3">
+          <SectionTitle help="body-measurements">Misurazioni</SectionTitle>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {rows.map((r) => (
+            <span key={r.label} className="rounded-full bg-surface-2 px-2.5 py-1 text-sm text-fg-2">
+              {r.label} <strong className="text-fg">{formatKg(r.cur as number)}</strong>
+              {r.delta != null && r.delta !== 0 && (
+                <span className={cn('ml-1 text-xs font-semibold', r.delta * r.good > 0 ? 'text-success' : 'text-warning')}>
+                  {r.delta > 0 ? '+' : ''}
+                  {formatKg(r.delta)}
+                </span>
+              )}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
   return (
     <Card className="p-4">
       <h2 className="section-title">

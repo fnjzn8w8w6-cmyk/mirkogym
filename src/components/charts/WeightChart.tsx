@@ -14,7 +14,7 @@ export interface WeightPoint {
 }
 
 /** Valori giornalieri (punti) + media mobile 7 giorni (linea). */
-export function WeightChart({ data, unit, label, plan }: { data: WeightPoint[]; unit: string; label: string; plan?: { t: number; plan: number }[] }) {
+export function WeightChart({ data, unit, label, plan, height = 'h-48' }: { data: WeightPoint[]; unit: string; label: string; plan?: { t: number; plan: number }[]; height?: string }) {
   const rows: WeightPoint[] = plan?.length ? [...data, ...plan].sort((a, b) => a.t - b.t) : data;
   return (
     <div>
@@ -26,7 +26,7 @@ export function WeightChart({ data, unit, label, plan }: { data: WeightPoint[]; 
           ...(plan?.length ? [{ label: 'Percorso obiettivo', color: '#A7B0AB' }] : []),
         ]}
       />
-      <div className="mt-2 h-48">
+      <div className={`mt-2 ${height}`}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
             <CartesianGrid stroke={chart.grid} vertical={false} />

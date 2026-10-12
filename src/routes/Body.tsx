@@ -1,4 +1,7 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Segmented } from '@/components/ui/Input';
+import { WeeklyCheckIn } from '@/components/coach/WeeklyCheckIn';
 import { usePhotos } from '@/hooks/use-photos';
 import { thumbOf } from '@/lib/progress-photos';
 import { motion } from 'framer-motion';
@@ -31,6 +34,8 @@ import { completeDays, METABOLISM_RELIABLE_DAYS, waterEvents, weightTrend } from
 import { SectionTitle } from '@/components/ui/Help';
 import { ProgressPhotos } from '@/components/body/ProgressPhotos';
 
+type BodyTab = 'muscles' | 'weight' | 'checkin';
+
 const PERIODS: [number, string][] = [
   [30, '1M'],
   [90, '3M'],
@@ -60,6 +65,11 @@ export default function Body() {
   const [toDelete, setToDelete] = useState<BodyLog | null>(null);
 
   const [period, setPeriod] = useState(90);
+  const [params, setParams] = useSearchParams();
+  const rawTab = params.get('tab');
+  const tab: BodyTab = rawTab === 'muscles' || rawTab === 'checkin' ? rawTab : rawTab === 'weight' ? 'weight' : 'muscles';
+  const [chartKind, setChartKind] = useState<'weight' | 'bf'>('weight');
+  const [showAll, setShowAll] = useState(false);
   // Peso: pesate + peso reale (media mobile esponenziale) + pesate gonfiate da acqua
   const foodLogs = useRecentFoodLogs(120);
   const { sessions, groupOf } = useSessions();
@@ -129,8 +139,26 @@ export default function Body() {
           toast.success('Massa grassa salvata, foto nella galleria dei progressi');
         }}
       />
-      <div className="page space-y-4 pt-4">
-        {bodyLogs.length === 0 ? (
+      <div className="page space-y-4 pt-3">
+        <Segmented<BodyTab>
+          label="Sezione corpo"
+          value={tab}
+          onChange={(t) => setParams({ tab: t }, { replace: true })}
+          options={[
+            { value: 'muscles', label: 'Muscoli' },
+            { value: 'weight', label: 'Peso e misure' },
+            { value: 'checkin', label: 'Check-in e foto' },
+          ]}
+        />
+        {tab === 'muscles' ? (
+          <MuscleWeekCard />
+        ) : tab === 'checkin' ? (
+          <>
+            {settings.profile && <WeeklyCheckIn profile={settings.profile} autoOpen={params.get('checkin') === '1'} />}
+            <ProgressPhotos kind="checkin" />
+            <ProgressPhotos kind="daily" />
+          </>
+        ) : bodyLogs.length === 0 ? (
           <EmptyState
             illustration="scale"
             title="Nessun log corporeo"
@@ -146,63 +174,103 @@ export default function Body() {
             <CompositionCard />
             <WeekCaloriesCard />
             {settings.weekCal?.week !== mondayISO() && <GoalStatus />}
-            <MuscleWeekCard />
-            <ProgressPhotos />
 
-            <div className="flex justify-end gap-1.5">
-              {PERIODS.map(([d, l]) => (
-                <button
-                  key={d}
-                  type="button"
-                  aria-pressed={period === d}
-                  onClick={() => setPeriod(d)}
-                  className={cn('h-8 rounded-full px-3 text-sm font-semibold', period === d ? 'bg-accent-500 text-onaccent' : 'text-fg-3')}
-                >
-                  {l}
-                </button>
-              ))}
-            </div>
             <Card className="p-4">
-              <div className="flex items-baseline justify-between">
-                <h2 className="section-title !mb-0">
-                  <SectionTitle help="body-weight-chart" isNew>Peso</SectionTitle>
-                </h2>
-                {wTrend && <TrendLine delta={wTrend.delta} label="7gg" unit=" kg" />}
+              <div className="flex items-center justify-between gap-2">
+                <div role="radiogroup" aria-label="Grafico" className="flex gap-1 rounded-full bg-surface-2 p-1">
+                  {(
+                    [
+                      ['weight', 'Peso'],
+                      ['bf', 'Massa grassa'],
+                    ] as const
+                  ).map(([k, l]) => (
+                    <button
+                      key={k}
+                      type="button"
+                      role="radio"
+                      aria-checked={chartKind === k}
+                      onClick={() => setChartKind(k)}
+                      className={cn('h-8 rounded-full px-3 text-sm font-semibold', chartKind === k ? 'bg-surface-3 text-fg' : 'text-fg-3')}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-0.5">
+                  {PERIODS.map(([d, l]) => (
+                    <button
+                      key={d}
+                      type="button"
+                      aria-pressed={period === d}
+                      onClick={() => setPeriod(d)}
+                      className={cn('h-8 rounded-full px-2 text-xs font-semibold', period === d ? 'bg-accent-500 text-onaccent' : 'text-fg-3')}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
               </div>
-              {real?.trend != null && (
-                <p className="mt-1 text-sm text-fg-2">
-                  Peso reale <strong className="text-fg">{formatKg(real.trend)} kg</strong>
-                  {real.value != null && Math.abs(real.value - real.trend) >= 0.2 ? <span className="text-fg-3"> · bilancia {formatKg(real.value)}</span> : null}
-                </p>
+              {chartKind === 'weight' ? (
+                <>
+                  <div className="mt-3 flex items-end justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold uppercase tracking-wider text-fg-3">
+                        <SectionTitle help="body-weight-chart">Peso reale</SectionTitle>
+                      </div>
+                      {real?.trend != null && (
+                        <div className="text-xl font-bold text-fg">
+                          {formatKg(real.trend)} kg
+                          {real.value != null && Math.abs(real.value - real.trend) >= 0.2 ? <span className="ml-1.5 text-sm font-normal text-fg-3">bilancia {formatKg(real.value)}</span> : null}
+                        </div>
+                      )}
+                    </div>
+                    {wTrend && (
+                      <span className="shrink-0 whitespace-nowrap">
+                        <TrendLine delta={wTrend.delta} label="7gg" unit=" kg" />
+                      </span>
+                    )}
+                  </div>
+                  {weightData.length > 1 ? (
+                    <WeightChart data={weightData} unit=" kg" label="Pesate" plan={goalPaths.w} height="h-36" />
+                  ) : (
+                    <p className="mt-2 text-base text-fg-3">Servono almeno 2 pesate nel periodo.</p>
+                  )}
+                  {water
+                    .filter((w) => w.date >= toISODate(subDays(new Date(), 21)))
+                    .slice(-1)
+                    .map((w) => (
+                      <p key={w.date} className="mt-2 border-l-2 border-sky-400 pl-2 text-sm text-fg-2">
+                        💧 <strong className="text-fg">{fromISODate(w.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}: +{formatKg(w.delta)} kg</strong> di acqua e glicogeno ({w.reason}): rientra in 2–3 giorni.
+                      </p>
+                    ))}
+                </>
+              ) : (
+                <>
+                  <div className="mt-3 flex items-end justify-between gap-2">
+                    <div className="text-xs font-bold uppercase tracking-wider text-fg-3">
+                      <SectionTitle help="body-bf-chart">Massa grassa</SectionTitle>
+                    </div>
+                    {bfTrend && (
+                      <span className="shrink-0 whitespace-nowrap">
+                        <TrendLine delta={bfTrend.delta} label="30gg" unit="%" polarity="down-good" />
+                      </span>
+                    )}
+                  </div>
+                  {bfData.length > 1 ? (
+                    <WeightChart data={bfData} unit="%" label="BF" plan={goalPaths.bf} height="h-36" />
+                  ) : (
+                    <p className="mt-2 text-base text-fg-3">Servono almeno 2 misure della massa grassa nel periodo.</p>
+                  )}
+                </>
               )}
-              {weightData.length > 1 ? <WeightChart data={weightData} unit=" kg" label="Pesate" plan={goalPaths.w} /> : <p className="mt-2 text-base text-fg-3">Servono almeno 2 pesate nel periodo.</p>}
-              {water
-                .filter((w) => w.date >= toISODate(subDays(new Date(), 21)))
-                .slice(-2)
-                .reverse()
-                .map((w) => (
-                  <p key={w.date} className="mt-2 border-l-2 border-sky-400 pl-2 text-sm text-fg-2">
-                    💧 <strong className="text-fg">{fromISODate(w.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}: +{formatKg(w.delta)} kg</strong> sopra il peso reale → acqua e glicogeno ({w.reason}).
-                    Grasso reale stimato <strong className="text-fg">+{formatKg(w.fat)} kg</strong>: rientra in 2–3 giorni, il coach non cambia le calorie.
-                  </p>
-                ))}
+              <Measurements logs={bodyLogs} compact />
               <MetabolismLine />
             </Card>
-            <Card className="p-4">
-              <div className="flex items-baseline justify-between">
-                <h2 className="section-title !mb-0">
-                  <SectionTitle help="body-bf-chart">Massa grassa</SectionTitle>
-                </h2>
-                {bfTrend && <TrendLine delta={bfTrend.delta} label="30gg" unit="%" polarity="down-good" />}
-              </div>
-              {bfData.length > 1 ? <WeightChart data={bfData} unit="%" label="BF" plan={goalPaths.bf} /> : <p className="mt-2 text-base text-fg-3">Servono almeno 2 misure della massa grassa nel periodo.</p>}
-            </Card>
-            <Measurements logs={bodyLogs} />
 
             <section>
-              <h2 className="section-title">Tutte le registrazioni</h2>
+              <h2 className="section-title">Registrazioni</h2>
               <ul className="card divide-y divide-line-subtle">
-                {bodyLogs.map((l) => (
+                {(showAll ? bodyLogs : bodyLogs.slice(0, 5)).map((l) => (
                   <li key={l.id} className="flex items-center gap-2 pr-2">
                     <button
                       type="button"
@@ -210,7 +278,7 @@ export default function Body() {
                         setEditing(l);
                         setModalOpen(true);
                       }}
-                      className="flex min-h-[64px] min-w-0 flex-1 items-center gap-3 px-4 py-3 text-left hover:bg-surface-2"
+                      className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 px-4 py-2.5 text-left hover:bg-surface-2"
                     >
                       <span className="w-16 shrink-0 text-sm text-fg-3">{formatRelativeDay(fromISODate(l.date))}</span>
                       <span className="min-w-0 flex-1">
@@ -234,12 +302,18 @@ export default function Body() {
                   </li>
                 ))}
               </ul>
+              {bodyLogs.length > 5 && (
+                <button type="button" onClick={() => setShowAll((v) => !v)} className="mt-2 h-10 text-sm font-semibold text-accent-400">
+                  {showAll ? 'Mostra meno' : `Mostra tutte (${bodyLogs.length})`}
+                </button>
+              )}
             </section>
           </>
         )}
       </div>
 
-      {/* FAB */}
+      {/* FAB: nuova registrazione (solo in Peso e misure) */}
+      {tab === 'weight' && (
       <motion.button
         type="button"
         onClick={openNew}
@@ -250,6 +324,7 @@ export default function Body() {
       >
         <Plus className="h-7 w-7" aria-hidden />
       </motion.button>
+      )}
 
       <BodyLogModal open={modalOpen} onClose={() => setModalOpen(false)} editing={editing} />
       <ConfirmDialog

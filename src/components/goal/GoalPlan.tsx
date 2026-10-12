@@ -331,7 +331,7 @@ export function GoalCard({ compact }: { compact?: boolean }) {
           </p>
         )}
         {!compact && (
-          <button type="button" className="text-xs font-semibold text-violet-400" onClick={() => navigate('/body')}>
+          <button type="button" className="text-xs font-semibold text-violet-400" onClick={() => navigate('/body?tab=weight')}>
             Vedi il percorso nel grafico del peso →
           </button>
         )}

@@ -64,6 +64,8 @@ export interface Insight {
   tone: 'good' | 'warn' | 'bad' | 'info';
   emoji: string;
   text: string;
+  /** dieta o allenamento (l'analisi dell'allenamento mostra solo i suoi) */
+  area?: 'diet' | 'train';
 }
 export interface AthleteReport {
   totalSessions: number;
@@ -261,18 +263,19 @@ function buildInsights(r: AthleteReport, target: { kcal: number; protein: number
   if (r.diet && r.diet.cheats.length >= 2)
     out.push({
       tone: 'warn',
+      area: 'diet',
       emoji: '🍕',
       text: `${r.diet.cheats.length} sgarri nelle ultime settimane${r.diet.weekendCheats >= 2 ? ', quasi tutti nel weekend' : ''}.`,
     });
   if (r.diet && target && r.diet.daysLogged >= 3 && r.diet.avgProtein < target.protein * 0.8)
-    out.push({ tone: 'warn', emoji: '🥩', text: `Proteine medie ${r.diet.avgProtein} g contro ${target.protein} g di obiettivo.` });
+    out.push({ tone: 'warn', area: 'diet', emoji: '🥩', text: `Proteine medie ${r.diet.avgProtein} g contro ${target.protein} g di obiettivo.` });
   for (const p of r.progress.slice(0, 2)) out.push({ tone: 'good', emoji: '📈', text: `${p.name}: +${p.change}% di forza nelle ultime settimane.` });
   if (r.totalSessions >= 3 && r.perWeek >= r.planned) out.push({ tone: 'good', emoji: '🔥', text: `Costanza top: ${r.perWeek} allenamenti a settimana su ${r.planned} previsti.` });
   return out;
 }
 
 /** Testo compatto del profilo da inserire nelle richieste al coach AI. */
-export function athleteText(r: AthleteReport): string {
+export function athleteText(r: AthleteReport, opts: { diet?: boolean } = {}): string {
   const lines: string[] = [];
   lines.push(
     `Storico: ${r.totalSessions} sessioni, media ${r.perWeek}/settimana (previste ${r.planned}) nelle ultime ${r.weeks} settimane${r.avgDuration ? `, durata media ${r.avgDuration} min` : ''}.`,
@@ -289,7 +292,7 @@ export function athleteText(r: AthleteReport): string {
   if (r.stalls.length) lines.push(`Esercizi in stallo (3 sessioni senza miglioramenti): ${r.stalls.map((s) => s.name).join(', ')}.`);
   if (r.progress.length) lines.push(`Migliori progressi (6 settimane): ${r.progress.map((p) => `${p.name} +${p.change}%`).join(', ')}.`);
   if (r.notes.length) lines.push(`Note dell'atleta: ${r.notes.map((n) => `[${fmtDate(n.date)}] ${n.text}`).join(' | ')}`);
-  if (r.diet)
+  if (r.diet && opts.diet !== false)
     lines.push(
       `Dieta (calcolata dal diario, ${r.diet.daysLogged} giorni registrati): giorni in obiettivo calorico ${r.diet.inTarget}/${r.diet.daysLogged}, media ${r.diet.avgKcal} kcal, proteine medie ${r.diet.avgProtein} g (l'utente può usare ricette sue: conta il rispetto di calorie e macro, non del piano)` +
         (r.diet.avgHunger != null ? `, fame media ${r.diet.avgHunger}/5` : '') +

@@ -1,3 +1,4 @@
+import { athleteText } from '@/lib/athlete';
 import { useMemo } from 'react';
 import { useSessions } from './use-sessions';
 import { useSettings } from './use-settings';
@@ -22,6 +23,18 @@ export function useTrainingModel() {
  * Memoria completa per il coach: profilo dell'atleta + modello di allenamento
  * (fatica per muscolo, volume ideale), così le proposte si basano sugli stessi numeri dell'app.
  */
+/** Memoria del coach solo per l'allenamento (senza dieta, peso e calorie). */
+export function useTrainingMemory(): string {
+  const { report } = useAthlete();
+  const { fatigue, ideal } = useTrainingModel();
+  return useMemo(() => {
+    const lines: string[] = [athleteText(report, { diet: false })];
+    const fat = [...fatigue.values()].filter((f) => f.score >= 40).sort((a, b) => b.score - a.score);
+    if (fat.length) lines.push(`FATICA PER MUSCOLO (0-100): ${fat.map((f) => `${f.group} ${f.score}`).join(', ')}.`);
+    return lines.join('\n');
+  }, [report, fatigue, ideal]);
+}
+
 export function useCoachMemory(): string {
   const { text } = useAthlete();
   const { fatigue, ideal } = useTrainingModel();
