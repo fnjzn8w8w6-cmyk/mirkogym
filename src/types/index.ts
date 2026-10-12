@@ -186,7 +186,8 @@ export interface Settings {
   soundEnabled: boolean;
   vibrationEnabled: boolean;
   weightUnit: 'kg' | 'lb';
-  theme: 'dark';
+  /** tema dei colori (le impostazioni vecchie hanno 'dark' = Vulcano) */
+  theme: 'dark' | 'vulcano' | 'carta' | 'grafite';
   deloadFrequency: number;
   deloadPercentage: number;
   autoDeload: boolean;

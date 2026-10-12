@@ -29,13 +29,13 @@ export function Medal({ emoji, tier, unlocked = true, size = 56 }: { emoji: stri
       {unlocked ? (
         <>
           <path d={HEX} fill={`url(#${id})`} />
-          <path d={INNER} fill="#0D0F0E" />
+          <path d={INNER} fill="var(--bg-surface)" />
         </>
       ) : (
-        <path d={HEX} fill="#151816" stroke="#2A302C" strokeWidth="3" />
+        <path d={HEX} fill="var(--bg-surface-2)" stroke="var(--bg-surface-3)" strokeWidth="3" />
       )}
       <svg x="28" y="28" width="40" height="40" viewBox="0 0 256 256" overflow="visible">
-        <I size={256} weight="fill" color={unlocked ? a : '#3A413D'} />
+        <I size={256} weight="fill" color={unlocked ? a : 'var(--text-disabled)'} />
       </svg>
     </svg>
   );

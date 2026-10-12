@@ -19,7 +19,7 @@ export function VolumeChart({ data, valueLabel }: SimpleBarProps) {
           <XAxis dataKey="label" tick={chart.tick} axisLine={false} tickLine={false} minTickGap={16} />
           <YAxis tick={chart.tick} axisLine={false} tickLine={false} tickFormatter={compact} width={44} />
           <Tooltip
-            cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+            cursor={{ fill: 'var(--chart-grid)' }}
             content={({ active, payload }) => {
               const p = payload?.[0]?.payload as SimpleBarProps['data'][number] | undefined;
               if (!active || !p) return null;
@@ -51,7 +51,7 @@ export function GroupVolumeChart({ data, groups }: StackedProps) {
             <XAxis dataKey="label" tick={chart.tick} axisLine={false} tickLine={false} />
             <YAxis tick={chart.tick} axisLine={false} tickLine={false} tickFormatter={compact} width={44} />
             <Tooltip
-              cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+              cursor={{ fill: 'var(--chart-grid)' }}
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
                 const rows = ordered

@@ -40,7 +40,7 @@ export function PeriodAnalysis({ title, help, modes, persona = 'coach', footer }
   };
 
   return (
-    <Card className="border-violet-500/40 p-4" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(13,15,14,0.95))' }}>
+    <Card className="border-violet-500/40 p-4" style={{ background: 'linear-gradient(135deg, var(--card-sheen), rgb(var(--rgb-surface) / 0.95))' }}>
       <h2 className="font-display text-lg font-extrabold text-fg">
         <SectionTitle help={help} isNew>
           {title}

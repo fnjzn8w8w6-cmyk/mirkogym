@@ -22,10 +22,10 @@ type Period = 7 | 30 | 90;
 const WD = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
 const WD_LONG = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
 const MEALS: { key: DiaryMeal; label: string; color: string }[] = [
-  { key: 'colazione', label: 'Colazione', color: '#3DDC84' },
-  { key: 'pranzo', label: 'Pranzo', color: '#A7B0AB' },
+  { key: 'colazione', label: 'Colazione', color: 'var(--macro-protein)' },
+  { key: 'pranzo', label: 'Pranzo', color: 'var(--macro-carbs)' },
   { key: 'cena', label: 'Cena', color: '#3B82F6' },
-  { key: 'spuntini', label: 'Spuntini', color: '#EAB308' },
+  { key: 'spuntini', label: 'Spuntini', color: 'var(--macro-fat)' },
 ];
 const avg = (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
 
@@ -177,10 +177,10 @@ export function DietAnalysis({ profile }: { profile: UserProfile }) {
             <div className="text-xs font-bold uppercase tracking-wider text-fg-3">
               <SectionTitle help="diet-analysis-macros">Media giornaliera vs obiettivo</SectionTitle>
             </div>
-            <MacroBar label="Calorie" value={mean.kcal} target={Math.round(tMean.kcal)} unit="kcal" color="#FAFAFA" />
-            <MacroBar label="Proteine" value={mean.protein} target={Math.round(tMean.protein)} unit="g" color="#3DDC84" />
-            <MacroBar label="Carboidrati" value={mean.carbs} target={Math.round(tMean.carbs)} unit="g" color="#A7B0AB" />
-            <MacroBar label="Grassi" value={mean.fat} target={Math.round(tMean.fat)} unit="g" color="#EAB308" />
+            <MacroBar label="Calorie" value={mean.kcal} target={Math.round(tMean.kcal)} unit="kcal" color="var(--text-primary)" />
+            <MacroBar label="Proteine" value={mean.protein} target={Math.round(tMean.protein)} unit="g" color="var(--macro-protein)" />
+            <MacroBar label="Carboidrati" value={mean.carbs} target={Math.round(tMean.carbs)} unit="g" color="var(--macro-carbs)" />
+            <MacroBar label="Grassi" value={mean.fat} target={Math.round(tMean.fat)} unit="g" color="var(--macro-fat)" />
           </Card>
 
           <Card className="p-4">

@@ -9,6 +9,18 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Vulcan Lift" />
+    <script>
+      // tema scelto (src/lib/theme.ts): applicato prima di mostrare la pagina, senza lampi di colore
+      try {
+        var t = localStorage.getItem('vl.theme');
+        var bars = { carta: '#f2f2f2', grafite: '#0b0b0c' };
+        if (t === 'carta' || t === 'grafite') {
+          document.documentElement.setAttribute('data-theme', t);
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', bars[t]);
+          if (t === 'carta') document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').setAttribute('content', 'default');
+        }
+      } catch (e) {}
+    </script>
     <link rel="icon" href="/mirkogym/favicon.ico?v=vulcan1" sizes="any" />
     <link rel="apple-touch-icon" href="/mirkogym/apple-touch-icon.png?v=vulcan1" />
     <title>Vulcan Lift</title>

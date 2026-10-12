@@ -23,7 +23,7 @@ interface ChipProps {
 
 export function Chip({ tone = 'default', color, icon, className, children }: ChipProps) {
   const style: CSSProperties | undefined = color
-    ? { color, backgroundColor: `${color}1f`, borderColor: `${color}40` }
+    ? { color: `color-mix(in srgb, ${color} var(--tint-ink), var(--text-primary))`, backgroundColor: `${color}1f`, borderColor: `${color}40` }
     : undefined;
   return (
     <span

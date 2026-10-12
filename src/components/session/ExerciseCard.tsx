@@ -161,7 +161,7 @@ export function ExerciseCard({
         {dragHandle}
         <button type="button" onClick={onToggleExpanded} className="flex min-w-0 flex-1 items-center gap-3 py-3 pr-3 text-left" aria-expanded={false} aria-label={`Apri ${draft.name}`}>
           {allDone ? (
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success text-black">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success text-onaccent">
               <Check className="h-4 w-4" strokeWidth={3} aria-hidden />
             </span>
           ) : (

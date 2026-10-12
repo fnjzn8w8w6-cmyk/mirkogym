@@ -102,7 +102,7 @@ export function SetRow({
       >
         {typeStyle?.label ?? workingNumber}
         {set.isPersonalRecord && (
-          <Trophy className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-base p-0.5 text-warning" aria-label="Record personale" />
+          <Trophy className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-page p-0.5 text-warning" aria-label="Record personale" />
         )}
       </button>
       <button
@@ -180,7 +180,7 @@ export function SetRow({
         aria-label={set.done ? `${label}: annulla completamento` : `${label}: completa`}
         className={cn(
           'flex h-12 w-12 items-center justify-center rounded-md transition-colors',
-          set.done ? 'bg-success text-black' : 'bg-surface-3 text-fg-3 hover:text-fg',
+          set.done ? 'bg-success text-onaccent' : 'bg-surface-3 text-fg-3 hover:text-fg',
         )}
       >
         <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden>

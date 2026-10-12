@@ -58,7 +58,7 @@ export function SwipeRow({ children, actions }: { children: ReactNode; actions: 
             close();
           }
         }}
-        className="relative bg-base"
+        className="relative bg-page"
       >
         {children}
       </motion.div>

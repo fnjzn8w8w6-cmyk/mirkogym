@@ -17,6 +17,7 @@ import { AuthScreen } from '@/components/onboarding/AuthScreen';
 import { ProfileSetup } from '@/components/onboarding/ProfileSetup';
 import Home from '@/routes/Home';
 import { useMetabolismSync, useWeekCaloriesSync } from '@/hooks/use-metabolism';
+import { applyTheme } from '@/lib/theme';
 import Session from '@/routes/Session';
 
 // Le schermate secondarie (grafici inclusi) vengono caricate on-demand
@@ -48,6 +49,11 @@ function Page({ children }: { children: ReactNode }) {
 }
 
 function AppShell() {
+  const { settings, loaded } = useData();
+  // tema salvato nell'account (vale anche sugli altri dispositivi); prima che arrivi resta quello del telefono
+  useEffect(() => {
+    if (loaded.settings) applyTheme(settings.theme);
+  }, [loaded.settings, settings.theme]);
   useMesocycleSync();
   useMetabolismSync();
   useWeekCaloriesSync();

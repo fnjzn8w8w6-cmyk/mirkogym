@@ -366,11 +366,11 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
             {active && proposal.diary.length > 0 && proposal.planChanged && (
               <div className="flex gap-4 text-sm text-fg">
                 <label className="flex items-center gap-2">
-                  <input type="checkbox" className="h-5 w-5 accent-[#3ddc84]" checked={toDiary} onChange={(e) => setToDiary(e.target.checked)} /> Modifica il diario
+                  <input type="checkbox" className="h-5 w-5 accent-accent-500" checked={toDiary} onChange={(e) => setToDiary(e.target.checked)} /> Modifica il diario
                 </label>
                 {!proposal.prefChange && (
                   <label className="flex items-center gap-2">
-                    <input type="checkbox" className="h-5 w-5 accent-[#3ddc84]" checked={toPlan} onChange={(e) => setToPlan(e.target.checked)} /> Modifica il piano
+                    <input type="checkbox" className="h-5 w-5 accent-accent-500" checked={toPlan} onChange={(e) => setToPlan(e.target.checked)} /> Modifica il piano
                   </label>
                 )}
               </div>

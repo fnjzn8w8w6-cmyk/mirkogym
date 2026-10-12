@@ -106,7 +106,7 @@ export function StartingLoads() {
       </ul>
 
       <div
-        className="fixed inset-x-0 bottom-0 border-t border-line-subtle bg-base/90 backdrop-blur-xl"
+        className="fixed inset-x-0 bottom-0 border-t border-line-subtle bg-page/90 backdrop-blur-xl"
         style={{ paddingBottom: 'calc(var(--safe-bottom) + 16px)' }}
       >
         <div className="mx-auto flex max-w-2xl gap-3 px-4 pt-4">

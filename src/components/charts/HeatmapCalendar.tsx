@@ -34,7 +34,7 @@ export function HeatmapCalendar({ counts, days = 90 }: { counts: Map<string, num
         <svg width={width} height={height} role="img" aria-label={`${total} giorni di allenamento negli ultimi ${days} giorni`}>
           {DAY_LABELS.map((l, i) =>
             l ? (
-              <text key={i} x={0} y={i * (CELL + GAP) + CELL - 3} fontSize={10} fontWeight={600} fill="#7D8781">
+              <text key={i} x={0} y={i * (CELL + GAP) + CELL - 3} fontSize={10} fontWeight={600} fill="var(--text-tertiary)">
                 {l}
               </text>
             ) : null,
@@ -48,8 +48,8 @@ export function HeatmapCalendar({ counts, days = 90 }: { counts: Map<string, num
                 width={CELL}
                 height={CELL}
                 rx={3}
-                fill={!c.inRange ? 'transparent' : c.count ? (c.count > 1 ? '#1FD86A' : '#3DDC84') : '#2A2A2F'}
-                stroke={hover?.date.getTime() === c.date.getTime() ? '#FAFAFA' : 'none'}
+                fill={!c.inRange ? 'transparent' : c.count ? (c.count > 1 ? 'var(--accent-600)' : 'var(--accent-500)') : 'var(--bg-surface-3)'}
+                stroke={hover?.date.getTime() === c.date.getTime() ? 'var(--text-primary)' : 'none'}
                 strokeWidth={1.5}
                 onMouseEnter={() => c.inRange && setHover(c)}
                 onClick={() => c.inRange && setHover(c)}

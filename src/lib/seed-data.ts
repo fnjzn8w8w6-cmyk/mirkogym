@@ -138,7 +138,7 @@ export const DEFAULT_SETTINGS: Settings = {
   soundEnabled: true,
   vibrationEnabled: true,
   weightUnit: 'kg',
-  theme: 'dark',
+  theme: 'vulcano',
   deloadFrequency: 4,
   deloadPercentage: 40,
   autoDeload: true,

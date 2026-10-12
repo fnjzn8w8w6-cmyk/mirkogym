@@ -90,13 +90,13 @@ function RingLoader({ icons }: { icons: IconType[] }) {
   return (
     <div className="relative mx-auto h-24 w-24" aria-hidden>
       <svg viewBox="0 0 120 120" className="absolute inset-0 h-full w-full">
-        <circle cx="60" cy="60" r="52" fill="none" stroke="#1D2420" strokeWidth="9" />
-        <circle className="vl-ring" cx="60" cy="60" r="52" fill="none" stroke="#3DDC84" strokeWidth="9" strokeLinecap="round" />
-        <circle cx="60" cy="60" r="38" fill="#11261A" />
+        <circle cx="60" cy="60" r="52" fill="none" stroke="var(--bg-surface-3)" strokeWidth="9" />
+        <circle className="vl-ring" cx="60" cy="60" r="52" fill="none" stroke="var(--accent-500)" strokeWidth="9" strokeLinecap="round" />
+        <circle cx="60" cy="60" r="38" fill="rgb(var(--rgb-accent-500) / 0.16)" />
       </svg>
       {icons.map((I, i) => (
         <span key={i} className="vl-ic absolute inset-0 flex items-center justify-center" style={{ animationDelay: `${i * 1.2}s` }}>
-          <I size={34} weight="fill" color="#F4F6F5" />
+          <I size={34} weight="fill" color="var(--text-primary)" />
         </span>
       ))}
     </div>
@@ -107,7 +107,7 @@ function RingLoader({ icons }: { icons: IconType[] }) {
 function PulseLoader() {
   return (
     <svg viewBox="0 0 200 110" className="mx-auto h-20 w-40" aria-hidden>
-      <path d="M0 70 H200 M0 40 H200 M0 100 H200" stroke="#151A17" strokeWidth="1" />
+      <path d="M0 70 H200 M0 40 H200 M0 100 H200" stroke="var(--chart-grid)" strokeWidth="1" />
       <path
         className="vl-ecg"
         d="M0 70 L50 70 L62 40 L74 100 L86 14 L98 92 L110 70 L130 70 L140 62 L160 50 L180 36 L200 20"

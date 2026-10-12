@@ -5,12 +5,13 @@ export default {
     extend: {
       colors: {
         // colori del tema (variabili in src/index.css): `rgb(... / alfa)` per poter usare bg-surface/50 ecc.
-        base: 'rgb(var(--rgb-base) / <alpha-value>)',
+        // «page» e non «base»: text-base è già la grandezza del testo (con «base» diventava anche il colore dello sfondo)
+        page: 'rgb(var(--rgb-base) / <alpha-value>)',
         surface: 'rgb(var(--rgb-surface) / <alpha-value>)',
         'surface-2': 'rgb(var(--rgb-surface-2) / <alpha-value>)',
         'surface-3': 'rgb(var(--rgb-surface-3) / <alpha-value>)',
         onaccent: 'rgb(var(--rgb-onaccent) / <alpha-value>)',
-        violet: { 400: '#C9D1CC', 500: '#7D8A83', 600: '#4B5550' },
+        violet: { 400: 'rgb(var(--rgb-violet-400) / <alpha-value>)', 500: 'rgb(var(--rgb-violet-500) / <alpha-value>)', 600: 'rgb(var(--rgb-violet-600) / <alpha-value>)' },
         line: {
           subtle: 'var(--border-subtle)',
           DEFAULT: 'var(--border-default)',
@@ -29,9 +30,9 @@ export default {
           glow: 'var(--accent-glow)',
         },
         success: { DEFAULT: 'rgb(var(--rgb-accent-500) / <alpha-value>)', bg: 'var(--success-bg)' },
-        warning: { DEFAULT: '#EAB308', bg: 'var(--warning-bg)' },
-        danger: { DEFAULT: '#EF4444', bg: 'var(--danger-bg)' },
-        info: { DEFAULT: '#3B82F6', bg: 'var(--info-bg)' },
+        warning: { DEFAULT: 'rgb(var(--rgb-warning) / <alpha-value>)', bg: 'var(--warning-bg)' },
+        danger: { DEFAULT: 'rgb(var(--rgb-danger) / <alpha-value>)', bg: 'var(--danger-bg)' },
+        info: { DEFAULT: 'rgb(var(--rgb-info) / <alpha-value>)', bg: 'var(--info-bg)' },
         muscle: {
           back: '#8B5CF6',
           chest: '#EC4899',

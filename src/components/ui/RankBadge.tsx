@@ -29,7 +29,7 @@ export function RankBadge({ rank, size = 44, locked = false }: { rank: number; s
   if (locked)
     return (
       <svg viewBox="0 0 100 110" width={size} height={size * 1.1} aria-hidden>
-        <path d={SHIELD} fill="#151816" stroke="#2A302C" strokeWidth="2" />
+        <path d={SHIELD} fill="var(--bg-surface-2)" stroke="var(--bg-surface-3)" strokeWidth="2" />
       </svg>
     );
   return (

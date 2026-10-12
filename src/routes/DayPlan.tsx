@@ -104,7 +104,7 @@ export default function DayPlan() {
         })}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line-subtle bg-base/90 px-4 pt-3 backdrop-blur-xl" style={{ paddingBottom: 'calc(var(--safe-bottom) + 12px)' }}>
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line-subtle bg-page/90 px-4 pt-3 backdrop-blur-xl" style={{ paddingBottom: 'calc(var(--safe-bottom) + 12px)' }}>
         <div className="mx-auto flex max-w-2xl gap-2">
           <Button size="lg" variant="secondary" className="shrink-0" icon={<Pencil className="h-4 w-4" />} onClick={() => navigate('/schedule')}>
             Modifica

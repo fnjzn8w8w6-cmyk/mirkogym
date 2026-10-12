@@ -13,7 +13,8 @@ import { TopBar } from '@/components/layout/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Segmented, Toggle, Input } from '@/components/ui/Input';
-import { NewBadge } from '@/components/ui/Help';
+import { NewBadge, SectionTitle } from '@/components/ui/Help';
+import { THEMES, applyTheme, normalizeTheme } from '@/lib/theme';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
@@ -167,6 +168,41 @@ export default function Settings() {
           </span>
           <ChevronRight className="h-5 w-5 text-fg-3" aria-hidden />
         </Card>
+
+        <section>
+          <h2 className="section-title">
+            <SectionTitle help="app-theme">Tema</SectionTitle> <NewBadge />
+          </h2>
+          <Card className="grid grid-cols-3 gap-2 p-3" role="radiogroup" aria-label="Tema dell'app">
+            {THEMES.map((t) => {
+              const on = normalizeTheme(settings.theme) === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => {
+                    applyTheme(t.id);
+                    void set({ theme: t.id });
+                  }}
+                  className={`flex flex-col items-center gap-2 rounded-md border p-2 text-sm font-semibold ${on ? 'border-accent-500 bg-accent-glow text-fg' : 'border-line bg-surface-2 text-fg-2'}`}
+                >
+                  {/* mini anteprima: sfondo, riquadro, righe di testo e pulsante del tema */}
+                  <span className="flex h-16 w-full flex-col gap-1 rounded-sm border border-line p-1.5" style={{ background: t.colors[0] }} aria-hidden>
+                    <span className="flex flex-1 flex-col justify-center gap-1 rounded-[4px] px-1.5" style={{ background: t.colors[1] }}>
+                      <span className="h-1 w-3/4 rounded-full" style={{ background: t.colors[2] }} />
+                      <span className="h-1 w-1/2 rounded-full opacity-60" style={{ background: t.colors[2] }} />
+                    </span>
+                    <span className="h-2.5 w-full rounded-full" style={{ background: t.colors[3] }} />
+                  </span>
+                  {t.label}
+                </button>
+              );
+            })}
+          </Card>
+          <p className="mt-2 px-1 text-xs text-fg-3">{THEMES.find((t) => t.id === normalizeTheme(settings.theme))?.note}</p>
+        </section>
 
         <section>
           <h2 className="section-title">Lingua delle istruzioni</h2>

@@ -459,7 +459,7 @@ function SessionView({ initial }: { initial: ActiveSession }) {
     <div>
       {/* Top bar sessione */}
       <header
-        className="sticky top-0 z-30 border-b border-line-subtle bg-base/90 backdrop-blur-xl"
+        className="sticky top-0 z-30 border-b border-line-subtle bg-page/90 backdrop-blur-xl"
         style={{ paddingTop: 'var(--safe-top)' }}
       >
         <div className="mx-auto flex min-h-[60px] max-w-2xl items-center gap-2 px-4">

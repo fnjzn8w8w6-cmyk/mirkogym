@@ -448,7 +448,7 @@ export function ProfileSetup() {
         </motion.div>
       </AnimatePresence>
 
-      <div className="sticky bottom-0 bg-base pt-2">
+      <div className="sticky bottom-0 bg-page pt-2">
         {step === 'program' ? (
           <Button size="lg" fullWidth loading={busy} disabled={!canNext.program} icon={<Sparkles className="h-5 w-5" />} onClick={finish}>
             Inizia ad allenarti

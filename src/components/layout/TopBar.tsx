@@ -26,7 +26,7 @@ export function TopBar({ title, subtitle, back, right, large }: TopBarProps) {
   const navigate = useNavigate();
   return (
     <header
-      className="sticky top-0 z-30 border-b border-line-subtle bg-base/85 backdrop-blur-xl"
+      className="sticky top-0 z-30 border-b border-line-subtle bg-page/85 backdrop-blur-xl"
       style={{ paddingTop: 'var(--safe-top)' }}
     >
       <div className="mx-auto flex min-h-[56px] w-full max-w-2xl items-center gap-2 px-4">

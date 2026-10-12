@@ -87,9 +87,9 @@ function WeekCalories({ week, cycling, date }: { week: { target: number }[]; cyc
 /** Macro del pasto: grammi di proteine, carboidrati e grassi e quanto pesano sulle calorie del pasto. */
 function MealMacros({ m }: { m: Macros }) {
   const parts = [
-    { k: 'P', label: 'proteine', short: 'Proteine', g: m.protein, kcal: m.protein * 4, color: '#3DDC84' },
-    { k: 'C', label: 'carboidrati', short: 'Carbo', g: m.carbs, kcal: m.carbs * 4, color: '#A7B0AB' },
-    { k: 'G', label: 'grassi', short: 'Grassi', g: m.fat, kcal: m.fat * 9, color: '#EAB308' },
+    { k: 'P', label: 'proteine', short: 'Proteine', g: m.protein, kcal: m.protein * 4, color: 'var(--macro-protein)' },
+    { k: 'C', label: 'carboidrati', short: 'Carbo', g: m.carbs, kcal: m.carbs * 4, color: 'var(--macro-carbs)' },
+    { k: 'G', label: 'grassi', short: 'Grassi', g: m.fat, kcal: m.fat * 9, color: 'var(--macro-fat)' },
   ];
   const tot = parts.reduce((a, p) => a + p.kcal, 0) || 1;
   return (
@@ -252,9 +252,9 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
             <div className="text-xs uppercase text-fg-3">{left < 0 ? 'Oltre' : 'Restano'}</div>
           </div>
         </div>
-        <MacroBar label="Proteine" value={totals.protein} target={target.protein} unit="g" color="#3DDC84" />
-        <MacroBar label="Carboidrati" value={totals.carbs} target={target.carbs} unit="g" color="#A7B0AB" />
-        <MacroBar label="Grassi" value={totals.fat} target={target.fat} unit="g" color="#EAB308" />
+        <MacroBar label="Proteine" value={totals.protein} target={target.protein} unit="g" color="var(--macro-protein)" />
+        <MacroBar label="Carboidrati" value={totals.carbs} target={target.carbs} unit="g" color="var(--macro-carbs)" />
+        <MacroBar label="Grassi" value={totals.fat} target={target.fat} unit="g" color="var(--macro-fat)" />
         {dayT && dayT.day.delta !== 0 && (
           <p className="text-sm text-fg-2">
             {dayT.day.training ? (

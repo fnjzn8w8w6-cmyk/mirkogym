@@ -273,6 +273,14 @@ export const HELP = {
       'Per ogni pasto ricevi una proposta con le quantità già calcolate; con "Un\'altra idea" la cambi.',
     ],
   },
+  'app-theme': {
+    title: 'Tema',
+    body: [
+      'Scegli i colori dell\'app: Vulcano (scuro, nero e verde, l\'originale), Carta (chiaro, bianco e nero: si legge bene anche al sole) o Grafite (scuro, nero e bianco).',
+      'Il tema si salva nel tuo account: lo ritrovi uguale su tutti i dispositivi. Foto del giorno, reel e immagini da condividere restano con i colori di Vulcan Lift.',
+      'Con il tema Carta, se l\'ora e la batteria in alto non si leggono bene, chiudi e riapri l\'app.',
+    ],
+  },
   'complete-day': { title: 'Giornata completa', body: ['Se nel diario manca qualche pasto, rispondi "No": quella giornata non verrà usata per calcolare il tuo metabolismo.'] },
 
   /* ---------- Coach ---------- */

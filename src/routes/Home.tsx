@@ -156,9 +156,9 @@ function TodayDiet({ onOpen }: { onOpen: () => void }) {
         </div>
       )}
       <div className="mt-3 grid grid-cols-3">
-        <Ring value={t.protein} target={target.protein} color="var(--accent-500)" label="Proteine" unit="g" />
-        <Ring value={t.carbs} target={target.carbs} color="var(--text-secondary)" label="Carbo" unit="g" />
-        <Ring value={t.fat} target={target.fat} color="#EAB308" label="Grassi" unit="g" />
+        <Ring value={t.protein} target={target.protein} color="var(--macro-protein)" label="Proteine" unit="g" />
+        <Ring value={t.carbs} target={target.carbs} color="var(--macro-carbs)" label="Carbo" unit="g" />
+        <Ring value={t.fat} target={target.fat} color="var(--macro-fat)" label="Grassi" unit="g" />
       </div>
       {entries.length > 0 && target.target - t.kcal >= 150 && (
         <p className="mt-3 text-center text-sm text-fg-2">
@@ -234,8 +234,8 @@ export default function Home() {
           style={{ paddingTop: 'calc(var(--safe-top) + 10px)', paddingBottom: 10 }}
         >
           <span className="relative flex h-3 w-3">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-60" />
-            <span className="relative inline-flex h-3 w-3 rounded-full bg-white" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-onaccent opacity-60" />
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-onaccent" />
           </span>
           <span className="flex-1">
             <span className="block text-base font-bold">Sessione in corso — Riprendi</span>
@@ -278,7 +278,7 @@ export default function Home() {
         {next && (
           <section
             className="relative overflow-hidden rounded-2xl border border-accent-500/30 p-5 shadow-glow"
-            style={{ background: 'radial-gradient(120% 90% at 100% 0%, rgba(255,255,255,0.10), transparent 60%), radial-gradient(90% 80% at 0% 100%, rgb(var(--rgb-accent-500) / 0.18), transparent 60%), linear-gradient(var(--bg-surface),var(--bg-surface))' }}
+            style={{ background: 'radial-gradient(120% 90% at 100% 0%, var(--card-sheen-strong), transparent 60%), radial-gradient(90% 80% at 0% 100%, rgb(var(--rgb-accent-500) / 0.18), transparent 60%), linear-gradient(var(--bg-surface),var(--bg-surface))' }}
           >
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-bold uppercase tracking-[0.2em] text-accent-400">
@@ -437,7 +437,7 @@ export default function Home() {
         )}
 
         {/* Coach con microfono */}
-        <Card className="flex items-center gap-3 border-violet-500/40 p-4" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(13,15,14,0.95))' }}>
+        <Card className="flex items-center gap-3 border-violet-500/40 p-4" style={{ background: 'linear-gradient(135deg, var(--card-sheen), rgb(var(--rgb-surface) / 0.95))' }}>
           <button type="button" onClick={() => navigate('/coach?tab=chat')} className="min-w-0 flex-1 text-left">
             <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-violet-400">
               <Sparkles className="h-4 w-4" aria-hidden /> <SectionTitle help="home-coach">Coach</SectionTitle>

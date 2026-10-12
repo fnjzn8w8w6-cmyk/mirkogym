@@ -148,7 +148,7 @@ export default function Profile() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="truncate text-base font-semibold text-fg">{r.lift.name}</span>
-                      <span className="font-display text-lg font-extrabold uppercase" style={{ color: rank.color }}>
+                      <span className="font-display text-lg font-extrabold uppercase" style={{ color: `color-mix(in srgb, ${rank.color} var(--tint-ink), var(--text-primary))` }}>
                         {rank.name}
                       </span>
                     </div>

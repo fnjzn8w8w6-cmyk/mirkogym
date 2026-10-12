@@ -183,7 +183,7 @@ export function TimerCamera({ open, onClose, onShot, ghost }: { open: boolean; o
                 setTimer(t);
                 write(TIMER_KEY, String(t));
               }}
-              className={cn('h-9 min-w-[44px] rounded-full px-2 text-sm font-bold', timer === t ? 'bg-accent-500 text-black' : 'text-white')}
+              className={cn('h-9 min-w-[44px] rounded-full px-2 text-sm font-bold', timer === t ? 'bg-accent-500 text-onaccent' : 'text-white')}
             >
               {t === 0 ? 'No' : `${t}s`}
             </button>
@@ -215,7 +215,7 @@ export function TimerCamera({ open, onClose, onShot, ghost }: { open: boolean; o
           className="relative z-10 mx-auto mt-3 flex items-center gap-2 rounded-full bg-black/55 px-3 py-1.5 text-sm text-white"
         >
           <span>{showGhost ? 'Mettiti dentro la sagoma dell’ultima foto' : 'Sagoma dell’ultima foto'}</span>
-          <span className={cn('rounded-full px-2 py-0.5 text-xs font-bold', showGhost ? 'bg-accent-500 text-black' : 'bg-white/20 text-white')}>{showGhost ? 'ON' : 'OFF'}</span>
+          <span className={cn('rounded-full px-2 py-0.5 text-xs font-bold', showGhost ? 'bg-accent-500 text-onaccent' : 'bg-white/20 text-white')}>{showGhost ? 'ON' : 'OFF'}</span>
           <NewBadge className="ml-0" />
         </button>
       )}

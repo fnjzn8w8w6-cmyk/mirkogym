@@ -441,7 +441,7 @@ function ChatCoach({ profile }: { profile: UserProfile }) {
       )}
       <div ref={endRef} />
       <form
-        className="sticky flex gap-2 bg-base py-2"
+        className="sticky flex gap-2 bg-page py-2"
         style={{ bottom: 'calc(var(--nav-h) + var(--safe-bottom))' }}
         onSubmit={(e) => {
           e.preventDefault();
