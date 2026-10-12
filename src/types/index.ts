@@ -287,6 +287,8 @@ export interface BackupFile {
   foodLogs?: FoodLog[];
   recipes?: UserRecipe[];
   myFoods?: Food[];
+  /** archivio completo dei check-in settimanali */
+  checkIns?: CheckIn[];
 }
 
 /* ---------- Alimentazione ---------- */

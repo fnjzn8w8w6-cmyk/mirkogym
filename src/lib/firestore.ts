@@ -15,6 +15,7 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore';
 import type { ActiveSession, BackupFile, BodyLog, Day, FoodLog, Mesocycle, PhotoImages, ProgressPhoto, Schedule, Session, Settings, UserRecipe } from '@/types';
+import type { CheckIn } from './checkin';
 import type { Food } from './foods';
 import { db } from './firebase';
 import { DEFAULT_SETTINGS, SEED_DAYS } from './seed-data';
@@ -34,6 +35,7 @@ const recipesCol = (uid: string) => collection(userDoc(uid), 'recipes');
 /** Foto dei progressi: metadati + miniatura (leggeri) e immagini complete in documenti separati. */
 const photosCol = (uid: string) => collection(userDoc(uid), 'photos');
 const photoImagesCol = (uid: string) => collection(userDoc(uid), 'photoImages');
+const checkInsCol = (uid: string) => collection(userDoc(uid), 'checkIns');
 const myFoodsRef = (uid: string) => doc(userDoc(uid), 'config', 'foods');
 
 export const newId = (uid: string): string => doc(sessionsCol(uid)).id;
@@ -200,6 +202,11 @@ export const getPhotoImages = async (uid: string, date: string): Promise<PhotoIm
   return d.exists() ? (d.data() as PhotoImages) : null;
 };
 export const deletePhoto = (uid: string, date: string) => Promise.all([deleteDoc(doc(photosCol(uid), date)), deleteDoc(doc(photoImagesCol(uid), date))]);
+/** Archivio completo dei check-in settimanali (uno per documento, dal più recente). */
+export function subscribeCheckIns(uid: string, cb: (c: CheckIn[]) => void, onError: OnError): Unsubscribe {
+  return onSnapshot(checkInsCol(uid), (snap) => cb(snap.docs.map((d) => d.data() as CheckIn).sort((a, b) => b.date - a.date)), onError);
+}
+export const saveCheckIn = (uid: string, c: CheckIn) => setDoc(doc(checkInsCol(uid), String(c.date)), clean(c));
 export const saveFoodLog = (uid: string, log: FoodLog) =>
   setDoc(doc(foodLogsCol(uid), log.date), clean({ date: log.date, entries: log.entries, updatedAt: Timestamp.now() }), { merge: true });
 export const saveDayRecap = (uid: string, date: string, recap: NonNullable<FoodLog['recap']>) =>
@@ -225,7 +232,7 @@ export const saveMyFoods = (uid: string, items: Food[]) => setDoc(myFoodsRef(uid
 /* ---------- Backup / Reset ---------- */
 
 export async function exportAll(uid: string): Promise<BackupFile> {
-  const [sched, settings, sessions, bodyLogs, mesos, foodLogs, recipes, myFoods] = await Promise.all([
+  const [sched, settings, sessions, bodyLogs, mesos, foodLogs, recipes, myFoods, checkIns] = await Promise.all([
     getDoc(scheduleRef(uid)),
     getDoc(settingsRef(uid)),
     getDocs(sessionsCol(uid)),
@@ -234,6 +241,7 @@ export async function exportAll(uid: string): Promise<BackupFile> {
     getDocs(foodLogsCol(uid)),
     getDocs(recipesCol(uid)),
     getDoc(myFoodsRef(uid)),
+    getDocs(checkInsCol(uid)),
   ]);
   return {
     app: 'mirkogym',
@@ -247,6 +255,7 @@ export async function exportAll(uid: string): Promise<BackupFile> {
     foodLogs: foodLogs.docs.map((d) => ({ date: d.id, entries: (d.data().entries as FoodLog['entries']) ?? [], recap: d.data().recap as FoodLog['recap'] })),
     recipes: recipes.docs.map((d) => ({ ...(d.data() as UserRecipe), id: d.id })),
     myFoods: myFoods.exists() ? ((myFoods.data().items as Food[]) ?? []) : [],
+    checkIns: checkIns.docs.map((d) => d.data() as CheckIn),
   };
 }
 
@@ -270,6 +279,7 @@ async function deletionOps(uid: string): Promise<Op[]> {
     getDocs(mesocyclesCol(uid)),
     getDocs(foodLogsCol(uid)),
     getDocs(recipesCol(uid)),
+    getDocs(checkInsCol(uid)),
   ]);
   return [
     ...cols.flatMap((c) => c.docs.map((d) => ({ ref: d.ref }))),
@@ -303,6 +313,7 @@ export async function importAll(uid: string, backup: BackupFile): Promise<void> 
   for (const l of backup.foodLogs ?? []) writes.push({ ref: doc(foodLogsCol(uid), l.date), data: clean({ date: l.date, entries: l.entries, recap: l.recap }) });
   for (const r of backup.recipes ?? []) writes.push({ ref: doc(recipesCol(uid), r.id), data: clean(r) });
   if (backup.myFoods?.length) writes.push({ ref: myFoodsRef(uid), data: clean({ items: backup.myFoods }) });
+  for (const c of backup.checkIns ?? []) writes.push({ ref: doc(checkInsCol(uid), String(c.date)), data: clean(c) });
   if (backup.schedule) {
     writes.push({ ref: scheduleRef(uid), data: { id: 'current', days: clean(backup.schedule.days), updatedAt: Timestamp.now() } });
   }

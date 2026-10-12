@@ -1,6 +1,10 @@
 import { METABOLISM_RELIABLE_DAYS } from '@/lib/body-model';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { HUNGER_WORDS, LevelScale } from '@/components/ui/LevelScale';
+import { LevelScale } from '@/components/ui/LevelScale';
+import { QUESTIONS } from './checkin-questions';
+import { CheckInHistory } from './CheckInHistory';
+import { useCheckIns } from '@/hooks/use-checkins';
+import { realWeight } from '@/lib/body-model';
 import { ClipboardCheck, Sparkles } from 'lucide-react';
 import { useSettings } from '@/hooks/use-settings';
 import { useSessions } from '@/hooks/use-sessions';
@@ -31,14 +35,6 @@ import { checkInDue, checkInSummary, evaluate, weekStats, type CheckIn, type Che
 import { loadRecipes, rescalePlan, setCustomMeal, type WeekPlan } from '@/lib/recipes';
 import { DEFAULT_NUTRITION, planPrefs } from '@/components/food/NutritionPlanner';
 
-const QUESTIONS: { key: keyof Omit<CheckInAnswers, 'note'>; label: string; scale: string[] }[] = [
-  { key: 'energy', label: 'Energia durante la settimana', scale: ['A terra', 'Bassa', 'Normale', 'Alta', 'Al top'] },
-  { key: 'sleep', label: 'Qualità del sonno', scale: ['Pessima', 'Scarsa', 'Normale', 'Buona', 'Ottima'] },
-  { key: 'stress', label: 'Stress (lavoro, studio, vita)', scale: ['Nessuno', 'Poco', 'Normale', 'Alto', 'Altissimo'] },
-  { key: 'soreness', label: 'Dolori muscolari / articolari', scale: ['Nessuno', 'Lievi', 'Medi', 'Forti', 'Intensi'] },
-  { key: 'hunger', label: 'Fame durante il giorno', scale: HUNGER_WORDS },
-  { key: 'adherence', label: 'Quanto hai rispettato calorie e macro?', scale: ['0–20%', '40%', '60%', '80%', '100%'] },
-];
 const DEFAULT_ANSWERS: CheckInAnswers = { energy: 3, sleep: 3, stress: 3, soreness: 2, hunger: 3, adherence: 4 };
 
 function Scale({ value, options, onChange, label }: { value: number; options: string[]; onChange: (v: number) => void; label: string }) {
@@ -75,7 +71,9 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
   const toast = useToast();
   const ai = useAITask();
   const history = settings.checkIns ?? [];
+  const archive = useCheckIns();
   const due = checkInDue(history);
+  const [historyOpen, setHistoryOpen] = useState<number | 'list' | null>(null);
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<'ask' | 'result'>('ask');
   const [answers, setAnswers] = useState<CheckInAnswers>(DEFAULT_ANSWERS);
@@ -211,7 +209,15 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
       kcalChange,
       deload,
       summary: summary ?? [...result.points, ...athlete.report.insights.map((i) => i.text)].join(' '),
+      points: result.points,
+      weight: realWeight(bodyLogs, profile.weightKg),
+      kcalTarget: userNutrition(profile, settings).target,
+      ...(front ? { photoDate: toISODate(new Date()) } : {}),
+      ...(photoRes ? { bodyFat: photoRes.bodyFat, photoComment: photoRes.comment } : {}),
+      ...(proposals.some((p) => picked[p.id]) ? { applied: proposals.filter((p) => picked[p.id]).map((p) => `${p.emoji} ${p.title}`) } : {}),
     };
+    // archivio completo: tutti i check-in restano consultabili
+    await archive.save(entry);
     const newAdjust = Math.max(-600, Math.min(600, (settings.kcalAdjust ?? 0) + kcalChange));
     const patch: Parameters<typeof update>[0] = { checkIns: [entry, ...history].slice(0, 12) };
     if (kcalChange !== 0) {
@@ -292,23 +298,21 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
         <Button className="mt-3" size="sm" variant={due ? 'primary' : 'secondary'} onClick={start}>
           {due ? 'Fai il check-in' : 'Rifai il check-in'}
         </Button>
-        {history.length > 1 && (
-          <details className="mt-3">
-            <summary className="cursor-pointer text-sm text-fg-3">Storico ({history.length})</summary>
-            <ul className="mt-2 space-y-2">
-              {history.slice(1).map((c) => (
-                <li key={c.date} className="rounded-md bg-surface-2 p-2 text-sm text-fg-2">
-                  <span className="font-semibold text-fg">{new Date(c.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</span> ·{' '}
-                  {c.stats.sessions}/{c.stats.planned} allenamenti
-                  {c.kcalChange ? ` · ${c.kcalChange > 0 ? '+' : ''}${c.kcalChange} kcal` : ''}
-                  {c.deload ? ' · deload' : ''}
-                </li>
-              ))}
-            </ul>
-          </details>
+        {archive.checkIns.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-x-4">
+            <button type="button" onClick={() => setHistoryOpen(archive.checkIns[0].date)} className="h-10 text-sm font-semibold text-accent-400">
+              Apri l'ultimo check-in
+            </button>
+            {archive.checkIns.length > 1 && (
+              <button type="button" onClick={() => setHistoryOpen('list')} className="h-10 text-sm font-semibold text-accent-400">
+                Tutti i check-in ({archive.checkIns.length}) <NewBadge className="ml-1" />
+              </button>
+            )}
+          </div>
         )}
       </Card>
 
+      <CheckInHistory checkIns={archive.checkIns} open={historyOpen} onClose={() => setHistoryOpen(null)} />
       <Modal open={open} onClose={() => !saving && setOpen(false)} title="Check-in settimanale" dismissible={!saving}>
         {step === 'ask' ? (
           <div className="space-y-4">

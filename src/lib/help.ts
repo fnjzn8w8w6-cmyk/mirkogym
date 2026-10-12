@@ -281,6 +281,7 @@ export const HELP = {
     body: [
       'Ogni settimana: poche domande, la foto (facoltativa) e l\'analisi del coach su allenamenti, peso, dieta e obiettivo.',
       'Qui arrivano anche le proposte per la settimana dopo: le applichi solo se le confermi.',
+      'Ogni check-in resta salvato nel tuo account: con «Tutti i check-in» riapri quelli passati con risposte, numeri, analisi del coach, foto e modifiche applicate.',
     ],
   },
   'coach-proposals': {

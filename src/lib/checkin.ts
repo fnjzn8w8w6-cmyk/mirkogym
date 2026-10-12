@@ -58,6 +58,18 @@ export interface CheckIn {
   kcalChange: number;
   deload: boolean;
   summary: string;
+  /** punti dell'analisi calcolata (senza AI) */
+  points?: string[];
+  /** peso reale (tendenza) quel giorno */
+  weight?: number | null;
+  /** obiettivo calorico in vigore */
+  kcalTarget?: number;
+  /** foto del check-in (data della galleria) e stima della massa grassa */
+  photoDate?: string;
+  bodyFat?: number;
+  photoComment?: string;
+  /** proposte del coach accettate */
+  applied?: string[];
 }
 
 const WEEK = 7 * 86400000;
