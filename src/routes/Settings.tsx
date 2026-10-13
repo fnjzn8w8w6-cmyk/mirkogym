@@ -275,7 +275,7 @@ export default function Settings() {
               }
               description={
                 canPlayInSilent()
-                  ? "Il bip si sente anche con l'iPhone in modalità silenziosa. Attenzione: la musica di altre app (es. Spotify) potrebbe abbassarsi o fermarsi a ogni bip."
+                  ? "Il bip si sente anche con l'iPhone in modalità silenziosa, ma ferma la musica di Spotify e delle altre app a ogni bip: usala solo se non ascolti musica."
                   : 'Non disponibile su questo telefono (su iPhone serve iOS 16.4 o più recente).'
               }
               checked={Boolean(settings.soundInSilent) && canPlayInSilent()}

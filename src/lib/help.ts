@@ -276,8 +276,8 @@ export const HELP = {
   'rest-timer-sound': {
     title: 'Timer di recupero e suono',
     body: [
-      'A fine recupero l\'app fa un doppio bip (se «Suono a fine recupero» è acceso).',
-      'Su iPhone il bip non si sente se il telefono è in modalità silenziosa: accendi «Suona anche in silenzioso» (la musica di altre app potrebbe abbassarsi o fermarsi a ogni bip).',
+      'A fine recupero l\'app suona per circa 2,5 secondi (tre doppi bip, l\'ultimo più acuto), forte e con un timbro che si sente anche sopra la musica.',
+      'Su iPhone il bip non si sente se il telefono è in modalità silenziosa: in palestra togli il silenzioso. «Suona anche in silenzioso» lo fa sentire comunque, ma ferma la musica di Spotify e delle altre app a ogni bip.',
       'Con lo schermo spento o con un\'altra app aperta l\'iPhone mette in pausa l\'app: il bip suona quando la riapri. Per sentirlo sempre al momento giusto tieni l\'app aperta durante il recupero, con «Schermo sempre acceso».',
       'La vibrazione non è disponibile su iPhone per le app web.',
     ],
