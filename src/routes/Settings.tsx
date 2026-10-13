@@ -15,6 +15,8 @@ import { Button, IconButton } from '@/components/ui/Button';
 import { Segmented, Toggle, Input } from '@/components/ui/Input';
 import { NewBadge, SectionTitle } from '@/components/ui/Help';
 import { THEMES, applyTheme, normalizeTheme } from '@/lib/theme';
+import { canPlayInSilent, playBeep, setSoundInSilent } from '@/lib/haptics';
+import type { HelpId } from '@/lib/help';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
@@ -26,10 +28,10 @@ import { toISODate } from '@/lib/date-utils';
 
 const REPO_URL = 'https://github.com/fnjzn8w8w6-cmyk/mirkogym';
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, help, children }: { title: string; help?: HelpId; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="section-title">{title}</h2>
+      <h2 className="section-title">{help ? <SectionTitle help={help}>{title}</SectionTitle> : title}</h2>
       <Card className="divide-y divide-line-subtle px-4">{children}</Card>
     </section>
   );
@@ -254,7 +256,7 @@ export default function Settings() {
           />
         </Section>
 
-        <Section title="Timer riposo">
+        <Section title="Timer riposo" help="rest-timer-sound">
           <Toggle label="Abilita timer" checked={settings.restTimerEnabled} onChange={(v) => set({ restTimerEnabled: v })} />
           <Toggle
             label="Avvio automatico"
@@ -264,6 +266,30 @@ export default function Settings() {
             onChange={(v) => set({ restTimerAutoStart: v })}
           />
           <Toggle label="Suono a fine recupero" checked={settings.soundEnabled} onChange={(v) => set({ soundEnabled: v })} />
+          {settings.soundEnabled && (
+            <Toggle
+              label={
+                <>
+                  Suona anche in silenzioso <NewBadge />
+                </>
+              }
+              description={
+                canPlayInSilent()
+                  ? "Il bip si sente anche con l'iPhone in modalità silenziosa. Attenzione: la musica di altre app (es. Spotify) potrebbe abbassarsi o fermarsi a ogni bip."
+                  : 'Non disponibile su questo telefono (su iPhone serve iOS 16.4 o più recente).'
+              }
+              checked={Boolean(settings.soundInSilent) && canPlayInSilent()}
+              disabled={!canPlayInSilent()}
+              onChange={(v) => {
+                set({ soundInSilent: v });
+                // bip di prova: metti l'iPhone in silenzioso e senti subito se funziona
+                if (v) {
+                  setSoundInSilent(true);
+                  void playBeep();
+                }
+              }}
+            />
+          )}
           <Toggle
             label="Schermo sempre acceso"
             description="Durante l'allenamento lo schermo non si spegne"

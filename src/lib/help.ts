@@ -273,6 +273,15 @@ export const HELP = {
       'Per ogni pasto ricevi una proposta con le quantità già calcolate; con "Un\'altra idea" la cambi.',
     ],
   },
+  'rest-timer-sound': {
+    title: 'Timer di recupero e suono',
+    body: [
+      'A fine recupero l\'app fa un doppio bip (se «Suono a fine recupero» è acceso).',
+      'Su iPhone il bip non si sente se il telefono è in modalità silenziosa: accendi «Suona anche in silenzioso» (la musica di altre app potrebbe abbassarsi o fermarsi a ogni bip).',
+      'Con lo schermo spento o con un\'altra app aperta l\'iPhone mette in pausa l\'app: il bip suona quando la riapri. Per sentirlo sempre al momento giusto tieni l\'app aperta durante il recupero, con «Schermo sempre acceso».',
+      'La vibrazione non è disponibile su iPhone per le app web.',
+    ],
+  },
   'app-theme': {
     title: 'Tema',
     body: [

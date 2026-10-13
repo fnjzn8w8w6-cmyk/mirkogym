@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { haptics, playBeep } from '@/lib/haptics';
+import { haptics, playBeep, unlockAudio } from '@/lib/haptics';
 import { useData } from './data-context';
 
 interface TimerState {
@@ -63,13 +63,29 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
     return () => window.clearInterval(id);
   }, [state.endAt]);
 
+  // audio sempre pronto mentre il recupero è in corso: si risveglia a ogni tocco e quando torni nell'app
+  // (iPhone lo sospende quando l'app va in secondo piano, e allo zero il bip non si sentirebbe)
+  useEffect(() => {
+    if (!state.endAt || !settingsRef.current.soundEnabled) return;
+    const wake = () => unlockAudio();
+    const back = () => document.visibilityState === 'visible' && unlockAudio();
+    document.addEventListener('pointerdown', wake, true);
+    document.addEventListener('touchend', wake, true);
+    document.addEventListener('visibilitychange', back);
+    return () => {
+      document.removeEventListener('pointerdown', wake, true);
+      document.removeEventListener('touchend', wake, true);
+      document.removeEventListener('visibilitychange', back);
+    };
+  }, [state.endAt]);
+
   const remaining = state.endAt ? Math.max(0, Math.ceil((state.endAt - now) / 1000)) : 0;
 
   useEffect(() => {
     if (!state.endAt || remaining > 0 || firedFor.current === state.endAt) return;
     firedFor.current = state.endAt;
     if (settingsRef.current.vibrationEnabled) haptics.timerEnd();
-    if (settingsRef.current.soundEnabled) playBeep();
+    if (settingsRef.current.soundEnabled) void playBeep();
     setFinished(true);
     setState({ endAt: null, duration: 0 });
     const t = window.setTimeout(() => setFinished(false), 2500);
@@ -77,6 +93,7 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
   }, [remaining, state.endAt]);
 
   const start = useCallback((seconds: number, label?: string) => {
+    unlockAudio();
     setFinished(false);
     setNow(Date.now());
     setState({ endAt: Date.now() + seconds * 1000, duration: seconds, label });

@@ -184,6 +184,8 @@ export interface Settings {
   /** Serie di riscaldamento già pronte sul primo esercizio multiarticolare di ogni gruppo (default sì). */
   autoWarmup?: boolean;
   soundEnabled: boolean;
+  /** bip del timer anche con l'iPhone in modalità silenziosa (può interrompere la musica di altre app) */
+  soundInSilent?: boolean;
   vibrationEnabled: boolean;
   weightUnit: 'kg' | 'lb';
   /** tema dei colori (le impostazioni vecchie hanno 'dark' = Vulcano) */
