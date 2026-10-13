@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CalendarRange, ChevronRight, Flame, Lock, Settings as SettingsIcon, Trophy } from 'lucide-react';
 import { useProgress } from '@/hooks/use-progress';
@@ -22,10 +22,14 @@ import { SectionTitle } from '@/components/ui/Help';
 import { cn } from '@/lib/cn';
 import { bodyFatNow } from '@/lib/bodyfat-estimate';
 
+/** Ranghi visibili prima di «Mostra tutti». */
+const RANKS_SHOWN = 6;
+
 export default function Profile() {
   const navigate = useNavigate();
   const { email } = useData();
   const { level, stats, achievements, unlocked, ranks, bodyweight } = useProgress();
+  const [showAllRanks, setShowAllRanks] = useState(false);
   const { settings, update } = useSettings();
   const { bodyLogs } = useBodyLogs();
   const profile = settings.profile;
@@ -139,7 +143,7 @@ export default function Profile() {
                 <p className="text-sm text-fg-2">Fai almeno 2 sedute con lo stesso esercizio nelle ultime 8 settimane: qui comparirà il tuo rango.</p>
               </div>
             )}
-            {ranks.map((r) => {
+            {(showAllRanks ? ranks : ranks.slice(0, RANKS_SHOWN)).map((r) => {
               const rank = RANKS[r.rank];
               const unit = r.perHand ? ' per manubrio' : '';
               return (
@@ -163,7 +167,12 @@ export default function Profile() {
               );
             })}
           </Card>
-          <p className="mt-2 text-xs text-fg-3">I tuoi esercizi più frequenti delle ultime 8 settimane. Standard indicativi basati sul rapporto 1RM stimato / peso corporeo.</p>
+          {ranks.length > RANKS_SHOWN && (
+            <Button variant="secondary" fullWidth className="mt-2" onClick={() => setShowAllRanks((v) => !v)}>
+              {showAllRanks ? 'Mostra meno' : `Mostra tutti i ranghi (${ranks.length})`}
+            </Button>
+          )}
+          <p className="mt-2 text-xs text-fg-3">Tutti gli esercizi che hai fatto almeno 2 volte nelle ultime 8 settimane, dai più frequenti. Standard indicativi basati sul rapporto 1RM stimato / peso corporeo.</p>
         </section>
 
         <GoalCard compact />

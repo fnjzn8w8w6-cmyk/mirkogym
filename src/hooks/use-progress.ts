@@ -38,7 +38,8 @@ export function useProgress() {
     const unlocked = achievements.filter((x) => x.unlocked).length;
     const level = levelOf(xpOf(stats, unlocked));
     const bodyweight = bodyLogs.find((b) => b.weight != null)?.weight ?? 0;
-    const ranks = liftRanks(sessions, bodyweight, nameOf, groupOf, settings.profile?.sex ?? 'm');
+    // tutti gli esercizi che fai con regolarità (il Profilo ne mostra 6 e il resto con «Mostra tutti»)
+    const ranks = liftRanks(sessions, bodyweight, nameOf, groupOf, settings.profile?.sex ?? 'm', Date.now(), Infinity);
     const key = weekKey();
     const from = new Date(`${key}T00:00:00`).getTime();
     const quests = weeklyQuests(

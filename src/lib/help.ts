@@ -333,7 +333,8 @@ export const HELP = {
   'profile-ranks': {
     title: 'Ranghi di forza',
     body: [
-      'Il rango si calcola sui tuoi esercizi più frequenti delle ultime 8 settimane (almeno 2 sedute): massimale stimato degli ultimi 6 mesi diviso il peso corporeo.',
+      'Il rango si calcola su tutti gli esercizi che fai con regolarità (almeno 2 sedute nelle ultime 8 settimane): massimale stimato degli ultimi 6 mesi diviso il peso corporeo. Vedi subito i 6 più frequenti, gli altri con «Mostra tutti i ranghi».',
+      'Gli esercizi senza uno standard di forza sensato (es. addominali, plank) non hanno rango.',
       'Sette ranghi, ognuno col suo stemma: Ferro, Bronzo, Argento, Oro, Platino, Diamante, Campione.',
       'Per panca, squat, stacco, lento, rematore e lat machine ci sono tabelle note; per gli altri esercizi lo standard è stimato in base al tipo (scritto "standard stimato").',
       'Con i manubri conta il peso di un manubrio; trazioni, dip e flessioni contano il corpo più l\'eventuale zavorra. Per le donne gli standard sono più bassi.',
