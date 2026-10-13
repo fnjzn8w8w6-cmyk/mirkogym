@@ -269,9 +269,16 @@ export interface ActiveSession {
 export type SuggestionType = 'deload' | 'first' | 'exercise-deload' | 'progress' | 'maintain' | 'start';
 
 export interface Suggestion {
+  /** carico della prima serie (riepilogo) */
   weight: number | null;
   hint: string;
   type: SuggestionType;
+  /** carico suggerito per ogni serie allenante (stessa serie dell'ultima volta: piramidi incluse) */
+  weights?: (number | null)[];
+  /** ripetizioni obiettivo per ogni serie allenante */
+  reps?: number[];
+  /** quante serie mostrare nel riepilogo (serie in programma) */
+  shown?: number;
 }
 
 export interface PRFlags {

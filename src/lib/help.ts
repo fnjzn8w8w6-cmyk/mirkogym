@@ -89,7 +89,9 @@ export const HELP = {
   'session-suggestion': {
     title: 'Carico suggerito',
     body: [
-      'Calcolato dalla tua ultima volta su questo esercizio: se hai raggiunto le ripetizioni obiettivo si sale di carico, altrimenti si consolida.',
+      'Calcolato serie per serie dalla tua ultima volta su questo esercizio: ogni serie si confronta con la stessa serie della volta scorsa, così anche le piramidi (es. 60 → 70 → 80 kg) salgono su ogni gradino.',
+      'Serie al top del range (con lo sforzo giusto) → +2,5 kg (+1,25 sugli esercizi leggeri) e si riparte dal fondo del range. Nel range → stesso peso, +1 ripetizione. Sotto range → stesso peso, completa il range; due volte di fila sotto range → −10% su quella serie.',
+      'Il carico di ogni serie è scritto in grigio nella casella KG: se non scrivi niente e spunti la serie, vale quello.',
       'RIR calibrato: l\'app impara quanto sei preciso quando dici "me ne restavano 2". Se tendi a lasciarne di più, il carico suggerito sale un po\'.',
     ],
   },

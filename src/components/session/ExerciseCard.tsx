@@ -129,7 +129,11 @@ export function ExerciseCard({
   const color = groupColor(draft.group);
   const doneCount = draft.sets.filter((s) => s.done).length;
   const allDone = draft.sets.length > 0 && doneCount === draft.sets.length;
-  const weightPh = suggestion.weight != null ? formatKg(suggestion.weight, 2) : 'kg';
+  // carico suggerito per ogni serie allenante (le piramidi hanno un carico diverso per serie)
+  const weightPhAt = (k: number) => {
+    const w = k >= 0 ? (suggestion.weights?.[k] ?? suggestion.weight) : suggestion.weight;
+    return w != null ? formatKg(w, 2) : 'kg';
+  };
   const lastSet = draft.sets[draft.sets.length - 1];
   // Numerazione delle sole serie allenanti (le W di riscaldamento non contano)
   const workingIdx: number[] = [];
@@ -148,7 +152,7 @@ export function ExerciseCard({
       number: workingIdx[i] + 1,
       rir: st.rir,
       target: rirForSet(exercise.rirTarget, workingIdx[i], n),
-      detail: st.weight || st.reps ? `${st.weight || weightPh} kg × ${st.reps || (repTargets[workingIdx[i]] ?? exercise.repMax)}` : '',
+      detail: st.weight || st.reps ? `${st.weight || weightPhAt(workingIdx[i])} kg × ${st.reps || (repTargets[workingIdx[i]] ?? exercise.repMax)}` : '',
     }));
   const canWarmup = !hasWarmups && isCompound(exercise) && workWeight != null && workWeight >= 20;
 
@@ -301,7 +305,7 @@ export function ExerciseCard({
                   onCycleType={() => onCycleType(i)}
                   set={s}
                   exerciseName={draft.name}
-                  weightPlaceholder={s.type === 'warmup' ? 'kg' : weightPh}
+                  weightPlaceholder={s.type === 'warmup' ? 'kg' : weightPhAt(workingIdx[i])}
                   repsPlaceholder={
                     s.type === 'warmup'
                       ? ''

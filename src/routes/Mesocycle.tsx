@@ -69,7 +69,9 @@ export default function Mesocycle() {
             const base = running ?? sugg.weight;
             return { value: base != null ? Math.round(base * (1 - pct / 100) * 4) / 4 : null, actual: false, deload: true };
           }
-          running = running == null ? sugg.weight : running + step;
+          // proiezione sulla serie più pesante (le piramidi hanno carichi diversi per serie)
+          const top = sugg.weights?.length ? Math.max(...sugg.weights.slice(0, Math.max(1, sugg.shown ?? 1)).map((x) => x ?? 0)) : sugg.weight;
+          running = running == null ? top : running + step;
           return { value: running, actual: false, deload: false };
         });
         out.set(e.id, cells);

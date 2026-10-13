@@ -1,4 +1,4 @@
-import type { Exercise, ExerciseLog, Session, SetLog, Suggestion } from '@/types';
+import type { Exercise, ExerciseLog, Session, SetLog, Suggestion, SuggestionType } from '@/types';
 import { formatKg } from './analytics';
 
 const round025 = (n: number) => Math.round(n * 4) / 4;
@@ -33,23 +33,41 @@ export function previousLogsFor(exercise: Pick<Exercise, 'id' | 'name'>, session
   return collect((l) => (l.name ?? '').trim().toLowerCase() === name);
 }
 
+const kg = (n: number) => `${formatKg(n, 2)} kg`;
+/** "1", "1 e 2", "1, 2 e 3" */
+const setList = (idx: number[]) => {
+  const n = idx.map((i) => String(i + 1));
+  return n.length === 1 ? n[0] : `${n.slice(0, -1).join(', ')} e ${n[n.length - 1]}`;
+};
+
+type SetKind = 'progress' | 'maintain' | 'below' | 'exercise-deload';
+
 /**
- * Algoritmo di progressione (double progression + RIR).
- * I log di deload vengono ignorati come riferimento per la progressione.
+ * Algoritmo di progressione (double progression + RIR), serie per serie.
+ * Ogni serie si confronta con la STESSA serie dell'ultima sessione (così le piramidi 60→70→80 progrediscono
+ * su ogni gradino, e una serie pesante sotto range non blocca le altre):
+ * - top del range con RIR ok → +incremento, si riparte dal fondo del range;
+ * - nel range → stesso peso, +1 rep;
+ * - sotto range → stesso peso, completa il range; due volte di fila sotto range → −10% su quella serie.
+ * I log di deload vengono ignorati come riferimento.
+ * `count` = quante serie preparare (le serie in più ripetono l'ultima).
  */
 export function calculateSuggestion(
   exercise: Exercise,
   previousLogs: PreviousLog[],
   isDeloadWeek: boolean,
   deloadPercentage: number,
+  count = Math.max(exercise.sets, 10),
 ): Suggestion {
   const training = previousLogs.filter((l) => !l.deload && validSetsOf(l).length > 0);
+  const at = <T,>(arr: T[], i: number) => arr[Math.min(i, arr.length - 1)];
 
   if (isDeloadWeek) {
-    const ref = training.length ? validSetsOf(training[training.length - 1])[0]?.weight : exercise.startWeight;
-    if (ref) {
-      const deloaded = round025(ref * (1 - deloadPercentage / 100));
-      return { weight: deloaded, hint: `Deload week — ${deloadPercentage}% di riduzione`, type: 'deload' };
+    const last = training.length ? validSetsOf(training[training.length - 1]) : [];
+    const ref = last.length ? last.map((x) => x.weight) : exercise.startWeight ? [exercise.startWeight] : [];
+    if (ref.length) {
+      const weights = Array.from({ length: count }, (_, i) => round025(at(ref, i) * (1 - deloadPercentage / 100)));
+      return { weight: weights[0], weights, reps: weights.map(() => exercise.repMin), shown: Math.max(1, exercise.sets), hint: `Deload week — ${deloadPercentage}% di riduzione`, type: 'deload' };
     }
   }
 
@@ -60,42 +78,43 @@ export function calculateSuggestion(
     return { weight: null, hint: 'Prima sessione — inserisci peso di partenza', type: 'first' };
   }
 
-  const lastLog = training[training.length - 1];
-  const validSets = validSetsOf(lastLog);
-  const lastWeight = validSets[0].weight;
-  const allAtTopRange = validSets.every((s) => s.reps >= exercise.repMax);
-  const allInRange = validSets.every((s) => s.reps >= exercise.repMin);
-
+  const last = validSetsOf(training[training.length - 1]);
+  const before = training.length > 1 ? validSetsOf(training[training.length - 2]) : [];
   const rirNums = parseRirNumbers(exercise.rirTarget);
   const minTargetRir = rirNums.length ? Math.min(...rirNums) : 0;
-  const allRirOk = validSets.every((s) => s.rir == null || s.rir >= minTargetRir);
-
   const step = progressionStep(exercise);
 
-  // Doppio fallimento → deload del singolo esercizio
-  const prevPrevLog = training[training.length - 2];
-  const failedNow = !allInRange;
-  const failedPrev = prevPrevLog ? !validSetsOf(prevPrevLog).every((s) => s.reps >= exercise.repMin) : false;
+  const plan = Array.from({ length: count }, (_, i): { weight: number; reps: number; kind: SetKind } => {
+    const p = at(last, i);
+    if (p.reps >= exercise.repMax && (p.rir == null || p.rir >= minTargetRir)) return { weight: p.weight + step, reps: exercise.repMin, kind: 'progress' };
+    if (p.reps >= exercise.repMin) return { weight: p.weight, reps: Math.min(exercise.repMax, p.reps + 1), kind: 'maintain' };
+    const pp = before.length ? at(before, i) : undefined;
+    if (pp && pp.reps < exercise.repMin && pp.weight <= p.weight) return { weight: round025(p.weight * 0.9), reps: exercise.repMin, kind: 'exercise-deload' };
+    return { weight: p.weight, reps: exercise.repMin, kind: 'below' };
+  });
 
-  if (failedNow && failedPrev) {
-    const deloaded = round025(lastWeight * 0.9);
-    return {
-      weight: deloaded,
-      hint: `2 sessioni sotto range → deload -10% (${formatKg(lastWeight)}kg → ${formatKg(deloaded)}kg)`,
-      type: 'exercise-deload',
-    };
+  // riepilogo sulle serie in programma (una serie aggiunta a mano ha comunque il suo carico, ma non cambia il riepilogo)
+  const shown = plan.slice(0, Math.max(1, exercise.sets));
+  const by = (k: SetKind) => shown.map((x, i) => (x.kind === k ? i : -1)).filter((i) => i >= 0);
+  const prog = by('progress');
+  const keep = by('maintain');
+  const below = by('below');
+  const down = by('exercise-deload');
+  let hint: string;
+  if (prog.length === shown.length) hint = `Top range con RIR ok → +${formatKg(step, 2)}kg`;
+  else if (keep.length === shown.length) hint = 'Stesso peso — punta ad aumentare le reps';
+  else if (below.length === shown.length) hint = 'Stesso peso — completa il range';
+  else if (down.length === shown.length) hint = `2 sessioni sotto range → deload -10% (${kg(last[0].weight)} → ${kg(plan[0].weight)})`;
+  else {
+    const parts: string[] = [];
+    if (prog.length) parts.push(`serie ${setList(prog)}: top del range → +${formatKg(step, 2)} kg`);
+    if (keep.length) parts.push(`serie ${setList(keep)}: stesso peso, +1 rep`);
+    if (below.length) parts.push(`serie ${setList(below)}: stesso peso, completa il range`);
+    if (down.length) parts.push(`serie ${setList(down)}: 2 volte sotto range → −10%`);
+    hint = parts.join(' · ').replace(/^./, (c) => c.toUpperCase());
   }
-
-  if (allAtTopRange && allRirOk) {
-    return {
-      weight: lastWeight + step,
-      hint: `Top range con RIR ok → +${formatKg(step, 2)}kg`,
-      type: 'progress',
-    };
-  }
-
-  if (allInRange) return { weight: lastWeight, hint: 'Stesso peso — punta ad aumentare le reps', type: 'maintain' };
-  return { weight: lastWeight, hint: 'Stesso peso — completa il range', type: 'maintain' };
+  const type: SuggestionType = prog.length ? 'progress' : down.length === shown.length ? 'exercise-deload' : 'maintain';
+  return { weight: plan[0].weight, weights: plan.map((x) => x.weight), reps: plan.map((x) => x.reps), shown: shown.length, hint, type };
 }
 
 /** "70×8, 70×8, 70×7 · RIR 2, 1, 1" */
@@ -124,6 +143,7 @@ export function parseRestSeconds(rest: string): number {
 export function repTargets(exercise: Exercise, lastLog: ExerciseLog | undefined, suggestion: Suggestion, count: number): string[] {
   const range = `${exercise.repMin}-${exercise.repMax}`;
   const last = lastLog ? validSetsOf(lastLog) : [];
+  if (suggestion.reps?.length) return Array.from({ length: count }, (_, i) => String(suggestion.reps![Math.min(i, suggestion.reps!.length - 1)]));
   return Array.from({ length: count }, (_, i) => {
     if (suggestion.type === 'progress' || suggestion.type === 'exercise-deload' || suggestion.type === 'deload') {
       return String(exercise.repMin);

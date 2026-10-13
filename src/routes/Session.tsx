@@ -224,16 +224,16 @@ function SessionView({ initial }: { initial: ActiveSession }) {
         if (base.weight != null && (base.type === 'progress' || base.type === 'maintain')) {
           const bump = calibrationBump(base.weight, cal, dumbbell);
           if (bump > 0)
-            base = { ...base, weight: base.weight + bump, hint: `${base.hint} · RIR calibrato: ti restano ~${String(cal!.offset).replace('.', ',')} rip. in più → +${formatKg(bump, 2)} kg` };
+            base = { ...base, weight: base.weight + bump, weights: base.weights?.map((w) => (w == null ? w : w + bump)), hint: `${base.hint} · RIR calibrato: ti restano ~${String(cal!.offset).replace('.', ',')} rip. in più → +${formatKg(bump, 2)} kg` };
         }
         // Settimana leggera mirata per i gruppi affaticati
         const fat = model.fatigue.get(ex.group);
         if (fat?.light && base.weight != null && !draft.deload)
-          base = { ...base, weight: Math.round(base.weight * 0.7 * 4) / 4, hint: `Settimana leggera ${ex.group.toLowerCase()} (fatica ${fat.score}/100): −30% e una serie in meno`, type: 'deload' };
+          base = { ...base, weight: Math.round(base.weight * 0.7 * 4) / 4, weights: base.weights?.map((w) => (w == null ? w : Math.round(w * 0.7 * 4) / 4)), hint: `Settimana leggera ${ex.group.toLowerCase()} (fatica ${fat.score}/100): −30% e una serie in meno`, type: 'deload' };
         // Autoregolazione: giornata "no" → -10% sul carico suggerito
         const suggestion =
           draft.readiness === 'low' && base.weight != null && !draft.deload
-            ? { ...base, weight: Math.round(base.weight * 0.9 * 4) / 4, hint: `Giornata no: -10% · ${base.hint}` }
+            ? { ...base, weight: Math.round(base.weight * 0.9 * 4) / 4, weights: base.weights?.map((w) => (w == null ? w : Math.round(w * 0.9 * 4) / 4)), hint: `Giornata no: -10% · ${base.hint}` }
             : draft.readiness === 'high' && base.type === 'maintain'
               ? { ...base, hint: `${base.hint} — sei in forma, prova a superare i target!` }
               : base;
@@ -343,7 +343,10 @@ function SessionView({ initial }: { initial: ActiveSession }) {
     }
     const isWarmup = set.type === 'warmup';
     const sugg = suggestions[exIdx]?.suggestion;
-    const weightStr = set.weight || (!isWarmup && sugg?.weight != null ? String(sugg.weight).replace('.', ',') : '');
+    // carico suggerito per questa serie (posizione tra le serie allenanti)
+    const working = ex.sets.slice(0, setIdx).filter((x) => x.type !== 'warmup').length;
+    const suggW = sugg?.weights?.[working] ?? sugg?.weight;
+    const weightStr = set.weight || (!isWarmup && suggW != null ? String(suggW).replace('.', ',') : '');
     const weight = parseNum(weightStr);
     const reps = parseNum(set.reps);
     if (weight == null || reps == null || reps <= 0 || weight < 0) {
