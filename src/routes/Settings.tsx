@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Copy, Download, ExternalLink, ListChecks, LogOut, RotateCcw, ShieldAlert, ShieldCheck, Upload } from 'lucide-react';
+import { Check, ChevronRight, Copy, Download, ExternalLink, ListChecks, LogOut, RotateCcw, ShieldAlert, ShieldCheck, Upload, Volume2 } from 'lucide-react';
 import type { BackupFile } from '@/types';
 import { useSettings } from '@/hooks/use-settings';
 import { useSessions } from '@/hooks/use-sessions';
@@ -15,7 +15,7 @@ import { Button, IconButton } from '@/components/ui/Button';
 import { Segmented, Toggle, Input } from '@/components/ui/Input';
 import { NewBadge, SectionTitle } from '@/components/ui/Help';
 import { THEMES, applyTheme, normalizeTheme } from '@/lib/theme';
-import { canPlayInSilent, playBeep, setSoundInSilent } from '@/lib/haptics';
+import { ALARMS, canPlayInSilent, playBeep, setAlarmSound, setSoundInSilent } from '@/lib/haptics';
 import type { HelpId } from '@/lib/help';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Modal } from '@/components/ui/Modal';
@@ -266,6 +266,42 @@ export default function Settings() {
             onChange={(v) => set({ restTimerAutoStart: v })}
           />
           <Toggle label="Suono a fine recupero" checked={settings.soundEnabled} onChange={(v) => set({ soundEnabled: v })} />
+          {settings.soundEnabled && (
+            <div className="py-3">
+              <div className="mb-1 flex items-center text-base text-fg">
+                Scegli il suono <NewBadge />
+              </div>
+              <p className="mb-2 text-sm text-fg-3">Tocca un suono per sentirlo e sceglierlo.</p>
+              <div role="radiogroup" aria-label="Suono di fine recupero" className="space-y-1.5">
+                {ALARMS.map((a) => {
+                  const on = (settings.timerSound ?? 'sveglia') === a.id;
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => {
+                        set({ timerSound: a.id });
+                        setAlarmSound(a.id);
+                        void playBeep(a.id);
+                      }}
+                      className={`flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left ${on ? 'border-accent-500 bg-accent-glow' : 'border-line bg-surface-2'}`}
+                    >
+                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${on ? 'bg-accent-500 text-onaccent' : 'bg-surface-3 text-fg-2'}`}>
+                        <Volume2 className="h-4 w-4" aria-hidden />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-base font-semibold text-fg">{a.label}</span>
+                        <span className="block text-sm text-fg-3">{a.note}</span>
+                      </span>
+                      {on && <Check className="h-5 w-5 shrink-0 text-accent-400" aria-hidden />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {settings.soundEnabled && (
             <Toggle
               label={
