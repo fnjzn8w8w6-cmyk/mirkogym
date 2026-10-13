@@ -12,7 +12,7 @@ import {
   subscribeSettings,
 } from '@/lib/firestore';
 import { DEFAULT_SETTINGS } from '@/lib/seed-data';
-import { setAlarmSound, setHapticsEnabled, setSoundInSilent } from '@/lib/haptics';
+import { setAlarmSound, setHapticsEnabled } from '@/lib/haptics';
 
 export interface DataState {
   user: User | null;
@@ -113,7 +113,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [uid]);
 
   useEffect(() => setHapticsEnabled(state.settings.vibrationEnabled), [state.settings.vibrationEnabled]);
-  useEffect(() => setSoundInSilent(Boolean(state.settings.soundInSilent)), [state.settings.soundInSilent]);
   useEffect(() => setAlarmSound(state.settings.timerSound), [state.settings.timerSound]);
 
   const refreshUser = useCallback(

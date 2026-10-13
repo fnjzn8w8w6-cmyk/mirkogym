@@ -186,8 +186,6 @@ export interface Settings {
   soundEnabled: boolean;
   /** suono di fine recupero (vedi ALARMS in src/lib/haptics.ts) */
   timerSound?: 'sveglia' | 'campanella' | 'fischietto' | 'ring' | 'arcade';
-  /** bip del timer anche con l'iPhone in modalità silenziosa (può interrompere la musica di altre app) */
-  soundInSilent?: boolean;
   vibrationEnabled: boolean;
   weightUnit: 'kg' | 'lb';
   /** tema dei colori (le impostazioni vecchie hanno 'dark' = Vulcano) */

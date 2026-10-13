@@ -23,28 +23,12 @@ export const haptics = {
 };
 
 let audioCtx: AudioContext | null = null;
-let soundInSilent = false;
-
-/** Bip anche con l'iPhone in silenzioso (Safari 16.4+): il suono diventa «di riproduzione» solo durante il bip. */
-export function setSoundInSilent(value: boolean): void {
-  soundInSilent = value;
-}
-
-type AudioSessionLike = { type: string };
-const audioSession = (): AudioSessionLike | null =>
-  typeof navigator !== 'undefined' ? ((navigator as unknown as { audioSession?: AudioSessionLike }).audioSession ?? null) : null;
-
-/** Il telefono permette di suonare anche in modalità silenziosa? */
-export const canPlayInSilent = (): boolean => audioSession() != null;
-
 function context(): AudioContext | null {
   const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Ctx) return null;
   audioCtx ??= new Ctx();
   return audioCtx;
 }
-
-let restoreTimer = 0;
 
 export type AlarmId = 'sveglia' | 'campanella' | 'fischietto' | 'ring' | 'arcade';
 
@@ -198,15 +182,8 @@ export async function playBeep(id: AlarmId = alarmId): Promise<void> {
   try {
     const ctx = context();
     if (!ctx) return;
-    const session = audioSession();
-    if (soundInSilent && session) {
-      window.clearTimeout(restoreTimer);
-      session.type = 'playback';
-    }
     if (ctx.state !== 'running') await ctx.resume().catch(() => undefined);
     scheduleAlarm(ctx, ctx.currentTime + 0.03, id);
-    // finito il bip si torna al suono normale (la musica di altre app non viene più disturbata)
-    if (soundInSilent && session) restoreTimer = window.setTimeout(() => (session.type = 'auto'), (alarmInfo(id).seconds + 0.5) * 1000);
   } catch {
     /* ignorato */
   }

@@ -15,7 +15,7 @@ import { Button, IconButton } from '@/components/ui/Button';
 import { Segmented, Toggle, Input } from '@/components/ui/Input';
 import { NewBadge, SectionTitle } from '@/components/ui/Help';
 import { THEMES, applyTheme, normalizeTheme } from '@/lib/theme';
-import { ALARMS, canPlayInSilent, playBeep, setAlarmSound, setSoundInSilent } from '@/lib/haptics';
+import { ALARMS, playBeep, setAlarmSound } from '@/lib/haptics';
 import type { HelpId } from '@/lib/help';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Modal } from '@/components/ui/Modal';
@@ -301,30 +301,6 @@ export default function Settings() {
                 })}
               </div>
             </div>
-          )}
-          {settings.soundEnabled && (
-            <Toggle
-              label={
-                <>
-                  Suona anche in silenzioso <NewBadge />
-                </>
-              }
-              description={
-                canPlayInSilent()
-                  ? "Il bip si sente anche con l'iPhone in modalità silenziosa, ma ferma la musica di Spotify e delle altre app a ogni bip: usala solo se non ascolti musica."
-                  : 'Non disponibile su questo telefono (su iPhone serve iOS 16.4 o più recente).'
-              }
-              checked={Boolean(settings.soundInSilent) && canPlayInSilent()}
-              disabled={!canPlayInSilent()}
-              onChange={(v) => {
-                set({ soundInSilent: v });
-                // bip di prova: metti l'iPhone in silenzioso e senti subito se funziona
-                if (v) {
-                  setSoundInSilent(true);
-                  void playBeep();
-                }
-              }}
-            />
           )}
           <Toggle
             label="Schermo sempre acceso"
