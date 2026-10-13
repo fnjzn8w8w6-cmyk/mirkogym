@@ -1,7 +1,6 @@
 import type { Exercise, ExerciseLog, Session, SetLog, Suggestion, SuggestionType } from '@/types';
 import { formatKg } from './analytics';
 
-const round025 = (n: number) => Math.round(n * 4) / 4;
 
 /** Esercizi di isolamento/leggeri: incremento 1.25 kg invece di 2.5 kg. */
 const LIGHT_ISO = /alzate|curl|reverse fly|push ?over(head)?|pushdown|croci|leg curl|leg extension|pullover/i;
@@ -33,24 +32,46 @@ export function previousLogsFor(exercise: Pick<Exercise, 'id' | 'name'>, session
   return collect((l) => (l.name ?? '').trim().toLowerCase() === name);
 }
 
-const kg = (n: number) => `${formatKg(n, 2)} kg`;
-/** "1", "1 e 2", "1, 2 e 3" */
-const setList = (idx: number[]) => {
-  const n = idx.map((i) => String(i + 1));
-  return n.length === 1 ? n[0] : `${n.slice(0, -1).join(', ')} e ${n[n.length - 1]}`;
-};
+/** RIR obiettivo della serie i dal programma ("2/1/1-0" → 2, 1, 0,5…). */
+export function targetRirFor(rirTarget: string, i: number): number | null {
+  const parts = rirTarget.split('/').map((x) => x.trim()).filter(Boolean);
+  const part = parts.length ? parts[Math.min(i, parts.length - 1)] : rirTarget;
+  const nums = parseRirNumbers(part);
+  return nums.length ? nums.reduce((x, y) => x + y, 0) / nums.length : null;
+}
 
-type SetKind = 'progress' | 'maintain' | 'below' | 'exercise-deload';
+/** RIR oltre il quale la stima non è affidabile (serie troppo lontana dal cedimento). */
+const MAX_RIR_FOR_ESTIMATE = 4;
 
 /**
- * Algoritmo di progressione (double progression + RIR), serie per serie.
- * Ogni serie si confronta con la STESSA serie dell'ultima sessione (così le piramidi 60→70→80 progrediscono
- * su ogni gradino, e una serie pesante sotto range non blocca le altre):
- * - top del range con RIR ok → +incremento, si riparte dal fondo del range;
- * - nel range → stesso peso, +1 rep;
- * - sotto range → stesso peso, completa il range; due volte di fila sotto range → −10% su quella serie.
+ * Massimale stimato da una serie: peso × (1 + ripetizioni possibili / 30) (Epley), dove le ripetizioni possibili
+ * sono quelle fatte + quelle rimaste (RIR). Senza sforzo segnato si considera la serie a cedimento (stima prudente).
+ */
+export function setE1RM(set: Pick<SetLog, 'weight' | 'reps' | 'rir'>): number {
+  const rir = Math.min(MAX_RIR_FOR_ESTIMATE, Math.max(0, set.rir ?? 0));
+  return set.weight * (1 + Math.min(15, set.reps + rir) / 30);
+}
+
+/** Massimale stimato di una sessione: la serie più indicativa (la stima più alta). */
+function sessionE1RM(log: ExerciseLog): { value: number; set: SetLog } | null {
+  let best: { value: number; set: SetLog } | null = null;
+  for (const x of validSetsOf(log)) {
+    const v = setE1RM(x);
+    if (!best || v > best.value) best = { value: v, set: x };
+  }
+  return best;
+}
+
+const roundTo = (n: number, step: number) => Math.round(n / step) * step;
+
+/**
+ * Carico di lavoro calcolato dall'app (al posto dei tentativi a piramide):
+ * 1. massimale stimato dalle serie dell'ultima sessione (peso, ripetizioni e sforzo); se è peggiore della volta
+ *    prima (giornata storta) si fa una media, così il carico non crolla per un giorno no;
+ * 2. carico per fare le ripetizioni minime del programma lasciando in canna il RIR della prima serie;
+ * 3. serie tutte uguali; se il carico è lo stesso dell'ultima volta si punta a +1 ripetizione.
  * I log di deload vengono ignorati come riferimento.
- * `count` = quante serie preparare (le serie in più ripetono l'ultima).
+ * `count` = quante serie preparare.
  */
 export function calculateSuggestion(
   exercise: Exercise,
@@ -60,16 +81,9 @@ export function calculateSuggestion(
   count = Math.max(exercise.sets, 10),
 ): Suggestion {
   const training = previousLogs.filter((l) => !l.deload && validSetsOf(l).length > 0);
-  const at = <T,>(arr: T[], i: number) => arr[Math.min(i, arr.length - 1)];
-
-  if (isDeloadWeek) {
-    const last = training.length ? validSetsOf(training[training.length - 1]) : [];
-    const ref = last.length ? last.map((x) => x.weight) : exercise.startWeight ? [exercise.startWeight] : [];
-    if (ref.length) {
-      const weights = Array.from({ length: count }, (_, i) => round025(at(ref, i) * (1 - deloadPercentage / 100)));
-      return { weight: weights[0], weights, reps: weights.map(() => exercise.repMin), shown: Math.max(1, exercise.sets), hint: `Deload week — ${deloadPercentage}% di riduzione`, type: 'deload' };
-    }
-  }
+  const step = progressionStep(exercise);
+  const shown = Math.max(1, exercise.sets);
+  const same = (w: number) => Array.from({ length: count }, () => w);
 
   if (training.length === 0) {
     if (exercise.startWeight) {
@@ -78,43 +92,41 @@ export function calculateSuggestion(
     return { weight: null, hint: 'Prima sessione — inserisci peso di partenza', type: 'first' };
   }
 
-  const last = validSetsOf(training[training.length - 1]);
-  const before = training.length > 1 ? validSetsOf(training[training.length - 2]) : [];
-  const rirNums = parseRirNumbers(exercise.rirTarget);
-  const minTargetRir = rirNums.length ? Math.min(...rirNums) : 0;
-  const step = progressionStep(exercise);
+  const lastLog = training[training.length - 1];
+  const last = sessionE1RM(lastLog)!;
+  const prev = training.length > 1 ? sessionE1RM(training[training.length - 2]) : null;
+  const e1rm = prev && last.value < prev.value ? last.value * 0.6 + prev.value * 0.4 : last.value;
 
-  const plan = Array.from({ length: count }, (_, i): { weight: number; reps: number; kind: SetKind } => {
-    const p = at(last, i);
-    if (p.reps >= exercise.repMax && (p.rir == null || p.rir >= minTargetRir)) return { weight: p.weight + step, reps: exercise.repMin, kind: 'progress' };
-    if (p.reps >= exercise.repMin) return { weight: p.weight, reps: Math.min(exercise.repMax, p.reps + 1), kind: 'maintain' };
-    const pp = before.length ? at(before, i) : undefined;
-    if (pp && pp.reps < exercise.repMin && pp.weight <= p.weight) return { weight: round025(p.weight * 0.9), reps: exercise.repMin, kind: 'exercise-deload' };
-    return { weight: p.weight, reps: exercise.repMin, kind: 'below' };
-  });
+  const rir = targetRirFor(exercise.rirTarget, 0) ?? 2;
+  const reps = exercise.repMin;
+  let weight = roundTo(e1rm / (1 + Math.min(15, reps + rir) / 30), step);
+  // prudenza: mai più del 7,5% sopra la serie più pesante fatta l'ultima volta
+  const lastWorking = validSetsOf(lastLog).map((x) => x.weight);
+  const heaviest = Math.max(...lastWorking);
+  weight = Math.min(weight, roundTo(heaviest * 1.075, step));
 
-  // riepilogo sulle serie in programma (una serie aggiunta a mano ha comunque il suo carico, ma non cambia il riepilogo)
-  const shown = plan.slice(0, Math.max(1, exercise.sets));
-  const by = (k: SetKind) => shown.map((x, i) => (x.kind === k ? i : -1)).filter((i) => i >= 0);
-  const prog = by('progress');
-  const keep = by('maintain');
-  const below = by('below');
-  const down = by('exercise-deload');
-  let hint: string;
-  if (prog.length === shown.length) hint = `Top range con RIR ok → +${formatKg(step, 2)}kg`;
-  else if (keep.length === shown.length) hint = 'Stesso peso — punta ad aumentare le reps';
-  else if (below.length === shown.length) hint = 'Stesso peso — completa il range';
-  else if (down.length === shown.length) hint = `2 sessioni sotto range → deload -10% (${kg(last[0].weight)} → ${kg(plan[0].weight)})`;
-  else {
-    const parts: string[] = [];
-    if (prog.length) parts.push(`serie ${setList(prog)}: top del range → +${formatKg(step, 2)} kg`);
-    if (keep.length) parts.push(`serie ${setList(keep)}: stesso peso, +1 rep`);
-    if (below.length) parts.push(`serie ${setList(below)}: stesso peso, completa il range`);
-    if (down.length) parts.push(`serie ${setList(down)}: 2 volte sotto range → −10%`);
-    hint = parts.join(' · ').replace(/^./, (c) => c.toUpperCase());
+  // tutte le serie al massimo del range (anche senza sforzo segnato) → si sale comunque di un gradino
+  const lastSets = validSetsOf(lastLog);
+  const minRir = parseRirNumbers(exercise.rirTarget).length ? Math.min(...parseRirNumbers(exercise.rirTarget)) : 0;
+  if (lastSets.length >= exercise.sets && lastSets.every((x) => x.reps >= exercise.repMax && (x.rir == null || x.rir >= minRir)) && weight <= heaviest)
+    weight = roundTo(heaviest + step, step);
+
+  const basis = `${formatKg(last.set.weight, 2)}×${last.set.reps}${last.set.rir != null ? ` a RPE ${formatKg(10 - last.set.rir, 1)}` : ''}`;
+  const e1Text = `massimale stimato ≈ ${Math.round(e1rm)} kg (da ${basis})`;
+
+  if (isDeloadWeek) {
+    const w = roundTo(weight * (1 - deloadPercentage / 100), step);
+    return { weight: w, weights: same(w), reps: same(reps), shown, e1rm, hint: `Deload week — ${deloadPercentage}% di riduzione · ${e1Text}`, type: 'deload' };
   }
-  const type: SuggestionType = prog.length ? 'progress' : down.length === shown.length ? 'exercise-deload' : 'maintain';
-  return { weight: plan[0].weight, weights: plan.map((x) => x.weight), reps: plan.map((x) => x.reps), shown: shown.length, hint, type };
+
+  // stesso carico della volta scorsa (serie tipica) → +1 ripetizione, fino al massimo del range
+  const typical = [...lastWorking].sort((x, y) => x - y)[Math.floor(lastWorking.length / 2)];
+  const lastReps = validSetsOf(lastLog).filter((x) => x.weight === weight).map((x) => x.reps);
+  const repTarget = lastReps.length ? Math.min(exercise.repMax, Math.max(reps, Math.max(...lastReps) + 1)) : reps;
+  const type: SuggestionType = weight > typical ? 'progress' : 'maintain';
+  const rpe = formatKg(10 - rir, 1);
+  const hint = `${e1Text} → ${repTarget} ripetizioni lasciandone ${formatKg(rir, 1)} in canna (RPE ${rpe})`;
+  return { weight, weights: same(weight), reps: same(repTarget), shown, e1rm, hint, type };
 }
 
 /** "70×8, 70×8, 70×7 · RIR 2, 1, 1" */

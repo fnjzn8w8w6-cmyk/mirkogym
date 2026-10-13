@@ -279,6 +279,8 @@ export interface Suggestion {
   reps?: number[];
   /** quante serie mostrare nel riepilogo (serie in programma) */
   shown?: number;
+  /** massimale stimato da cui è calcolato il carico */
+  e1rm?: number;
 }
 
 export interface PRFlags {

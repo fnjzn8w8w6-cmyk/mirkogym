@@ -18,13 +18,6 @@ const icons = {
   start: Info,
 };
 
-/** "62,5 kg" oppure, se le serie hanno carichi diversi, "62,5 / 72,5 / 80 kg" (serie in programma). */
-function suggestedText(s: Suggestion): string {
-  const w = (s.weights ?? []).slice(0, Math.max(1, s.shown ?? 1)).filter((x): x is number => x != null);
-  const uniq = w.filter((x, i) => i === 0 || x !== w[i - 1]);
-  return uniq.length > 1 ? w.map((x) => formatKg(x, 2)).join(' / ') : formatKg(s.weight ?? 0, 2);
-}
-
 export function SuggestionBox({ suggestion, lastText }: SuggestionBoxProps) {
   const Icon = icons[suggestion.type];
   const tone =
@@ -54,13 +47,26 @@ export function SuggestionBox({ suggestion, lastText }: SuggestionBoxProps) {
       <div className={cn('flex items-start gap-2 text-sm', lastText && 'mt-1')}>
         <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', iconColor)} aria-hidden />
         <span className="text-fg">
-          {suggestion.weight != null && (
+          {suggestion.weight != null && suggestion.e1rm != null ? (
+            // carico di lavoro calcolato dall'app: serie tutte uguali
             <>
-              <span className="font-bold">→ Suggerito: {suggestedText(suggestion)} kg</span>{' '}
+              <span className="font-bold">
+                → Carico di lavoro: {formatKg(suggestion.weight, 2)} kg × {suggestion.reps?.[0] ?? '?'} · {suggestion.shown ?? 1} serie
+              </span>{' '}
+              <NewBadge />
+              <span className="mt-0.5 block text-fg-2">{suggestion.hint.replace(/^./, (c) => c.toUpperCase())}</span>
+            </>
+          ) : (
+            <>
+              {suggestion.weight != null && (
+                <>
+                  <span className="font-bold">→ Suggerito: {formatKg(suggestion.weight, 2)} kg</span>{' '}
+                </>
+              )}
+              <span className="text-fg-2">({suggestion.hint})</span>
             </>
           )}
-          <span className="text-fg-2">({suggestion.hint})</span>
-          {/RIR calibrato|Settimana leggera|Carico equivalente/.test(suggestion.hint) && <NewBadge />}
+          {/RIR calibrato|Settimana leggera|Carico equivalente/.test(suggestion.hint) && suggestion.e1rm == null && <NewBadge />}
         </span>
         <HelpTip id="session-suggestion" className="ml-auto mt-0.5" />
       </div>

@@ -89,9 +89,10 @@ export const HELP = {
   'session-suggestion': {
     title: 'Carico suggerito',
     body: [
-      'Calcolato serie per serie dalla tua ultima volta su questo esercizio: ogni serie si confronta con la stessa serie della volta scorsa, così anche le piramidi (es. 60 → 70 → 80 kg) salgono su ogni gradino.',
-      'Serie al top del range (con lo sforzo giusto) → +2,5 kg (+1,25 sugli esercizi leggeri) e si riparte dal fondo del range. Nel range → stesso peso, +1 ripetizione. Sotto range → stesso peso, completa il range; due volte di fila sotto range → −10% su quella serie.',
-      'Il carico di ogni serie è scritto in grigio nella casella KG: se non scrivi niente e spunti la serie, vale quello.',
+      'L\'app calcola il carico al posto tuo: dalle serie dell\'ultima volta (peso, ripetizioni e sforzo RPE) stima il tuo massimale, cioè quanto alzeresti per 1 ripetizione. Le serie vicine al cedimento sono le più affidabili; quelle senza sforzo segnato contano come fatte a cedimento (stima prudente).',
+      'Dal massimale ricava il carico per fare le ripetizioni minime del programma lasciandone in canna quante dice l\'obiettivo (es. 8 ripetizioni a RPE 8 = 2 in canna). Tutte le serie con lo stesso carico, dopo il riscaldamento.',
+      'Ogni volta si aggiorna: se fai più ripetizioni o fai meno fatica il massimale sale e sale il carico; se lo stesso carico va bene, si punta a +1 ripetizione. Una giornata storta non fa crollare il carico (si fa la media con la volta prima).',
+      'Segna sempre lo sforzo (RPE) di ogni serie: è quello che rende preciso il calcolo.',
       'RIR calibrato: l\'app impara quanto sei preciso quando dici "me ne restavano 2". Se tendi a lasciarne di più, il carico suggerito sale un po\'.',
     ],
   },
