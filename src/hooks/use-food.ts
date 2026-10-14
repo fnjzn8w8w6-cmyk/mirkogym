@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { DayRecap, DiaryEntry, FoodLog, UserRecipe } from '@/types';
 import {
   deleteRecipe,
+  saveDayAnalysis,
   saveDayRecap,
   saveFoodLog,
   saveMyFoods,
@@ -46,6 +47,11 @@ export function useFoodLog(date: string) {
   return {
     entries: log.date === date ? log.entries : [],
     recap: log.date === date ? log.recap : undefined,
+    analysis: log.date === date ? log.analysis : undefined,
+    saveAnalysis: (a: NonNullable<FoodLog['analysis']>) => {
+      setLog((l) => ({ ...l, analysis: a }));
+      return uid ? settle(saveDayAnalysis(uid, date, a)) : Promise.resolve();
+    },
     saveRecap: (r: DayRecap) => {
       setLog((l) => ({ ...l, recap: r }));
       return uid ? settle(saveDayRecap(uid, date, r)) : Promise.resolve();

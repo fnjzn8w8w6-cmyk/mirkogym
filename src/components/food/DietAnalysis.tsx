@@ -252,17 +252,13 @@ export function DietAnalysis({ profile }: { profile: UserProfile }) {
 const MEAL_LABEL: Record<DiaryMeal, string> = { colazione: 'Colazione', pranzo: 'Pranzo', cena: 'Cena', spuntini: 'Spuntini' };
 
 /** Analisi del dietologo: una giornata (oggi o l'ultima registrata) o la settimana in corso. Solo dieta. */
-function DietCoachAnalysis({ profile }: { profile: UserProfile }) {
-  const { settings, update } = useSettings();
+/** Giornata del diario → dati per il dietologo (obiettivo del giorno, mangiato, pasti, resoconto). */
+export function useDietDay(profile: UserProfile) {
   const { sessions } = useSessions();
   const dayT = useDayTarget(profile);
-  const logs = useRecentFoodLogs(15);
   const today = todayISO();
-  const week = mondayISO();
-  const prevWeek = toISODate(fromISODate(week).getTime() - 7 * 86400000);
   const trainedOn = useMemo(() => new Set(sessions.map((s) => toISODate(s.date))), [sessions]);
-
-  const toDay = useMemo(
+  return useMemo(
     () =>
       (l: FoodLog): DietDay | null => {
         if (!dayT) return null;
@@ -287,6 +283,16 @@ function DietCoachAnalysis({ profile }: { profile: UserProfile }) {
       },
     [dayT, trainedOn, today],
   );
+}
+
+function DietCoachAnalysis({ profile }: { profile: UserProfile }) {
+  const { settings, update } = useSettings();
+  const dayT = useDayTarget(profile);
+  const logs = useRecentFoodLogs(15);
+  const today = todayISO();
+  const week = mondayISO();
+  const prevWeek = toISODate(fromISODate(week).getTime() - 7 * 86400000);
+  const toDay = useDietDay(profile);
 
   const logged = logs.filter((l) => l.entries.length).sort((a, b) => b.date.localeCompare(a.date));
   const dayLog = logged.find((l) => l.date === today) ?? logged[0];

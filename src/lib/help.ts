@@ -276,6 +276,22 @@ export const HELP = {
       'Per ogni pasto ricevi una proposta con le quantità già calcolate; con "Un\'altra idea" la cambi.',
     ],
   },
+  'session-recap': {
+    title: 'Recap del coach',
+    body: [
+      'Dopo ogni allenamento il coach fa da solo il recap di quella sessione: cosa è andato bene, cosa migliorare e carichi o ripetizioni per la prossima volta, confrontando ogni esercizio con le volte precedenti.',
+      'Parte appena invii il resoconto «Com\'è andata?» (che rende il recap più preciso); se non lo invii puoi farlo partire tu con «Fai il recap adesso».',
+      'Resta salvato nella sessione: lo ritrovi in Allenamento → Sessioni aprendo quella sessione. Le sessioni vecchie lo fanno la prima volta che le apri.',
+    ],
+  },
+  'day-recap': {
+    title: 'Recap del dietologo',
+    body: [
+      'Per ogni giorno del diario il dietologo fa da solo il recap di quella giornata: cosa va bene, cosa sistemare e idee concrete per il giorno dopo.',
+      'Parte quando chiudi la giornata rispondendo a «Com\'è andata oggi?», oppure da solo quando riapri un giorno passato. Durante la giornata puoi farlo anche a metà con «Fai il recap adesso».',
+      'Resta salvato in quel giorno del diario: scorri i giorni con le frecce in alto per rileggerli. Se aggiungi o togli cibi, il recap si aggiorna.',
+    ],
+  },
   'rest-timer-sound': {
     title: 'Timer di recupero e suono',
     body: [

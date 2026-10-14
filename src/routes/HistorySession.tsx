@@ -14,6 +14,7 @@ import { useToast } from '@/components/ui/Toast';
 import { epley1RM, exerciseKey, formatKg, formatTonnage, groupColor, logVolume, sessionTonnage } from '@/lib/analytics';
 import { formatDuration, formatLongDate, formatShortDate } from '@/lib/date-utils';
 import { WorkoutRecapForm } from '@/components/coach/Recaps';
+import { SessionRecap } from '@/components/coach/SessionRecap';
 import { settle } from '@/lib/firestore';
 
 export default function HistorySession() {
@@ -123,6 +124,7 @@ export default function HistorySession() {
             </>
           )}
         </Card>
+        <SessionRecap session={s} auto waiting="Il coach sta per fare il recap di questa sessione." />
         {s.notes && (
           <Card className="p-4">
             <div className="section-title">Note</div>

@@ -16,6 +16,7 @@ import { Button, IconButton } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { settle } from '@/lib/firestore';
 import { WorkoutRecapForm } from '@/components/coach/Recaps';
+import { SessionRecap } from '@/components/coach/SessionRecap';
 import { Modal } from '@/components/ui/Modal';
 import { Input, TextArea } from '@/components/ui/Input';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -795,6 +796,14 @@ function SessionView({ initial }: { initial: ActiveSession }) {
                   setResult(next);
                   await settle(saveSessionRecap(next));
                 }}
+              />
+            </div>
+            <div className="mt-4 text-left">
+              <SessionRecap
+                session={result}
+                auto={Boolean(result.recap)}
+                waiting="Invia il resoconto qui sopra e il coach fa subito il recap di questa sessione: cosa è andato bene, cosa migliorare e cosa fare la prossima volta."
+                onSaved={(a) => setResult((r) => (r ? { ...r, analysis: a } : r))}
               />
             </div>
             <Button className="mt-6" size="lg" variant="secondary" fullWidth icon={<Camera className="h-5 w-5" />} onClick={() => setDailyOpen(true)}>

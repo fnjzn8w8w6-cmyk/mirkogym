@@ -69,6 +69,8 @@ export interface Session {
   deload?: boolean;
   /** Resoconto di fine allenamento inviato al coach */
   recap?: WorkoutRecap;
+  /** recap del coach su questa sessione (fatto in automatico) */
+  analysis?: SavedAnalysis;
 }
 
 /** Com'è andato l'allenamento (per il resoconto personale del coach). */
@@ -334,6 +336,8 @@ export interface FoodLog {
   date: string;
   entries: DiaryEntry[];
   recap?: DayRecap;
+  /** recap del dietologo su questa giornata (fatto in automatico) */
+  analysis?: SavedAnalysis;
 }
 
 export interface RecipeIngredient {

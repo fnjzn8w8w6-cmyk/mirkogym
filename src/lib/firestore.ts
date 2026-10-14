@@ -131,6 +131,9 @@ export const clearActiveSession = (uid: string) => deleteDoc(activeRef(uid));
 export const saveSession = (uid: string, s: Session) =>
   setDoc(doc(sessionsCol(uid), s.id), { ...clean(s), date: toTs(s.date) });
 
+/** Recap del coach salvato dentro la sessione (senza toccare il resto). */
+export const saveSessionAnalysis = (uid: string, id: string, analysis: NonNullable<Session['analysis']>) => setDoc(doc(sessionsCol(uid), id), { analysis }, { merge: true });
+
 export const deleteSession = (uid: string, id: string) => deleteDoc(doc(sessionsCol(uid), id));
 
 export const saveBodyLog = (uid: string, l: BodyLog) =>
@@ -182,7 +185,13 @@ export async function ensureSeed(uid: string): Promise<boolean> {
 export function subscribeFoodLog(uid: string, date: string, cb: (l: FoodLog) => void, onError: OnError): Unsubscribe {
   return onSnapshot(
     doc(foodLogsCol(uid), date),
-    (d) => cb({ date, entries: d.exists() ? ((d.data().entries as FoodLog['entries']) ?? []) : [], recap: d.exists() ? (d.data().recap as FoodLog['recap']) : undefined }),
+    (d) =>
+      cb({
+        date,
+        entries: d.exists() ? ((d.data().entries as FoodLog['entries']) ?? []) : [],
+        recap: d.exists() ? (d.data().recap as FoodLog['recap']) : undefined,
+        analysis: d.exists() ? (d.data().analysis as FoodLog['analysis']) : undefined,
+      }),
     onError,
   );
 }
@@ -235,6 +244,9 @@ export const saveCheckIn = (uid: string, c: CheckIn) => setDoc(doc(checkInsCol(u
 export const deleteCheckIn = (uid: string, date: number) => deleteDoc(doc(checkInsCol(uid), String(date)));
 export const saveFoodLog = (uid: string, log: FoodLog) =>
   setDoc(doc(foodLogsCol(uid), log.date), clean({ date: log.date, entries: log.entries, updatedAt: Timestamp.now() }), { merge: true });
+/** Recap del dietologo salvato dentro la giornata del diario. */
+export const saveDayAnalysis = (uid: string, date: string, analysis: NonNullable<FoodLog['analysis']>) =>
+  setDoc(doc(foodLogsCol(uid), date), { date, analysis }, { merge: true });
 export const saveDayRecap = (uid: string, date: string, recap: NonNullable<FoodLog['recap']>) =>
   setDoc(doc(foodLogsCol(uid), date), clean({ date, recap, updatedAt: Timestamp.now() }), { merge: true });
 

@@ -22,6 +22,9 @@ import { RecipeLibrary } from './RecipeLibrary';
 import type { DiaryEntry, DiaryMeal } from '@/types';
 import { FoodPicker } from './FoodPicker';
 import { DayRecapForm } from '@/components/coach/Recaps';
+import { AutoRecap } from '@/components/coach/AutoRecap';
+import { useDietDay } from './DietAnalysis';
+import { analyzeDietDay, dietDayData } from '@/lib/analysis';
 import { useDayTarget } from '@/hooks/use-habits';
 import { WhyKcal, planPrefs } from './NutritionPlanner';
 import { HelpTip, NewBadge, SectionTitle } from '@/components/ui/Help';
@@ -132,7 +135,8 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
   const { settings } = useSettings();
   const toast = useToast();
   const [date, setDate] = useState(todayISO());
-  const { entries, loading, add, update, remove, recap, saveRecap } = useFoodLog(date);
+  const { entries, loading, add, update, remove, recap, saveRecap, analysis, saveAnalysis } = useFoodLog(date);
+  const toDietDay = useDietDay(profile);
   const { data } = useRecipes();
   const [adding, setAdding] = useState<DiaryMeal | null>(null);
   const [photoFor, setPhotoFor] = useState<DiaryMeal | null>(null);
@@ -411,6 +415,23 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
         <div className="mb-3 text-base font-semibold text-fg">📝 Com'è andata {dayLabel(date).toLowerCase() === 'oggi' ? 'oggi' : 'questa giornata'}?</div>
         <DayRecapForm key={date} initial={recap} onSend={(r) => saveRecap(r)} score={{ kcal: totals.kcal, target: target.target, protein: totals.protein, proteinTarget: target.protein }} />
       </Card>
+
+      {/* recap del dietologo su questa giornata: da solo quando la chiudi (o per i giorni passati), salvato nel diario */}
+      {entries.length > 0 && (
+        <AutoRecap
+          key={date}
+          title="Recap del dietologo"
+          help="day-recap"
+          persona="diet"
+          saved={analysis}
+          refKey={toDietDay({ date, entries, recap }) ? `${date}:${entries.length}:${Math.round(totals.kcal)}:${recap?.at ?? 0}` : null}
+          auto={date < todayISO() || Boolean(recap)}
+          waiting="Quando rispondi a «Com'è andata oggi?» qui sopra, il dietologo fa da solo il recap della giornata. Puoi farlo anche adesso, a giornata in corso."
+          action="Fai il recap adesso"
+          run={(o) => analyzeDietDay(dietDayData(toDietDay({ date, entries, recap })!), profile, o)}
+          save={(a) => saveAnalysis(a)}
+        />
+      )}
 
       <RecipeLibrary
         open={library != null}
