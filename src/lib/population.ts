@@ -48,7 +48,8 @@ const SHOW_FROM = 0.6;
 /** Articolo italiano davanti alla percentuale: "il 4%", "l'8%", "lo 0,5%". */
 function withArticle(n: string): string {
   if (n.startsWith('0')) return `lo ${n}`;
-  if (/^(1|8|11|18|8\d)(,|$)/.test(n)) return `l'${n}`;
+  // l' davanti a uno, otto, undici, ottanta…: "l'1%", "l'8%", "l'11%", "l'85%" (ma "il 18%")
+  if (/^(1|8|11|8\d)(,|$)/.test(n)) return `l'${n}`;
   return `il ${n}`;
 }
 
@@ -75,17 +76,23 @@ export function strengthRarity(o: { ratio: number; ratios: number[]; sex: Sex; k
   return `Sei più forte di circa ${pctText(1 - above)} ${who(o.sex)} adult${o.sex === 'f' ? 'e' : 'i'} in ${lift}.`;
 }
 
-/** Frasi sul corpo: solo quelle a tuo favore (meno grasso, più muscolo per l'altezza). Vuoto = nessun confronto. */
-export function bodyRarity(o: { sex: Sex; age: number; bf: number; ffmi: number }): string[] {
+/** Quota massima della popolazione per mostrare la frase sul corpo (sopra non è un traguardo da segnalare). */
+const BODY_SHOW_MAX = 0.3;
+
+/**
+ * Frase sul corpo, una sola e neutra: quanti hanno una condizione fisica come la tua o migliore (poco grasso e tanto
+ * muscolo per l'altezza, in un punteggio unico). Nessun confronto per chi non è tra i primi: null = non si mostra nulla.
+ */
+export function bodyRarity(o: { sex: Sex; age: number; bf: number; ffmi: number }): string | null {
+  if (o.bf < MIN_BF[o.sex]) return null;
   const band = ageBand(o.age);
-  const group = `${who(o.sex)} ${AGE_TXT[band]}`;
-  const out: string[] = [];
-  // quota con meno grasso di te
-  const leaner = normalCdf((o.bf - BF_MEAN[o.sex][band]) / BF_SD);
-  if (o.bf >= MIN_BF[o.sex] && 1 - leaner >= SHOW_FROM) out.push(`Hai meno grasso di circa ${pctText(1 - leaner)} ${group}.`);
-  // quota con più muscolo di te
+  // punteggio unico della condizione fisica: quanto sei sotto la media di grasso + quanto sei sopra la media di muscolo
+  // per l'altezza (in deviazioni standard, pesi uguali); chi è nella media sta al 50%
+  const zFat = (BF_MEAN[o.sex][band] - o.bf) / BF_SD;
   const f = FFMI[o.sex];
-  const moreMuscle = 1 - normalCdf((o.ffmi - f.mean) / f.sd);
-  if (1 - moreMuscle >= SHOW_FROM) out.push(`Hai più muscolo per la tua altezza di circa ${pctText(1 - moreMuscle)} ${group}.`);
-  return out;
+  const zMuscle = (o.ffmi - f.mean) / f.sd;
+  const share = 1 - normalCdf((zFat + zMuscle) / Math.SQRT2);
+  if (share > BODY_SHOW_MAX) return null;
+  const s = pctText(share);
+  return `${s.startsWith('meno') ? 'Meno dello 0,1%' : `Solo ${s}`} ${who(o.sex)} ${AGE_TXT[band]} ha una condizione fisica come la tua.`;
 }

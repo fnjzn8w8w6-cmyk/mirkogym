@@ -71,6 +71,7 @@ export function CompositionCard() {
   const c = composition(p);
   const bf = c.bf.value;
   const fatKg = p.weightKg - c.lean;
+  const rarity = bodyRarity({ sex: p.sex, age: p.age, bf, ffmi: c.ffmi });
   return (
     <Card variant="elevated" className="p-4">
       <div className="section-title">
@@ -98,19 +99,14 @@ export function CompositionCard() {
           ))}
         </div>
       </div>
-      {/* confronto con la popolazione: solo con una misura vera e solo le frasi a tuo favore */}
-      {bfNow &&
-        bodyRarity({ sex: p.sex, age: p.age, bf, ffmi: c.ffmi }).map((t, i) => (
-          <p key={t} className="mt-2 flex items-start gap-1.5 text-sm font-semibold text-accent-400">
-            <span>🌍 {t}</span>
-            {i === 0 && (
-              <>
-                <NewBadge since="2026-10-15" className="ml-0 shrink-0" />
-                <HelpTip id="population-rarity" className="shrink-0" />
-              </>
-            )}
-          </p>
-        ))}
+      {/* confronto con la popolazione: solo con una misura vera e solo se è un traguardo */}
+      {bfNow && rarity && (
+        <p className="mt-2 flex items-start gap-1.5 text-sm font-semibold text-accent-400">
+          <span>🌍 {rarity}</span>
+          <NewBadge since="2026-10-15" className="ml-0 shrink-0" />
+          <HelpTip id="population-rarity" className="shrink-0" />
+        </p>
+      )}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Chip tone="accent">{bfCategory(bf, p.sex)}</Chip>
         <span className="text-xs text-fg-3">
