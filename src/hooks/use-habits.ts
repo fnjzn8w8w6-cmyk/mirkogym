@@ -10,6 +10,7 @@ import { buildProposals, learnedFavorites, resolveCycling, weekDays, weekTargets
 import { fromISODate, mondayISO, toISODate, todayISO } from '@/lib/date-utils';
 import { useData } from './data-context';
 import { useEffectiveProfile } from './use-effective-profile';
+import { useWeekCalc } from './use-metabolism';
 import type { UserProfile } from '@/lib/metabolism';
 
 /** Giorni con più calorie (allenamento) o null se le calorie sono uguali tutti i giorni. */
@@ -36,9 +37,13 @@ export function useDayTarget(profile: UserProfile | undefined, date = todayISO()
   const cycling = useCyclingDays();
   // peso e massa grassa attuali (stessi numeri in tutta l'app)
   const eff = useEffectiveProfile();
+  // settimana futura: anteprima di quello che il lunedì fisserà con i dati di oggi
+  const { next } = useWeekCalc();
   return useMemo(() => {
     if (!profile) return null;
-    const base = userNutrition(eff ?? profile, settings);
+    const future = mondayISO(fromISODate(date)) > mondayISO();
+    const preview = future && next ? next : null;
+    const base = preview ? userNutrition(eff ?? profile, settings, { tdee: preview.tdee ?? preview.formula ?? 0, adjust: preview.adjust }) : userNutrition(eff ?? profile, settings);
     const today = todayISO();
     const trainedOn = new Set(sessions.map((s) => toISODate(s.date)));
     const choices = new Map(logs.filter((l) => l.dayType).map((l) => [l.date, l.dayType!]));
@@ -60,8 +65,10 @@ export function useDayTarget(profile: UserProfile | undefined, date = todayISO()
       /** i 7 giorni della settimana come sono davvero */
       weekDays: days,
       week: weekTargets(base, cycling),
+      /** settimana futura: numeri in anteprima (si fissano il lunedì) */
+      preview: preview ? { adjust: preview.adjust, real: preview.tdee != null } : null,
     };
-  }, [profile, eff, settings, sessions, date, cycling, logs, activeSession]);
+  }, [profile, eff, settings, sessions, date, cycling, logs, activeSession, next]);
 }
 
 /** Ricette che mangi davvero (dal diario): il piano le propone più spesso. */

@@ -261,19 +261,20 @@ function DayPills({ value, onChange, plan, target, cycling }: { value: number; o
 }
 
 /** "Perché queste calorie?": scomposizione dell'obiettivo del giorno. */
-export function WhyKcal({ base, day }: { base: Nutrition; day?: Nutrition & { delta?: number } }) {
+export function WhyKcal({ base, day, preview }: { base: Nutrition; day?: Nutrition & { delta?: number }; preview?: { adjust: number; real: boolean } | null }) {
   const { settings } = useSettings();
   const [open, setOpen] = useState(false);
   // stessi numeri usati per l'obiettivo: quelli fissati il lunedì (consumo e correzione)
   const wk = settings.weekCal && settings.weekCal.week === mondayISO() ? settings.weekCal : null;
-  const real = wk ? (wk.tdee != null ? settings.metabolism : null) : metabolismReliable(settings.metabolism) ? settings.metabolism : null;
-  const adj = wk ? wk.adjust : real ? 0 : (settings.kcalAdjust ?? 0);
+  // settimana futura: i numeri dell'anteprima
+  const real = preview ? (preview.real ? settings.metabolism : null) : wk ? (wk.tdee != null ? settings.metabolism : null) : metabolismReliable(settings.metabolism) ? settings.metabolism : null;
+  const adj = preview ? preview.adjust : wk ? wk.adjust : real ? 0 : (settings.kcalAdjust ?? 0);
   const total = day?.target ?? base.target;
   const delta = day?.delta ?? 0;
   const ritmo = base.target - base.tdee - adj;
   const phase = settings.goalPlan?.phases[settings.goalPlan.current];
   const rows: [string, number, boolean?][] = [
-    [real ? `Il tuo metabolismo (dal diario, ${real.days} giornate)` : wk && wk.formula == null ? 'Fabbisogno stimato (formula)' : 'Consumo calcolato (basale, movimento, allenamenti, digestione)', base.tdee],
+    [real ? `Il tuo metabolismo (dal diario, ${real.days} giornate)` : !preview && wk && wk.formula == null ? 'Fabbisogno stimato (formula)' : 'Consumo calcolato (basale, movimento, allenamenti, digestione)', base.tdee],
     [phase ? `Ritmo per l'obiettivo "${phase.label}"` : 'Obiettivo (surplus/deficit)', ritmo, true],
     ...(adj ? ([['Correzione dall\'andamento del peso', adj, true]] as [string, number, boolean][]) : []),
     ...(delta ? ([[delta > 0 ? 'Giorno di allenamento (+ carboidrati)' : 'Giorno di riposo (riequilibrio)', delta, true]] as [string, number, boolean][]) : []),

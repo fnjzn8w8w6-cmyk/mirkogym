@@ -3,6 +3,7 @@ import { useSettings } from '@/hooks/use-settings';
 import { useBodyLogs } from '@/hooks/use-body-logs';
 import { useRecentFoodLogs } from '@/hooks/use-athlete';
 import { useEnergy } from '@/hooks/use-energy';
+import { useWeekCalc } from '@/hooks/use-metabolism';
 import { useEffectiveProfile } from '@/hooks/use-effective-profile';
 import { completeDays, METABOLISM_RELIABLE_DAYS, METABOLISM_WEIGH_DAYS, SETTLING_DAYS, weighSpan } from '@/lib/body-model';
 import { metabolismReliable } from '@/lib/coach';
@@ -26,6 +27,8 @@ export function EnergyCard() {
   const e = useEnergy();
   const p = useEffectiveProfile();
   const [editSteps, setEditSteps] = useState(false);
+  const { recalc, applyRecalc } = useWeekCalc();
+  const [busy, setBusy] = useState(false);
   const [steps, setSteps] = useState('');
   if (!e || !p || !settings.profile) return null;
   const m = settings.metabolism;
@@ -154,6 +157,23 @@ export function EnergyCard() {
           <p className="mt-1 text-xs text-fg-3">
             Le calorie di questa settimana usano {nf(weekValue)} kcal (fissate a inizio settimana): il valore aggiornato entra lunedì prossimo, con cambi di al massimo 200 kcal a
             settimana.
+            {recalc && wk && !wk.undone && Math.abs(recalc.target - wk.target) >= 50 && (
+              <>
+                {' '}
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="font-semibold text-accent-400"
+                  onClick={async () => {
+                    setBusy(true);
+                    await applyRecalc();
+                    setBusy(false);
+                  }}
+                >
+                  {busy ? 'Ricalcolo…' : 'Ricalcola ora'}
+                </button>
+              </>
+            )}
           </p>
         )}
         {span > 0 && span < METABOLISM_WEIGH_DAYS && (

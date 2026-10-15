@@ -121,7 +121,17 @@ export function subscribeMesocycles(uid: string, cb: (s: Mesocycle[]) => void, o
 export const saveSchedule = (uid: string, days: Day[]) =>
   setDoc(scheduleRef(uid), { id: 'current', days: clean(days), updatedAt: Timestamp.now() });
 
-export const saveSettings = (uid: string, patch: Partial<Settings>) => setDoc(settingsRef(uid), clean(patch), { merge: true });
+/**
+ * Ogni campo scritto sostituisce per intero quello salvato (con la semplice fusione i campi interni vecchi restavano,
+ * es. "annullato" della settimana prima); un campo a undefined viene cancellato.
+ */
+export function saveSettings(uid: string, patch: Partial<Settings>) {
+  const data = clean(patch) as Record<string, unknown>;
+  for (const [k, v] of Object.entries(patch)) if (v === undefined) data[k] = deleteField();
+  const fields = Object.keys(data);
+  if (!fields.length) return Promise.resolve();
+  return setDoc(settingsRef(uid), data, { mergeFields: fields });
+}
 
 export const saveActiveSession = (uid: string, s: ActiveSession) =>
   setDoc(activeRef(uid), { ...clean(s), startedAt: toTs(s.startedAt), updatedAt: Timestamp.now() });

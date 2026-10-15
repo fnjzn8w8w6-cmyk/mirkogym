@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
+import type { WeekCalories } from '@/types';
 import { useSettings } from './use-settings';
 import { useBodyLogs } from './use-body-logs';
 import { useRecentFoodLogs } from './use-athlete';
@@ -57,47 +58,88 @@ export function useMetabolismSync() {
   }, [ready, energy, foodLogs, bodyLogs, settings.energy, settings.metabolism, update]);
 }
 
+/** Settimana prima di quella in corso, ricostruita dai valori salvati per "Annulla" (per rifare il calcolo del lunedì). */
+function previousWeek(w: WeekCalories | undefined): WeekCalories | undefined {
+  if (!w || w.week !== mondayISO()) return w;
+  const base = w.beforeRecalc ?? w;
+  if (!base.undo) return undefined;
+  return { ...base, ...base.undo, intent: undefined, week: 'prima', undo: undefined, beforeRecalc: undefined };
+}
+
+/** Salva le calorie di una settimana e ricalcola le porzioni del piano pasti (stesse ricette). */
+function useApplyWeek() {
+  const { settings, update } = useSettings();
+  const { sessions } = useSessions();
+  const { days } = useSchedule();
+  const p = useEffectiveProfile();
+  return useCallback(
+    async (w: WeekCalories) => {
+      if (!p) return;
+      const patch: Parameters<typeof update>[0] = { weekCal: w, kcalAdjust: w.adjust };
+      const before = settings.weekCal && settings.weekCal.week === w.week ? settings.weekCal.target : w.prevTarget;
+      if (before != null && w.target !== before && settings.weekPlan && settings.weekPlan.source !== 'nutrizionista') {
+        try {
+          const data = await loadRecipes();
+          const t = userNutrition(p, { ...settings, weekCal: w });
+          const cycling = resolveCycling({ enabled: settings.calorieCycling, manual: settings.carbCycling, sessions, perWeek: p.daysPerWeek ?? days.length });
+          patch.weekPlan = rescalePlan(
+            settings.weekPlan,
+            data,
+            t,
+            planPrefs(settings.nutritionPrefs ?? DEFAULT_NUTRITION, settings.favoriteRecipes ?? []),
+            cycling ? weekTargets(t, cycling) : undefined,
+          );
+        } catch {
+          /* il piano verrà ricalibrato dalla sezione Dieta */
+        }
+      }
+      await settle(update(patch));
+    },
+    [p, settings, update, sessions, days.length],
+  );
+}
+
+/**
+ * Calcolo della settimana con i dati di oggi:
+ * - `recalc`: questa settimana rifatta adesso (come se fosse lunedì), per "Ricalcola ora";
+ * - `next`: anteprima della settimana prossima (quello che il lunedì fisserebbe con i dati di oggi).
+ */
+export function useWeekCalc() {
+  const { settings } = useSettings();
+  const { bodyLogs } = useBodyLogs();
+  const foodLogs = useRecentFoodLogs(28);
+  const p = useEffectiveProfile();
+  const energy = useEnergy();
+  const apply = useApplyWeek();
+  return useMemo(() => {
+    if (!p || !energy) return { recalc: null, next: null, applyRecalc: async () => undefined };
+    const now = new Date();
+    const cur = settings.weekCal && settings.weekCal.week === mondayISO() ? settings.weekCal : undefined;
+    const recalc = cur ? { ...computeWeekCalories(p, { ...settings, weekCal: previousWeek(cur) }, bodyLogs, foodLogs, now, energy.total), beforeRecalc: cur.beforeRecalc ?? cur } : null;
+    const next = computeWeekCalories(p, settings, bodyLogs, foodLogs, now, energy.total);
+    return { recalc, next, applyRecalc: async () => (recalc ? apply(recalc) : undefined) };
+  }, [p, energy, settings, bodyLogs, foodLogs, apply]);
+}
+
 /**
  * Aggiornamento settimanale delle calorie: il primo avvio di ogni settimana (lunedì) fissa l'obiettivo.
  * Aspetta qualche secondo che diario, pesate e metabolismo del giorno siano caricati.
  */
 export function useWeekCaloriesSync() {
-  const { settings, update } = useSettings();
+  const { settings } = useSettings();
   const { bodyLogs } = useBodyLogs();
   const foodLogs = useRecentFoodLogs(28);
   const { loaded } = useData();
-  const { sessions } = useSessions();
-  const { days } = useSchedule();
   // peso e massa grassa attuali, consumo calcolato con gli allenamenti fatti
   const p = useEffectiveProfile();
   const energy = useEnergy();
   const due = Boolean(p) && settings.weekCal?.week !== mondayISO();
+  const apply = useApplyWeek();
   useEffect(() => {
     if (!due || !p || !energy || !loaded.settings || !loaded.bodyLogs || !loaded.sessions) return;
     const t = window.setTimeout(() => {
-      const w = computeWeekCalories(p, settings, bodyLogs, foodLogs, new Date(), energy.total);
-      void (async () => {
-        const patch: Parameters<typeof update>[0] = { weekCal: w, kcalAdjust: w.adjust };
-        // il piano pasti segue il nuovo obiettivo (stesse ricette, porzioni ricalcolate)
-        if (w.prevTarget != null && w.target !== w.prevTarget && settings.weekPlan && settings.weekPlan.source !== 'nutrizionista') {
-          try {
-            const data = await loadRecipes();
-            const t = userNutrition(p, { ...settings, weekCal: w });
-            const cycling = resolveCycling({ enabled: settings.calorieCycling, manual: settings.carbCycling, sessions, perWeek: p.daysPerWeek ?? days.length });
-            patch.weekPlan = rescalePlan(
-              settings.weekPlan,
-              data,
-              t,
-              planPrefs(settings.nutritionPrefs ?? DEFAULT_NUTRITION, settings.favoriteRecipes ?? []),
-              cycling ? weekTargets(t, cycling) : undefined,
-            );
-          } catch {
-            /* il piano verrà ricalibrato dalla sezione Dieta */
-          }
-        }
-        await settle(update(patch));
-      })();
+      void apply(computeWeekCalories(p, settings, bodyLogs, foodLogs, new Date(), energy.total));
     }, 4000);
     return () => window.clearTimeout(t);
-  }, [due, p, energy, loaded.settings, loaded.bodyLogs, loaded.sessions, settings, bodyLogs, foodLogs, update, sessions, days.length]);
+  }, [due, p, energy, loaded.settings, loaded.bodyLogs, loaded.sessions, settings, bodyLogs, foodLogs, apply]);
 }

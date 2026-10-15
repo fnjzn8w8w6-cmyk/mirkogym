@@ -230,6 +230,14 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
       </div>
 
       <Card variant="elevated" className="space-y-3 p-4">
+        {dayT?.preview && (
+          <p className="rounded-md border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-sm text-fg-2">
+            🔮 <strong className="text-fg">Anteprima della settimana prossima</strong>
+            <NewBadge />
+            <br />
+            Calcolata con i dati di oggi: le calorie si fissano lunedì, alla prima apertura dell'app, con pesate, diario e allenamenti di quel giorno.
+          </p>
+        )}
         {dayT?.cycling && (
           <div className="flex items-center justify-between gap-2">
             {/* oggi e i giorni futuri: tocca per dire se ti alleni (calorie e macro cambiano subito) */}
@@ -297,7 +305,7 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
                 Giorno di riposo: <strong className="text-fg">{dayT.day.delta} kcal</strong> sulla media.
               </>
             )}{' '}
-            La media della settimana resta <strong className="text-fg">{dayT.base.target.toLocaleString('it-IT')} kcal</strong>.
+            La media della settimana {dayT.preview ? 'sarà circa' : 'resta'} <strong className="text-fg">{dayT.base.target.toLocaleString('it-IT')} kcal</strong>.
           </p>
         )}
         {dayT && dayT.rebalance !== 0 && (
@@ -309,7 +317,7 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
             (soprattutto carboidrati) per {dayT.reasons.join(' e ')}: così la media della settimana resta quella prevista.
           </p>
         )}
-        <WhyKcal base={dayT?.base ?? target} day={dayT?.day} />
+        <WhyKcal base={dayT?.base ?? target} day={dayT?.day} preview={dayT?.preview} />
       </Card>
 
       {dayT?.cycling && <WeekCalories week={dayT.weekDays.map((d) => ({ target: d.target.target, training: d.target.training, changed: d.rebalance !== 0 || d.source === 'manual' }))} date={date} />}

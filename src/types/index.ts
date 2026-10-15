@@ -234,6 +234,8 @@ export interface WeekCalories {
   logged: number;
   /** peso e diario non tornano (acqua/glicogeno): l'andamento del peso non ha corretto le calorie */
   water?: boolean;
+  /** ricalcolata a metà settimana con "Ricalcola ora": i valori di prima, per annullare */
+  beforeRecalc?: Omit<WeekCalories, 'beforeRecalc'>;
   at: number;
   /** valori della settimana prima, per "Annulla" */
   undo?: { tdee: number | null; adjust: number; target: number; formula?: number };

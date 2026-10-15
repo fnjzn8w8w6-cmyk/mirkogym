@@ -14,7 +14,8 @@ import { useDayTarget } from '@/hooks/use-habits';
 import { explainWeek, undoWeekCalories } from '@/lib/calorie-week';
 import { cn } from '@/lib/cn';
 import { planRate } from '@/lib/goal-plan';
-import { SectionTitle } from '@/components/ui/Help';
+import { NewBadge, SectionTitle } from '@/components/ui/Help';
+import { useWeekCalc } from '@/hooks/use-metabolism';
 import type { BodyLog } from '@/types';
 import { BF_SOURCE_IT, bodyFatNow, type BodyFatNow } from '@/lib/bodyfat-estimate';
 
@@ -120,11 +121,16 @@ export function WeekCaloriesCard() {
   const dayT = useDayTarget(prof);
   const w = settings.weekCal;
   const [why, setWhy] = useState(false);
+  const { recalc, applyRecalc } = useWeekCalc();
+  const [busy, setBusy] = useState(false);
   // chiuso di base: una riga di riepilogo, si apre con un tocco
   const [open, setOpen] = useState(false);
   if (!prof || !w || w.week !== mondayISO() || !dayT) return null;
   const weight = bodyLogs.find((b) => b.weight != null)?.weight ?? prof.weightKg;
-  const delta = w.prevTarget != null && !w.undone ? w.target - w.prevTarget : 0;
+  // ricalcolata a metà settimana: la differenza è rispetto ai valori di prima del ricalcolo
+  const from = w.beforeRecalc ? w.beforeRecalc.target : w.prevTarget;
+  const delta = from != null && !w.undone ? w.target - from : 0;
+  const canRecalc = recalc != null && !w.undone && Math.abs(recalc.target - w.target) >= 50;
   const changed = Math.abs(delta) >= 50;
   const train = Math.max(...dayT.week.map((d) => d.target));
   const rest = Math.min(...dayT.week.map((d) => d.target));
@@ -148,7 +154,11 @@ export function WeekCaloriesCard() {
         <SectionTitle help="body-weekcal">Aggiornamento settimanale</SectionTitle>
       </div>
       <div className="mt-2 text-lg font-bold text-fg">
-        {changed ? (
+        {changed && w.beforeRecalc ? (
+          <>
+            Ricalcolate oggi: <span className="text-accent-400">{delta > 0 ? '+' : ''}{delta} kcal</span> al giorno
+          </>
+        ) : changed ? (
           <>
             Da {monday}: <span className="text-accent-400">{delta > 0 ? '+' : ''}{delta} kcal</span> al giorno
           </>
@@ -162,7 +172,7 @@ export function WeekCaloriesCard() {
       </div>
       <p className="mt-1 text-sm text-fg-2">
         {changed ? 'Già applicato: obiettivo medio ' : 'Obiettivo medio '}
-        {changed && w.prevTarget != null ? `da ${nf(w.prevTarget)} a ` : ''}
+        {changed && from != null ? `da ${nf(from)} a ` : ''}
         <strong className="text-fg">{nf(w.target)} kcal</strong>
         {train !== rest ? ` (allenamento ${nf(train)} · riposo ${nf(rest)})` : ''}.
       </p>
@@ -174,6 +184,33 @@ export function WeekCaloriesCard() {
       <p className="mt-3 text-sm text-fg-2">
         {w.prevTarget == null ? 'Primo calcolo: da lunedì prossimo l\'app confronta peso e diario della settimana e aggiorna l\'obiettivo da sola.' : explainWeek(w, weight, prof.goal)}
       </p>
+      {canRecalc && (
+        <div className="mt-3 rounded-md border border-accent-500/40 bg-accent-glow p-3 text-sm text-fg-2">
+          <div className="font-semibold text-fg">
+            Ricalcola ora <NewBadge />
+          </div>
+          <p className="mt-1">
+            {w.formula == null && w.tdee == null
+              ? 'Le calorie di questa settimana sono state fissate con il vecchio calcolo, che non contava gli allenamenti.'
+              : 'Da lunedì sono cambiati i tuoi dati (allenamenti, passi, pesate o diario).'}{' '}
+            Ricalcolando adesso l'obiettivo medio passa da <strong className="text-fg">{nf(w.target)}</strong> a{' '}
+            <strong className="text-fg">{nf(recalc.target)} kcal</strong>
+            {recalc.intent != null && Math.abs(recalc.adjust - recalc.intent) >= 50 ? ', il resto arriva lunedì (al massimo 200 kcal a settimana)' : ''}.
+          </p>
+          <Button
+            className="mt-2"
+            size="sm"
+            loading={busy}
+            onClick={async () => {
+              setBusy(true);
+              await applyRecalc();
+              setBusy(false);
+            }}
+          >
+            Ricalcola ora
+          </Button>
+        </div>
+      )}
       {why && (
         <p className="mt-2 rounded-md bg-surface-2 p-3 text-xs text-fg-2">
           Ogni lunedì l'app calcola quanto consumi (basale, passi, allenamenti fatti e digestione) e lo confronta con l'andamento del peso e con le calorie che hai registrato. Poi fissa l'obiettivo della settimana: consumo + quanto serve per il ritmo del tuo obiettivo, con cambi di al massimo 200 kcal a settimana. Check-in, coach e analisi usano questi stessi numeri.
@@ -185,8 +222,14 @@ export function WeekCaloriesCard() {
         </Button>
         <Button
           variant="secondary"
-          disabled={!changed || !w.undo}
-          onClick={() => void settle(update({ weekCal: undoWeekCalories(w), kcalAdjust: w.undo?.adjust ?? settings.kcalAdjust }))}
+          disabled={!changed || !(w.beforeRecalc || w.undo)}
+          onClick={() =>
+            void settle(
+              w.beforeRecalc
+                ? update({ weekCal: w.beforeRecalc, kcalAdjust: w.beforeRecalc.adjust })
+                : update({ weekCal: undoWeekCalories(w), kcalAdjust: w.undo?.adjust ?? settings.kcalAdjust }),
+            )
+          }
         >
           Annulla
         </Button>
