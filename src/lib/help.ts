@@ -190,7 +190,7 @@ export const HELP = {
     body: [
       'Le calorie che consumi davvero, calcolate da quanto mangi (diario) e da come cambia il peso reale: è più preciso delle formule.',
       'Si aggiorna ogni giorno, ma l\'obiettivo calorico si muove al massimo di 50 kcal al giorno per non oscillare.',
-      'Servono almeno 7 giornate complete nel diario nelle ultime 3 settimane. Prima di allora si usa la formula.',
+      'Servono almeno 7 giornate complete nel diario nelle ultime 3 settimane e pesate che coprano almeno 10 giorni, dalla prima all\'ultima comprese (es. dal 5 al 14 del mese). Non serve pesarsi ogni giorno. Prima di allora si usa la formula.',
     ],
   },
   'body-measurements': { title: 'Misure', body: ['Le circonferenze registrate, con la differenza rispetto alla misura precedente.'] },

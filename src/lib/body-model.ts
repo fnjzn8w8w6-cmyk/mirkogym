@@ -142,6 +142,23 @@ export interface Metabolism {
 /** Giornate complete del diario dopo cui la stima del metabolismo è affidabile (prima è provvisoria). */
 export const METABOLISM_RELIABLE_DAYS = 14;
 
+/** Giorni di calendario coperti dalle pesate (dalla prima all'ultima, entrambe comprese) necessari per il metabolismo. */
+export const METABOLISM_WEIGH_DAYS = 10;
+
+/** Pesate delle ultime 3 settimane (una per giorno, media se più di una). */
+function recentWeighs(logs: BodyLog[], now = Date.now()) {
+  const from = toISODate(new Date(now - 21 * DAY));
+  return weightTrend(logs, now)
+    .filter((p) => p.date >= from && p.weight != null)
+    .map((p) => ({ t: p.t, w: p.weight! }));
+}
+
+/** Giorni di calendario dalla prima all'ultima pesata delle ultime 3 settimane, entrambe comprese (5 → 14 ottobre = 10). */
+export function weighSpan(logs: BodyLog[], now = Date.now()): number {
+  const w = recentWeighs(logs, now);
+  return w.length ? Math.round((w[w.length - 1].t - w[0].t) / DAY) + 1 : 0;
+}
+
 /**
  * Pendenza robusta delle pesate (kg/giorno): mediana delle pendenze tra coppie di pesate a ≥ 3 giorni di distanza.
  * Una pesata "gonfia" (acqua, sale, ciclo) non sposta il risultato, a differenza della tendenza che parte dalla prima pesata.
@@ -159,16 +176,14 @@ export function robustSlope(points: { t: number; w: number }[]): number | null {
 /**
  * Calorie consumate davvero = calorie medie mangiate − variazione del peso × 7700.
  * La variazione del peso è una pendenza robusta delle pesate (non risente di una pesata gonfia d'acqua).
- * Si fonde con la formula finché i dati sono pochi (≥ 7 giornate complete negli ultimi 21 giorni, pesate su almeno 10 giorni).
+ * Si fonde con la formula finché i dati sono pochi (≥ 7 giornate complete negli ultimi 21 giorni, pesate che coprono almeno 10 giorni di calendario).
  */
 export function estimateMetabolism(foodLogs: FoodLog[], logs: BodyLog[], formulaTdee: number, now = Date.now()): Metabolism | null {
   const from = toISODate(new Date(now - 21 * DAY));
   const days = completeDays(foodLogs).filter((d) => d.date >= from);
-  const weighs = weightTrend(logs, now)
-    .filter((p) => p.date >= from && p.weight != null)
-    .map((p) => ({ t: p.t, w: p.weight! }));
+  const weighs = recentWeighs(logs, now);
   if (days.length < 7 || weighs.length < 4) return null;
-  if ((weighs[weighs.length - 1].t - weighs[0].t) / DAY < 10) return null;
+  if (weighSpan(logs, now) < METABOLISM_WEIGH_DAYS) return null;
   const slope = robustSlope(weighs);
   if (slope == null) return null;
   const intake = avg(days.map((d) => d.kcal));

@@ -30,7 +30,7 @@ import { MuscleWeekCard } from '@/components/body/MuscleWeek';
 import { useRecentFoodLogs } from '@/hooks/use-athlete';
 import { useSessions } from '@/hooks/use-sessions';
 import { userNutrition } from '@/lib/coach';
-import { completeDays, METABOLISM_RELIABLE_DAYS, waterEvents, weightTrend } from '@/lib/body-model';
+import { completeDays, METABOLISM_RELIABLE_DAYS, METABOLISM_WEIGH_DAYS, waterEvents, weighSpan, weightTrend } from '@/lib/body-model';
 import { SectionTitle } from '@/components/ui/Help';
 import { DailyPhotos } from '@/components/body/DailyPhotos';
 
@@ -359,6 +359,8 @@ function MetabolismLine() {
   const foodLogs = useRecentFoodLogs(21);
   const m = settings.metabolism;
   const complete = completeDays(foodLogs).length;
+  const { bodyLogs } = useBodyLogs();
+  const span = weighSpan(bodyLogs);
   return (
     <div className="mt-3 rounded-md bg-surface-2 p-3 text-sm text-fg-2">
       <SectionTitle help="body-metabolism" isNew className="text-xs font-bold uppercase tracking-wider text-fg-3">
@@ -376,8 +378,8 @@ function MetabolismLine() {
         </p>
       ) : (
         <p className="mt-1">
-          Per calcolarlo dai tuoi dati servono 7 giornate complete nel diario negli ultimi 21 giorni (ora {Math.min(complete, 7)}/7) e pesate su almeno 10 giorni. Fino ad allora
-          uso la formula.
+          Per calcolarlo dai tuoi dati servono 7 giornate complete nel diario negli ultimi 21 giorni (ora {Math.min(complete, 7)}/7) e {METABOLISM_WEIGH_DAYS} giorni di
+          pesate, dalla prima all'ultima (ora {Math.min(span, METABOLISM_WEIGH_DAYS)}/{METABOLISM_WEIGH_DAYS}). Fino ad allora uso la formula.
         </p>
       )}
     </div>
