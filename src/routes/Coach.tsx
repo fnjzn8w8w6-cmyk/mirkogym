@@ -287,7 +287,7 @@ function TrainingCoach({ profile }: { profile: UserProfile }) {
             msgs={msgs}
             busy={ai.busy}
             busyView={<AIBusy status={ai.status} onCancel={ai.cancel} />}
-            placeholder={msgs.length ? 'Rispondi al coach…' : 'Cosa vuoi dal tuo allenamento?'}
+            placeholder={msgs.length ? 'Rispondi al coach…' : 'Cosa vuoi allenare?'}
             onSend={(t) => void send(t)}
             onReset={() => setMsgs([])}
             renderProposal={(p, active, msg) => (

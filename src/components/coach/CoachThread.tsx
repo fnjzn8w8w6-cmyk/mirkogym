@@ -66,6 +66,14 @@ export function CoachThread<P>({
 }) {
   const [text, setText] = useState('');
   const end = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLTextAreaElement>(null);
+  // la casella cresce con il testo (fino a ~5 righe) e torna a una riga quando si svuota
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+  }, [text]);
   const lastProposal = [...msgs].reverse().find((m) => m.proposal);
   useEffect(() => {
     end.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -110,13 +118,19 @@ export function CoachThread<P>({
         }}
       >
         <div className="relative flex-1">
+          {/* block: niente spazio sotto la casella, così microfono e invio restano allineati al centro */}
           <textarea
+            ref={box}
             value={text}
             rows={1}
             onChange={(e) => setText(e.target.value)}
             placeholder={placeholder}
             aria-label={placeholder}
-            className="max-h-32 min-h-[48px] w-full resize-none rounded-3xl border border-line bg-surface-2 py-3 pl-4 pr-12 text-base text-fg outline-none placeholder:text-fg-disabled focus:border-accent-500"
+            className={cn(
+              'block max-h-32 min-h-[48px] w-full resize-none rounded-3xl border border-line bg-surface-2 py-3 pl-4 pr-12 text-base leading-6 text-fg outline-none placeholder:text-fg-disabled focus:border-accent-500',
+              // vuota: l'esempio resta su una riga (con i puntini) invece di andare a capo tagliato
+              !text && 'overflow-hidden whitespace-nowrap placeholder:text-ellipsis',
+            )}
           />
           <MicButton size="sm" className="absolute bottom-1.5 right-1.5" onText={(t) => setText((r) => appendText(r, t))} />
         </div>

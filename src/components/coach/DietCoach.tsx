@@ -484,7 +484,7 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
             msgs={msgs}
             busy={ai.busy}
             busyView={<AIBusy persona="diet" status={ai.status} onCancel={ai.cancel} />}
-            placeholder={msgs.length ? 'Rispondi al dietologo…' : 'Cosa vuoi cambiare nella tua dieta?'}
+            placeholder={msgs.length ? 'Rispondi al dietologo…' : 'Cosa cambio nella dieta?'}
             onSend={(t) => void submit(t)}
             onReset={() => setMsgs([])}
             renderProposal={(proposal, active, msg) => renderProposal(proposal, active, msg)}
