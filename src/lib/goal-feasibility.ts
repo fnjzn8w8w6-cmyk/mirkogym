@@ -28,27 +28,77 @@ export interface Comp {
 export const compOf = (weight: number, bf: number): Comp => ({ weight, bf, lean: weight * (1 - bf / 100), fat: (weight * bf) / 100 });
 const fromLean = (lean: number, weight: number): Comp => ({ weight, lean, fat: weight - lean, bf: ((weight - lean) / weight) * 100 });
 
-const BASE_LEAN: Record<UserProfile['experience'], number> = { beginner: 0.25, intermediate: 0.13, advanced: 0.06 };
 const LEVEL_IT: Record<UserProfile['experience'], string> = { beginner: 'neofita', intermediate: 'intermedio', advanced: 'avanzato' };
 
-/** Massa magra che puoi mettere in una settimana con allenamento e surplus giusti (kg). */
+const BULK_MAX = 0.005;
+const BULK_OK = 0.0025;
+
+/** FFMI: massa magra in rapporto all'altezza (normalizzato a 1,80 m). */
+const ffmiOf = (p: UserProfile, lean: number) => {
+  const h = p.heightCm / 100;
+  return lean / (h * h) + 6.1 * (1.8 - h);
+};
+/** Potenziale rimasto (0–1): quanto sei lontano dal limite naturale di muscolo (FFMI ~25 uomo, ~21,5 donna). */
+export function potential(p: UserProfile, lean: number): number {
+  const ffmi = ffmiOf(p, lean);
+  const v = p.sex === 'f' ? (21.5 - ffmi) / 6.5 : (25 - ffmi) / 7;
+  return Math.max(0, Math.min(1, v));
+}
+
+/**
+ * Massa magra che puoi mettere in una settimana con allenamento e surplus giusti (kg).
+ * Conta soprattutto quanto sei lontano dal limite naturale (lontano ~0,25 kg, vicino ~0,04); il livello dichiarato
+ * corregge un po' (neofita +15%, avanzato −15%), poi sesso ed età.
+ */
 export function leanGainPerWeek(p: UserProfile, lean: number): number {
+  const byPotential = 0.04 + 0.22 * potential(p, lean) ** 1.5;
+  const exp = p.experience === 'beginner' ? 1.15 : p.experience === 'advanced' ? 0.85 : 1;
   const sex = p.sex === 'f' ? 0.55 : 1;
   const age = p.age >= 50 ? 0.7 : p.age >= 40 ? 0.85 : 1;
-  const h = p.heightCm / 100;
-  const ffmi = lean / (h * h) + 6.1 * (1.8 - h);
-  const cap = p.sex === 'f' ? 21 : 25;
-  // più vicino al limite naturale, più lento
-  const room = Math.max(0.1, Math.min(1, ((cap - ffmi) / 6) * 1.5));
-  return (BASE_LEAN[p.experience] ?? 0.13) * sex * age * room;
+  return byPotential * exp * sex * age;
+}
+
+/** Massa magra dopo `weeks` settimane di massa (il ritmo cala man mano che ti avvicini al limite). */
+function leanAfter(p: UserProfile, lean: number, weeks: number): number {
+  let l = lean;
+  const n = Math.floor(weeks);
+  for (let i = 0; i < n; i++) l += leanGainPerWeek(p, l);
+  return l + leanGainPerWeek(p, l) * (weeks - n);
+}
+
+/** In massa con il surplus giusto ~55% del peso preso è massa magra. */
+const LEAN_SHARE = 0.55;
+
+/**
+ * Massa "pulita" di b settimane: ogni settimana il peso sale quanto serve al muscolo che puoi mettere
+ * (massa magra / 55%), al massimo 0,5% del peso.
+ */
+function leanBulk(p: UserProfile, start: Comp, weeks: number): Comp {
+  let lean = start.lean;
+  let w = start.weight;
+  for (let i = 0; i < Math.round(weeks); i++) {
+    const g = leanGainPerWeek(p, lean);
+    const dw = Math.min(g / LEAN_SHARE, w * BULK_MAX);
+    lean += Math.min(g, dw * 0.75);
+    w += dw;
+  }
+  return fromLean(lean, w);
 }
 
 /** Percentuale minima di grasso sensata (non la proponiamo mai sotto). */
 const minBf = (p: UserProfile) => (p.sex === 'f' ? 15 : 7);
-/** Calo massimo a settimana in definizione (frazione del peso). */
-const cutRate = (p: UserProfile, endBf: number) => (endBf < (p.sex === 'f' ? 20 : 12) ? 0.005 : 0.007);
-const BULK_MAX = 0.005;
-const BULK_OK = 0.0025;
+/** Calo massimo a settimana in definizione (frazione del peso): 0,7%, 0,5% quando sei già asciutto. */
+const cutRate = (p: UserProfile, bf: number) => (bf < (p.sex === 'f' ? 20 : 12) ? 0.005 : 0.007);
+/** Settimane per scendere da un peso all'altro mantenendo la massa magra. */
+function cutWeeks(p: UserProfile, from: Comp, toWeight: number): number {
+  let w = from.weight;
+  let n = 0;
+  while (w > toWeight + 0.01 && n < 520) {
+    w -= w * cutRate(p, ((w - from.lean) / w) * 100);
+    n++;
+  }
+  return n;
+}
 
 export type Verdict = 'ok' | 'tight' | 'no';
 export interface PhaseCheck {
@@ -93,7 +143,7 @@ export function checkPlan(p: UserProfile, now: Comp, phases: GoalPhase[], curren
         verdict = 'no';
       }
       const loss = cur.weight - to.weight;
-      const need = loss > 0 ? loss / (((cur.weight + to.weight) / 2) * cutRate(p, to.bf)) : 0;
+      const need = loss > 0 ? cutWeeks(p, cur, to.weight) : 0;
       if (need > weeks + 0.5) {
         issues.push(`Per perdere ${itKg(loss)} kg senza perdere muscolo servono almeno ${Math.ceil(need)} settimane, non ${Math.round(weeks)}.`);
         verdict = 'no';
@@ -105,7 +155,7 @@ export function checkPlan(p: UserProfile, now: Comp, phases: GoalPhase[], curren
         issues.push(`${itKg(gain)} kg in ${Math.round(weeks)} settimane sono troppi: al massimo circa ${itKg(maxGain)} kg senza mettere soprattutto grasso.`);
         verdict = 'no';
       } else if (gain > cur.weight * BULK_OK * weeks * 1.3) verdict = 'tight';
-      const leanGain = Math.max(0, Math.min(leanGainPerWeek(p, cur.lean) * weeks, gain * 0.75));
+      const leanGain = Math.max(0, Math.min(leanAfter(p, cur.lean, weeks) - cur.lean, gain * 0.75));
       to = fromLean(cur.lean + leanGain, Math.max(wT, cur.lean + leanGain + 1));
       if (ph.targetBf != null && to.bf > ph.targetBf + 0.5) {
         const needLean = wT * (1 - ph.targetBf / 100) - cur.lean;
@@ -145,13 +195,10 @@ export interface Alternative {
 
 /** Massa poi definizione: con b settimane di massa, come finisci (o null se non c'è tempo per la definizione). */
 function bulkThenCut(p: UserProfile, now: Comp, b: number, totalWeeks: number, finalBf: number) {
-  const gain = now.weight * BULK_OK * b;
-  const leanGain = Math.min(leanGainPerWeek(p, now.lean) * b, gain * 0.75);
-  const peak = fromLean(now.lean + leanGain, now.weight + gain);
+  const peak = leanBulk(p, now, b);
   const lean = peak.lean + (p.experience === 'beginner' ? 0.03 * (totalWeeks - b) : 0);
   const end = fromLean(lean, lean / (1 - finalBf / 100));
-  const loss = peak.weight - end.weight;
-  const need = loss > 0 ? loss / (((peak.weight + end.weight) / 2) * cutRate(p, finalBf)) : 0;
+  const need = peak.weight > end.weight ? cutWeeks(p, peak, end.weight) : 0;
   // margine del 15% sul tempo di definizione: un piano proposto dal coach non deve essere già al limite
   return need <= (totalWeeks - b) * 0.85 ? { peak, end, cutWeeks: totalWeeks - b, need } : null;
 }
@@ -247,7 +294,8 @@ export function alternatives(p: UserProfile, now: Comp, phases: GoalPhase[], cur
     }
   } else if (hasBulk) {
     // solo massa: peso realistico al grasso indicato, o grasso realistico al peso indicato
-    const leanGain = (w: number) => Math.min(leanGainPerWeek(p, now.lean) * T, (w - now.weight) * 0.75);
+    const maxLean = leanAfter(p, now.lean, T) - now.lean;
+    const leanGain = (w: number) => Math.min(maxLean, (w - now.weight) * 0.75);
     const wMax = Math.min(wF, now.weight * (1 + BULK_MAX * T));
     const atW = fromLean(now.lean + Math.max(0, leanGain(wMax)), wMax);
     out.push({
@@ -261,10 +309,9 @@ export function alternatives(p: UserProfile, now: Comp, phases: GoalPhase[], cur
     if (last.targetBf != null && last.targetBf < now.bf - 1) {
       // vuoi più muscolo ma anche meno grasso di adesso: prima definizione, poi massa pulita
       const end = fromLean(now.lean, now.lean / (1 - last.targetBf / 100));
-      const c = Math.ceil((now.weight - end.weight) / (((now.weight + end.weight) / 2) * cutRate(p, last.targetBf)));
+      const c = cutWeeks(p, now, end.weight);
       if (c < T) {
-        const leanAdd = leanGainPerWeek(p, end.lean) * (T - c);
-        const fin = fromLean(end.lean + leanAdd, end.weight + leanAdd / 0.8);
+        const fin = leanBulk(p, end, T - c);
         out.push({
           id: 'cutfirst',
           title: `Prima definizione, poi massa pulita`,
@@ -293,8 +340,7 @@ export function alternatives(p: UserProfile, now: Comp, phases: GoalPhase[], cur
     }
   } else if (hasCut) {
     const end = fromLean(now.lean, now.lean / (1 - bfF / 100));
-    const loss = now.weight - end.weight;
-    const need = Math.ceil(loss / (((now.weight + end.weight) / 2) * cutRate(p, bfF)));
+    const need = cutWeeks(p, now, end.weight);
     out.push({
       id: 'bf',
       title: `Definizione al ${pct(bfF)}`,
