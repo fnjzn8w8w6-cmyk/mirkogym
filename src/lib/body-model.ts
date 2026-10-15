@@ -135,8 +135,14 @@ export interface Metabolism {
   sd: number;
   /** giornate complete usate */
   days: number;
-  /** peso del dato reale rispetto alla formula (0–1) */
+  /** peso del dato reale rispetto al consumo calcolato (0–1) */
   confidence: number;
+  /** giorni di calendario coperti dalle pesate */
+  span: number;
+  /** valore ricavato da diario e peso, prima del controllo */
+  measured: number;
+  /** troppo lontano dal consumo calcolato (oltre ±20%): probabile acqua/glicogeno, non si usa */
+  anomalous: boolean;
 }
 
 /** Giornate complete del diario dopo cui la stima del metabolismo è affidabile (prima è provvisoria). */
@@ -146,14 +152,27 @@ export const METABOLISM_RELIABLE_DAYS = 14;
 export const METABOLISM_WEIGH_DAYS = 10;
 
 /** Pesate delle ultime 3 settimane (una per giorno, media se più di una). */
+/**
+ * Giorni di assestamento: nella prima settimana di pesate (di solito coincide con l'inizio di una nuova dieta)
+ * il peso si muove soprattutto per acqua e glicogeno, quindi non entra nei calcoli di metabolismo e correzioni.
+ */
+export const SETTLING_DAYS = 7;
+/** Primo giorno di pesate valido per i calcoli (dopo l'assestamento). */
+export function settledFrom(logs: BodyLog[]): string | null {
+  const first = logs.reduce<string | null>((a, l) => (l.weight != null && (a == null || l.date < a) ? l.date : a), null);
+  return first ? toISODate(new Date(dayKey(first) + SETTLING_DAYS * DAY)) : null;
+}
+
 function recentWeighs(logs: BodyLog[], now = Date.now()) {
-  const from = toISODate(new Date(now - 21 * DAY));
+  const settled = settledFrom(logs) ?? '';
+  const last21 = toISODate(new Date(now - 21 * DAY));
+  const from = settled > last21 ? settled : last21;
   return weightTrend(logs, now)
     .filter((p) => p.date >= from && p.weight != null)
     .map((p) => ({ t: p.t, w: p.weight! }));
 }
 
-/** Giorni di calendario dalla prima all'ultima pesata delle ultime 3 settimane, entrambe comprese (5 → 14 ottobre = 10). */
+/** Giorni di calendario dalla prima all'ultima pesata delle ultime 3 settimane (dopo l'assestamento), entrambe comprese (5 → 14 ottobre = 10). */
 export function weighSpan(logs: BodyLog[], now = Date.now()): number {
   const w = recentWeighs(logs, now);
   return w.length ? Math.round((w[w.length - 1].t - w[0].t) / DAY) + 1 : 0;
@@ -176,21 +195,29 @@ export function robustSlope(points: { t: number; w: number }[]): number | null {
 /**
  * Calorie consumate davvero = calorie medie mangiate − variazione del peso × 7700.
  * La variazione del peso è una pendenza robusta delle pesate (non risente di una pesata gonfia d'acqua).
- * Si fonde con la formula finché i dati sono pochi (≥ 7 giornate complete negli ultimi 21 giorni, pesate che coprono almeno 10 giorni di calendario).
+ * Si fonde con il consumo calcolato finché i dati sono pochi (≥ 7 giornate complete negli ultimi 21 giorni, pesate che coprono almeno 10 giorni di calendario).
+ * Se si allontana di oltre il 20% dal consumo calcolato è segnato come anomalo e non si usa.
  */
-export function estimateMetabolism(foodLogs: FoodLog[], logs: BodyLog[], formulaTdee: number, now = Date.now()): Metabolism | null {
+export function estimateMetabolism(foodLogs: FoodLog[], logs: BodyLog[], modelTdee: number, now = Date.now()): Metabolism | null {
   const from = toISODate(new Date(now - 21 * DAY));
   const days = completeDays(foodLogs).filter((d) => d.date >= from);
   const weighs = recentWeighs(logs, now);
   if (days.length < 7 || weighs.length < 4) return null;
-  if (weighSpan(logs, now) < METABOLISM_WEIGH_DAYS) return null;
+  const span = weighSpan(logs, now);
+  if (span < METABOLISM_WEIGH_DAYS) return null;
   const slope = robustSlope(weighs);
   if (slope == null) return null;
   const intake = avg(days.map((d) => d.kcal));
   const est = intake - slope * 7700;
-  const confidence = Math.min(1, days.length / METABOLISM_RELIABLE_DAYS);
-  const tdee = Math.round((confidence * est + (1 - confidence) * formulaTdee) / 10) * 10;
-  return { tdee: Math.max(1200, Math.min(5000, tdee)), sd: Math.round(250 / Math.sqrt(days.length / 7) / 10) * 10, days: days.length, confidence };
+  const measured = Math.round(est / 10) * 10;
+  const sd = Math.round(250 / Math.sqrt(days.length / 7) / 10) * 10;
+  // controllo di plausibilità: il consumo misurato non può allontanarsi troppo da quello calcolato voce per voce
+  if (Math.abs(est - modelTdee) > modelTdee * 0.2)
+    return { tdee: modelTdee, sd, days: days.length, confidence: 0, span, measured, anomalous: true };
+  // più giornate (e più settimane di pesate) = più peso al dato reale
+  const confidence = Math.min(1, days.length / METABOLISM_RELIABLE_DAYS, span / METABOLISM_RELIABLE_DAYS);
+  const tdee = Math.round((confidence * est + (1 - confidence) * modelTdee) / 10) * 10;
+  return { tdee: Math.max(1200, Math.min(5000, tdee)), sd, days: days.length, confidence, span, measured, anomalous: false };
 }
 
 /** Il valore salvato si muove al massimo di 50 kcal al giorno verso la nuova stima. */

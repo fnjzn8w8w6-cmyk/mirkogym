@@ -10,7 +10,7 @@ import { useToast } from '@/components/ui/Toast';
 import { settle } from '@/lib/firestore';
 import { cn } from '@/lib/cn';
 import { MACRO_STYLE_LABEL, type MacroStyle, type Nutrition, type UserProfile } from '@/lib/metabolism';
-import { DEFAULT_NUTRITION, DIETS, userNutrition, type NutritionPrefs } from '@/lib/coach';
+import { DEFAULT_NUTRITION, DIETS, metabolismReliable, userNutrition, type NutritionPrefs } from '@/lib/coach';
 import {
   SLOT_LABEL,
   dayTotals,
@@ -264,17 +264,18 @@ function DayPills({ value, onChange, plan, target, cycling }: { value: number; o
 export function WhyKcal({ base, day }: { base: Nutrition; day?: Nutrition & { delta?: number } }) {
   const { settings } = useSettings();
   const [open, setOpen] = useState(false);
-  // metabolismo reale solo se è quello usato davvero per la settimana
-  const real = settings.weekCal?.tdee != null && settings.weekCal.week === mondayISO() ? settings.metabolism : null;
-  const adj = real ? 0 : (settings.kcalAdjust ?? 0);
+  // stessi numeri usati per l'obiettivo: quelli fissati il lunedì (consumo e correzione)
+  const wk = settings.weekCal && settings.weekCal.week === mondayISO() ? settings.weekCal : null;
+  const real = wk ? (wk.tdee != null ? settings.metabolism : null) : metabolismReliable(settings.metabolism) ? settings.metabolism : null;
+  const adj = wk ? wk.adjust : real ? 0 : (settings.kcalAdjust ?? 0);
   const total = day?.target ?? base.target;
   const delta = day?.delta ?? 0;
   const ritmo = base.target - base.tdee - adj;
   const phase = settings.goalPlan?.phases[settings.goalPlan.current];
   const rows: [string, number, boolean?][] = [
-    [real ? `Il tuo metabolismo (dal diario, ${real.days} giornate)` : 'Fabbisogno stimato (formula)', base.tdee],
+    [real ? `Il tuo metabolismo (dal diario, ${real.days} giornate)` : wk && wk.formula == null ? 'Fabbisogno stimato (formula)' : 'Consumo calcolato (basale, movimento, allenamenti, digestione)', base.tdee],
     [phase ? `Ritmo per l'obiettivo "${phase.label}"` : 'Obiettivo (surplus/deficit)', ritmo, true],
-    ...(adj ? ([['Correzione dei check-in', adj, true]] as [string, number, boolean][]) : []),
+    ...(adj ? ([['Correzione dall\'andamento del peso', adj, true]] as [string, number, boolean][]) : []),
     ...(delta ? ([[delta > 0 ? 'Giorno di allenamento (+ carboidrati)' : 'Giorno di riposo (riequilibrio)', delta, true]] as [string, number, boolean][]) : []),
   ];
   return (

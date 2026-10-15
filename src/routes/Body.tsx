@@ -12,6 +12,7 @@ import { useSettings } from '@/hooks/use-settings';
 import { mondayISO, todayISO } from '@/lib/date-utils';
 import type { BodyLog } from '@/types';
 import { useBodyLogs } from '@/hooks/use-body-logs';
+import { useEffectiveProfile } from '@/hooks/use-effective-profile';
 import { TopBar } from '@/components/layout/TopBar';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -30,9 +31,10 @@ import { MuscleWeekCard } from '@/components/body/MuscleWeek';
 import { useRecentFoodLogs } from '@/hooks/use-athlete';
 import { useSessions } from '@/hooks/use-sessions';
 import { userNutrition } from '@/lib/coach';
-import { completeDays, METABOLISM_RELIABLE_DAYS, METABOLISM_WEIGH_DAYS, waterEvents, weighSpan, weightTrend } from '@/lib/body-model';
+import { waterEvents, weightTrend } from '@/lib/body-model';
 import { SectionTitle } from '@/components/ui/Help';
 import { DailyPhotos } from '@/components/body/DailyPhotos';
+import { EnergyCard } from '@/components/body/EnergyCard';
 
 type BodyTab = 'muscles' | 'weight' | 'checkin';
 
@@ -55,6 +57,7 @@ function series(logs: BodyLog[], field: 'weight' | 'bodyFat', days: number): Wei
 export default function Body() {
   const { bodyLogs, remove, loading, save } = useBodyLogs();
   const { settings } = useSettings();
+  const effProfile = useEffectiveProfile();
   const [photoOpen, setPhotoOpen] = useState(false);
   const photosApi = usePhotos();
   const latestWeight = bodyLogs.find((b) => b.weight != null)?.weight ?? settings.profile?.weightKg;
@@ -73,7 +76,7 @@ export default function Body() {
   // Peso: pesate + peso reale (media mobile esponenziale) + pesate gonfiate da acqua
   const foodLogs = useRecentFoodLogs(120);
   const { sessions, groupOf } = useSessions();
-  const target = settings.profile ? userNutrition(settings.profile, settings).target : null;
+  const target = effProfile ? userNutrition(effProfile, settings).target : null;
   const water = useMemo(() => waterEvents(bodyLogs, foodLogs, sessions, target, groupOf), [bodyLogs, foodLogs, sessions, target, groupOf]);
   const weightData = useMemo(() => {
     const since = toISODate(subDays(new Date(), period));
@@ -154,7 +157,7 @@ export default function Body() {
           <MuscleWeekCard />
         ) : tab === 'checkin' ? (
           <>
-            {settings.profile && <WeeklyCheckIn profile={settings.profile} autoOpen={params.get('checkin') === '1'} />}
+            {effProfile && <WeeklyCheckIn profile={effProfile} autoOpen={params.get('checkin') === '1'} />}
             <DailyPhotos />
           </>
         ) : bodyLogs.length === 0 ? (
@@ -263,7 +266,7 @@ export default function Body() {
                 </>
               )}
               <Measurements logs={bodyLogs} compact />
-              <MetabolismLine />
+              <EnergyCard />
             </Card>
 
             <section>
@@ -353,35 +356,3 @@ function EnergyDots({ value }: { value: number }) {
   );
 }
 
-/** Metabolismo reale (dal diario) o quanto manca per calcolarlo. */
-function MetabolismLine() {
-  const { settings } = useSettings();
-  const foodLogs = useRecentFoodLogs(21);
-  const m = settings.metabolism;
-  const complete = completeDays(foodLogs).length;
-  const { bodyLogs } = useBodyLogs();
-  const span = weighSpan(bodyLogs);
-  return (
-    <div className="mt-3 rounded-md bg-surface-2 p-3 text-sm text-fg-2">
-      <SectionTitle help="body-metabolism" isNew className="text-xs font-bold uppercase tracking-wider text-fg-3">
-        Il tuo metabolismo
-      </SectionTitle>
-      {m && m.days >= METABOLISM_RELIABLE_DAYS ? (
-        <p className="mt-1">
-          🔥 <strong className="font-display text-fg">{m.tdee.toLocaleString('it-IT')} kcal</strong> al giorno (±{m.sd}), dal diario di {m.days} giornate complete. Si
-          aggiorna ogni giorno.
-        </p>
-      ) : m ? (
-        <p className="mt-1">
-          ⏳ Stima provvisoria: <strong className="font-display text-fg">{m.tdee.toLocaleString('it-IT')} kcal</strong> al giorno (±{m.sd}). Diventa affidabile con{' '}
-          {METABOLISM_RELIABLE_DAYS} giornate complete nel diario (ora {m.days}/{METABOLISM_RELIABLE_DAYS}): fino ad allora le calorie seguono la formula.
-        </p>
-      ) : (
-        <p className="mt-1">
-          Per calcolarlo dai tuoi dati servono 7 giornate complete nel diario negli ultimi 21 giorni (ora {Math.min(complete, 7)}/7) e {METABOLISM_WEIGH_DAYS} giorni di
-          pesate, dalla prima all'ultima (ora {Math.min(span, METABOLISM_WEIGH_DAYS)}/{METABOLISM_WEIGH_DAYS}). Fino ad allora uso la formula.
-        </p>
-      )}
-    </div>
-  );
-}

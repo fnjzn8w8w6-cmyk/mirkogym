@@ -1,4 +1,3 @@
-import { METABOLISM_RELIABLE_DAYS } from '@/lib/body-model';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LevelScale } from '@/components/ui/LevelScale';
 import { QUESTIONS } from './checkin-questions';
@@ -16,8 +15,8 @@ import { weekTargets } from '@/lib/habits';
 import { NewBadge, SectionTitle } from '@/components/ui/Help';
 import { analyzeWeekPhoto, compressPhoto, thumbOf, type WeekPhotoResult } from '@/lib/progress-photos';
 import { toISODate } from '@/lib/date-utils';
-import { estimateTdee, planRate, planStatus } from '@/lib/goal-plan';
-import { userNutrition } from '@/lib/coach';
+import { planRate, planStatus } from '@/lib/goal-plan';
+import { metabolismReliable, userNutrition } from '@/lib/coach';
 import { useBodyLogs } from '@/hooks/use-body-logs';
 import { useMesocycle } from '@/hooks/use-mesocycle';
 import { Card } from '@/components/ui/Card';
@@ -92,9 +91,6 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
     const plan = settings.goalPlan;
     const st = plan ? planStatus(plan, bodyLogs, profile.weightKg) : null;
     const rate = plan ? planRate(plan, bodyLogs, profile.weightKg) : null;
-    const est = estimateTdee(foodLogs, bodyLogs);
-    const current = userNutrition(profile, settings).target;
-    const desired = est ? est.tdee + (rate ?? 0) * 1100 + 0 : 0;
     let goalLine: string | undefined;
     if (st) {
       const kg = (v: number) => v.toFixed(1).replace('.', ',');
@@ -107,10 +103,9 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
     }
     return weekStats(sessions, bodyLogs, profile, Date.now(), {
       expectedRate: rate,
-      diary: est && !(settings.metabolism && settings.metabolism.days >= METABOLISM_RELIABLE_DAYS) ? { ...est, desired, current } : null,
       goalLine,
-      // solo quando la stima è affidabile (prima le calorie seguono ancora la formula)
-      metabolism: settings.metabolism && settings.metabolism.days >= METABOLISM_RELIABLE_DAYS ? settings.metabolism.tdee : null,
+      // solo quando la stima dal diario è affidabile e plausibile (prima le calorie seguono il consumo calcolato)
+      metabolism: settings.metabolism && metabolismReliable(settings.metabolism) ? settings.metabolism.tdee : null,
     });
   }, [sessions, bodyLogs, profile, settings, foodLogs]);
   const deloadAvailable = Boolean(meso.mesocycle) && !meso.isDeloadWeek;

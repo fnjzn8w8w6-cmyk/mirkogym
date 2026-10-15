@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { useSettings } from './use-settings';
 import { useSessions } from './use-sessions';
-import { useBodyLogs } from './use-body-logs';
 import { useSchedule } from './use-schedule';
 import { useMesocycle } from './use-mesocycle';
 import { useAthlete, useRecentFoodLogs } from './use-athlete';
@@ -10,6 +9,7 @@ import { userNutrition } from '@/lib/coach';
 import { buildProposals, learnedFavorites, resolveCycling, weekDays, weekTargets } from '@/lib/habits';
 import { fromISODate, mondayISO, toISODate, todayISO } from '@/lib/date-utils';
 import { useData } from './data-context';
+import { useEffectiveProfile } from './use-effective-profile';
 import type { UserProfile } from '@/lib/metabolism';
 
 /** Giorni con più calorie (allenamento) o null se le calorie sono uguali tutti i giorni. */
@@ -31,14 +31,14 @@ export function useCyclingDays(): number[] | null {
 export function useDayTarget(profile: UserProfile | undefined, date = todayISO()) {
   const { settings } = useSettings();
   const { sessions } = useSessions();
-  const { bodyLogs } = useBodyLogs();
   const { activeSession } = useData();
   const logs = useRecentFoodLogs(21);
   const cycling = useCyclingDays();
+  // peso e massa grassa attuali (stessi numeri in tutta l'app)
+  const eff = useEffectiveProfile();
   return useMemo(() => {
     if (!profile) return null;
-    const w = bodyLogs.find((b) => b.weight != null)?.weight ?? profile.weightKg;
-    const base = userNutrition({ ...profile, weightKg: w }, settings);
+    const base = userNutrition(eff ?? profile, settings);
     const today = todayISO();
     const trainedOn = new Set(sessions.map((s) => toISODate(s.date)));
     const choices = new Map(logs.filter((l) => l.dayType).map((l) => [l.date, l.dayType!]));
@@ -61,7 +61,7 @@ export function useDayTarget(profile: UserProfile | undefined, date = todayISO()
       weekDays: days,
       week: weekTargets(base, cycling),
     };
-  }, [profile, settings, sessions, bodyLogs, date, cycling, logs, activeSession]);
+  }, [profile, eff, settings, sessions, date, cycling, logs, activeSession]);
 }
 
 /** Ricette che mangi davvero (dal diario): il piano le propone più spesso. */

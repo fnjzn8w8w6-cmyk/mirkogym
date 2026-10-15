@@ -42,7 +42,8 @@ function measured(logs: BodyLog[], l: BodyLog): number {
  * Chi dimagrisce perde soprattutto grasso (~75% del peso), chi ingrassa ne prende ~60%.
  */
 export function bodyFatNow(bodyLogs: BodyLog[], now = Date.now()): BodyFatNow | null {
-  const withBf = bodyLogs.filter((l) => l.bodyFat != null).sort((a, b) => b.date.localeCompare(a.date));
+  // la stima dal BMI del questionario iniziale non è una misura (sbaglia molto con chi è muscoloso)
+  const withBf = bodyLogs.filter((l) => l.bodyFat != null && !fromBmi(l)).sort((a, b) => b.date.localeCompare(a.date));
   const anchor = withBf[0];
   if (!anchor || now - ts(anchor.date) > MAX_AGE) return null;
   const bf = measured(bodyLogs, anchor);
@@ -63,3 +64,6 @@ export function bodyFatNow(bodyLogs: BodyLog[], now = Date.now()): BodyFatNow | 
 }
 
 const round = (n: number) => Math.round(n * 10) / 10;
+
+/** Massa grassa calcolata dal BMI (Deurenberg) al primo accesso, non misurata. */
+export const fromBmi = (l: BodyLog) => !l.bodyFatSource && /Deurenberg|da BMI/i.test(l.notes ?? '');

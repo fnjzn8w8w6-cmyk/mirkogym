@@ -14,6 +14,8 @@ import { useSessions } from './use-sessions';
 import { useSchedule } from './use-schedule';
 import { useSettings } from './use-settings';
 import { useBodyLogs } from './use-body-logs';
+import { useEffectiveProfile } from './use-effective-profile';
+import { energyText } from '@/lib/energy';
 
 /*
  * Diario degli ultimi 180 giorni: UNA sola sottoscrizione condivisa da tutta l'app
@@ -90,10 +92,10 @@ export function useAthlete() {
   const { settings } = useSettings();
   const { bodyLogs } = useBodyLogs();
   const foodLogs = useRecentFoodLogs();
+  const eff = useEffectiveProfile();
   return useMemo(() => {
-    const p = settings.profile;
-    const w = bodyLogs.find((b) => b.weight != null)?.weight ?? p?.weightKg;
-    const t = p ? userNutrition({ ...p, weightKg: w ?? p.weightKg }, settings) : null;
+    const p = eff;
+    const t = p ? userNutrition(p, settings) : null;
     const report = athleteReport({
       sessions,
       days,
@@ -111,7 +113,8 @@ export function useAthlete() {
       (plan && p ? `\n${planText(plan, planStatus(plan, bodyLogs, p.weightKg))}` : '') +
       (lastCheck ? `\nUltimo check-in (${new Date(lastCheck.date).toLocaleDateString('it-IT')}): ${lastCheck.summary.slice(0, 400)}` : '') +
       (settings.coachAnalysis ? `\nUltima analisi del coach: ${settings.coachAnalysis.text.slice(0, 500)}` : '') +
-      (t ? `\n${calorieText(t.target, settings.weekCal, resolveCycling({ enabled: settings.calorieCycling, manual: settings.carbCycling, sessions, perWeek: p?.daysPerWeek ?? days.length }))}` : '');
+      (t ? `\n${calorieText(t.target, settings.weekCal, resolveCycling({ enabled: settings.calorieCycling, manual: settings.carbCycling, sessions, perWeek: p?.daysPerWeek ?? days.length }))}` : '') +
+      (settings.energy ? `\nCONSUMO: ${energyText(settings.energy)}.` : '');
     return { report, text };
-  }, [sessions, days, foodLogs, bodyLogs, settings, nameOf, groupOf]);
+  }, [sessions, days, foodLogs, bodyLogs, settings, nameOf, groupOf, eff]);
 }

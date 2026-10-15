@@ -7,6 +7,7 @@ import { useRecentFoodLogs } from './use-athlete';
 import { ACHIEVEMENTS, computeStats, isUnlocked, levelOf, liftRanks, xpOf, type StatsExtra } from '@/lib/gamification';
 import { weekKey, weeklyQuests } from '@/lib/quests';
 import { userNutrition } from '@/lib/coach';
+import { useEffectiveProfile } from './use-effective-profile';
 import { weekStreak } from '@/lib/analytics';
 
 const WEEK = 7 * 86400000;
@@ -17,12 +18,12 @@ export function useStatsExtra(): StatsExtra {
   const { bodyLogs } = useBodyLogs();
   const { settings } = useSettings();
   const foodLogs = useRecentFoodLogs(180);
+  const eff = useEffectiveProfile();
   return useMemo(() => {
-    const p = settings.profile;
-    const bodyweight = bodyLogs.find((b) => b.weight != null)?.weight ?? p?.weightKg;
-    const t = p ? userNutrition({ ...p, weightKg: bodyweight ?? p.weightKg }, settings) : null;
+    const bodyweight = bodyLogs.find((b) => b.weight != null)?.weight ?? eff?.weightKg;
+    const t = eff ? userNutrition(eff, settings) : null;
     return { foodLogs, target: t ? { kcal: t.target, protein: t.protein } : null, quests: settings.questsDone?.length ?? 0, bodyweight, groupOf };
-  }, [foodLogs, bodyLogs, settings, groupOf]);
+  }, [foodLogs, bodyLogs, settings, groupOf, eff]);
 }
 
 /** Livello, traguardi, ranghi di forza, sfide settimanali e striscia dell'utente. */

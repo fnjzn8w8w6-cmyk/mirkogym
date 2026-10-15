@@ -133,6 +133,10 @@ export interface Mesocycle {
 import type { UserProfile } from '@/lib/metabolism';
 import type { CoachPrefs } from '@/lib/program-generator';
 import type { MetabolismState, NutritionPrefs } from '@/lib/coach';
+import type { EnergyBreakdown } from '@/lib/energy';
+
+/** Consumo calcolato salvato con il giorno del calcolo. */
+export type EnergyState = EnergyBreakdown & { date: string };
 import type { Lang } from '@/lib/exercise-i18n';
 import type { WeekPlan } from '@/lib/recipes';
 import type { Food, Macros } from '@/lib/foods';
@@ -164,6 +168,8 @@ export interface Settings {
   carbCycling?: number[] | null;
   /** Metabolismo reale stimato dal diario (null = si usa la formula). */
   metabolism?: MetabolismState | null;
+  /** Consumo calcolato voce per voce (basale, movimento, allenamenti, digestione), aggiornato una volta al giorno. */
+  energy?: EnergyState | null;
   /** Obiettivo a fasi con scadenze (es. massa → cut). */
   goalPlan?: GoalPlan | null;
   /** Sfide settimanali completate ("lunedì:id"). */
@@ -208,10 +214,14 @@ export interface Settings {
 export interface WeekCalories {
   /** lunedì della settimana (YYYY-MM-DD) */
   week: string;
-  /** metabolismo reale usato per la settimana (null = formula + correzione) */
+  /** metabolismo reale usato per la settimana (null = consumo calcolato + correzione) */
   tdee: number | null;
-  /** correzione in kcal (solo senza metabolismo reale) */
+  /** consumo calcolato voce per voce fissato il lunedì (assente nelle settimane calcolate con la vecchia formula) */
+  formula?: number;
+  /** correzione in kcal applicata questa settimana (obiettivo − consumo e ritmo) */
   adjust: number;
+  /** correzione voluta dall'andamento del peso (può essere diversa da adjust per il limite di ±200 kcal a settimana) */
+  intent?: number;
   /** obiettivo medio giornaliero della settimana */
   target: number;
   /** obiettivo medio della settimana prima (null = primo calcolo) */
@@ -222,9 +232,11 @@ export interface WeekCalories {
   expected: number | null;
   /** giorni con il diario compilato negli ultimi 7 */
   logged: number;
+  /** peso e diario non tornano (acqua/glicogeno): l'andamento del peso non ha corretto le calorie */
+  water?: boolean;
   at: number;
   /** valori della settimana prima, per "Annulla" */
-  undo?: { tdee: number | null; adjust: number; target: number };
+  undo?: { tdee: number | null; adjust: number; target: number; formula?: number };
   undone?: boolean;
 }
 

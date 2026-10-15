@@ -66,6 +66,7 @@ export function ProfileSetup() {
   const [height, setHeight] = useState(prev ? String(prev.heightCm) : '');
   const [weight, setWeight] = useState(prev ? String(prev.weightKg).replace('.', ',') : '');
   const [activity, setActivity] = useState<UserProfile['activity'] | null>(prev?.activity ?? null);
+  const [stepsTxt, setStepsTxt] = useState(prev?.stepsPerDay ? String(prev.stepsPerDay) : '');
   const [experience, setExperience] = useState<Experience | null>(prev?.experience ?? null);
   const [goal, setGoal] = useState<Goal | null>(prev?.goal ?? null);
   const [days, setDays] = useState(prev?.daysPerWeek ?? 4);
@@ -110,6 +111,8 @@ export function ProfileSetup() {
           hipCm: parseNum(hip) ?? undefined,
           bodyFatPct: parseNum(bfKnown) ?? undefined,
           bodyFatSource: parseNum(bfKnown) != null ? (bfSource ?? 'manual') : undefined,
+          // 0 = stima dal livello di attività
+          stepsPerDay: parseNum(stepsTxt) ? Math.min(60000, Math.round(parseNum(stepsTxt)!)) : 0,
         }
       : null;
 
@@ -232,6 +235,12 @@ export function ProfileSetup() {
                 {ACTIVITY.map((o) => (
                   <Option key={o.value} active={activity === o.value} onClick={() => setActivity(o.value)} label={o.label} description={o.description} emoji={['🪑', '🚶', '🚴', '🏃', '⛏️'][o.value - 1]} />
                 ))}
+              </div>
+              <div className="mt-4">
+                <Input label="Passi medi al giorno (facoltativo)" kind="number" value={stepsTxt} onChange={(e) => setStepsTxt(e.target.value.replace(/\D/g, ''))} />
+                <p className="mt-1 text-sm text-fg-3">
+                  Se li conosci rendono il calcolo più preciso (iPhone: app Salute → Passi → S). Altrimenti li stimo dal livello scelto; puoi inserirli quando vuoi in Corpo → Peso.
+                </p>
               </div>
             </>
           )}

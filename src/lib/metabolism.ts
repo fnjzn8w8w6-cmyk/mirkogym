@@ -27,6 +27,8 @@ export interface UserProfile {
   /** Massa grassa nota (misurata o stimata da foto): ha la priorità sulle formule. */
   bodyFatPct?: number;
   bodyFatSource?: 'manual' | 'photo';
+  /** passi medi al giorno (facoltativo: senza, si stimano dal livello di attività) */
+  stepsPerDay?: number;
 }
 
 export type BodyFatMethod = 'manual' | 'photo' | 'navy' | 'bmi';
@@ -66,6 +68,14 @@ export function bmr(p: UserProfile): number {
   return Math.round(p.sex === 'm' ? base + 5 : base - 161);
 }
 
+/** Metabolismo basale usato dall'app: dalla massa magra (Katch-McArdle) se la massa grassa è misurata o stimata bene, altrimenti Mifflin-St Jeor. */
+export function basal(p: UserProfile): { value: number; method: 'katch' | 'mifflin' } {
+  const c = composition(p);
+  if (c.bf.method !== 'bmi') return { value: Math.round(370 + 21.6 * c.lean), method: 'katch' };
+  return { value: bmr(p), method: 'mifflin' };
+}
+
+/** Vecchia stima (basale × fattore di attività): resta solo per le settimane calcolate prima del consumo voce per voce. */
 export const tdee = (p: UserProfile): number => Math.round(bmr(p) * (ACTIVITY.find((a) => a.value === p.activity)?.factor ?? 1.375));
 
 /** Grasso corporeo stimato da BMI, età e sesso (Deurenberg 1991). */
@@ -127,7 +137,8 @@ export function nutrition(p: UserProfile, adjust = 0, style: MacroStyle = 'stand
   const t = tdeeOverride ?? tdee(p);
   const goal = GOALS.find((g) => g.value === p.goal) ?? GOALS[3];
   // Minimo di sicurezza: mai sotto il metabolismo basale né sotto 1500/1200 kcal
-  const floor = Math.max(bmr(p), p.sex === 'm' ? 1500 : 1200);
+  const b = basal(p).value;
+  const floor = Math.max(b, p.sex === 'm' ? 1500 : 1200);
   // Con un obiettivo a scadenza le calorie seguono il ritmo necessario (1 kg/sett ≈ 1100 kcal/giorno)
   const base = rateKgWeek != null ? t + rateKgWeek * 1100 : t * (1 + goal.kcal);
   const target = Math.max(floor, Math.round((base + adjust) / 10) * 10);
@@ -143,7 +154,7 @@ export function nutrition(p: UserProfile, adjust = 0, style: MacroStyle = 'stand
   const minCarbs = style === 'low-carb' ? 80 : 100;
   const carbs = Math.max(minCarbs, Math.round((target - protein * 4 - fat * 9) / 4));
   if (protein * 4 + fat * 9 + carbs * 4 > target + 40) fat = Math.max(Math.round(p.weightKg * 0.6), Math.round((target - protein * 4 - carbs * 4) / 9));
-  return { bmr: bmr(p), tdee: t, target, protein, fat, carbs };
+  return { bmr: b, tdee: t, target, protein, fat, carbs };
 }
 
 export function composition(p: UserProfile) {

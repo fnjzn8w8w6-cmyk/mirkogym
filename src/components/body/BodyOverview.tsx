@@ -168,7 +168,7 @@ export function WeekCaloriesCard() {
       </p>
       <div className="mt-3 grid gap-2">
         <Stat label="Peso (trend)" value={w.trend != null ? `${w.trend >= 0 ? '+' : ''}${String(w.trend).replace('.', ',')} kg/sett` : 'servono più pesate'} note={w.expected != null ? `atteso ${w.expected >= 0 ? '+' : ''}${String(w.expected).replace('.', ',')}` : undefined} />
-        <Stat label={w.tdee ? 'Dispendio reale stimato' : 'Dispendio (formula)'} value={`${nf(w.tdee ?? dayT.base.tdee)} kcal`} note={w.prevTdee && w.tdee && w.prevTdee !== w.tdee ? `prima ${nf(w.prevTdee)}` : w.tdee ? 'dal diario e dal peso' : 'finché il diario non basta'} />
+        <Stat label={w.tdee ? 'Dispendio reale stimato' : 'Consumo calcolato'} value={`${nf(w.tdee ?? dayT.base.tdee)} kcal`} note={w.prevTdee && w.tdee && w.prevTdee !== w.tdee ? `prima ${nf(w.prevTdee)}` : w.tdee ? 'dal diario e dal peso' : w.formula != null ? 'basale + movimento + allenamenti + digestione' : 'formula (vecchio calcolo)'} />
         <Stat label="Giorni registrati (ultimi 7)" value={`${w.logged} su 7`} note={w.logged >= 5 ? 'dati affidabili' : 'registra tutti i pasti'} />
       </div>
       <p className="mt-3 text-sm text-fg-2">
@@ -176,7 +176,7 @@ export function WeekCaloriesCard() {
       </p>
       {why && (
         <p className="mt-2 rounded-md bg-surface-2 p-3 text-xs text-fg-2">
-          Ogni lunedì l'app confronta l'andamento del peso (media delle pesate) con le calorie che hai registrato e stima quanto consumi davvero. Poi fissa l'obiettivo della settimana: dispendio reale + quanto serve per il ritmo del tuo obiettivo. Check-in, coach e analisi usano questi stessi numeri.
+          Ogni lunedì l'app calcola quanto consumi (basale, passi, allenamenti fatti e digestione) e lo confronta con l'andamento del peso e con le calorie che hai registrato. Poi fissa l'obiettivo della settimana: consumo + quanto serve per il ritmo del tuo obiettivo, con cambi di al massimo 200 kcal a settimana. Check-in, coach e analisi usano questi stessi numeri.
         </p>
       )}
       <div className="mt-3 grid grid-cols-2 gap-2">

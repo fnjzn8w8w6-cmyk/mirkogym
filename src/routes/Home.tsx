@@ -5,6 +5,7 @@ import { ChevronRight, Dumbbell, Play, Repeat, Timer } from 'lucide-react';
 import { WeekCard } from '@/components/home/MuscleCard';
 import { useProgress } from '@/hooks/use-progress';
 import { userNutrition } from '@/lib/coach';
+import { useEffectiveProfile } from '@/hooks/use-effective-profile';
 import { ClipboardCheck, Sparkles } from 'lucide-react';
 import { checkInDue } from '@/lib/checkin';
 import { TrendLine } from '@/components/ui/Trend';
@@ -134,13 +135,12 @@ function WeeklyQuests() {
 
 function TodayDiet({ onOpen }: { onOpen: () => void }) {
   const { settings } = useSettings();
-  const { bodyLogs } = useBodyLogs();
   const { entries } = useFoodLog(todayISO());
   const profile = settings.profile!;
-  const w = bodyLogs.find((b) => b.weight != null)?.weight ?? profile.weightKg;
+  const eff = useEffectiveProfile();
   const dayT = useDayTarget(profile);
   const { uid } = useData();
-  const target = dayT?.day ?? userNutrition({ ...profile, weightKg: w }, settings);
+  const target = dayT?.day ?? userNutrition(eff ?? profile, settings);
   const t = sumMacros(entries.map(entryMacros));
   return (
     <Card interactive className="p-4" onClick={onOpen} role="link" aria-label="Apri la dieta">

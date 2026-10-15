@@ -20,7 +20,7 @@ import { settle } from '@/lib/firestore';
 import { GoalCard } from '@/components/goal/GoalPlan';
 import { SectionTitle } from '@/components/ui/Help';
 import { cn } from '@/lib/cn';
-import { bodyFatNow } from '@/lib/bodyfat-estimate';
+import { useEffectiveProfile } from '@/hooks/use-effective-profile';
 
 /** Ranghi visibili prima di «Mostra tutti». */
 const RANKS_SHOWN = 6;
@@ -33,13 +33,9 @@ export default function Profile() {
   const { settings, update } = useSettings();
   const { bodyLogs } = useBodyLogs();
   const profile = settings.profile;
-  const analysis = useMemo(() => {
-    if (!profile) return null;
-    // Usa il peso più recente registrato in "Corpo"
-    const lastBf = bodyFatNow(bodyLogs)?.value;
-    const p = { ...profile, weightKg: bodyweight || profile.weightKg, bodyFatPct: lastBf ?? profile.bodyFatPct };
-    return { n: userNutrition(p, settings), c: composition(p), p };
-  }, [profile, bodyweight, bodyLogs, settings]);
+  // peso e massa grassa attuali registrati in "Corpo" (stessi numeri di Dieta e Corpo)
+  const eff = useEffectiveProfile();
+  const analysis = useMemo(() => (eff ? { n: userNutrition(eff, settings), c: composition(eff), p: eff } : null), [eff, settings]);
 
 
   const lastBfNote = bodyLogs.find((b) => b.bodyFat != null)?.notes ?? 'stima dal questionario';

@@ -110,7 +110,7 @@ export function weekStats(
 export function evaluate(a: CheckInAnswers, s: CheckInStats, deloadAvailable: boolean): CheckInResult {
   const points: string[] = [];
   if (s.goalLine) points.push(s.goalLine);
-  if (s.metabolism) points.push(`🔥 Il tuo metabolismo reale è ${s.metabolism} kcal: le calorie si aggiornano già ogni giorno, quindi nessuna correzione settimanale.`);
+  if (s.metabolism) points.push(`🔥 Il tuo metabolismo reale (dal diario e dal peso) è ${s.metabolism} kcal: l'aggiornamento del lunedì usa questo valore.`);
   else if (s.diaryTdee) points.push(`🍽️ Dal tuo diario (${s.diaryDays} giornate) il tuo fabbisogno reale è circa ${s.diaryTdee} kcal: uso questo dato per correggere le calorie.`);
   // Fatica: energia e sonno bassi, stress e indolenzimento alti
   const fatigue = Math.round((((5 - a.energy) + (5 - a.sleep) + (a.stress - 1) + (a.soreness - 1)) / 16) * 100);

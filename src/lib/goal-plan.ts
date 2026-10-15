@@ -4,7 +4,7 @@
  * - Il ritmo necessario (kg/settimana) determina le calorie: 1 kg/sett ≈ 1100 kcal/giorno.
  * - Ogni settimana si confronta il peso reale (tendenza) con il percorso previsto.
  */
-import type { BodyLog, FoodLog } from '@/types';
+import type { BodyLog } from '@/types';
 import { callAIJson, num, oneOf, str, type AIOptions } from './ai';
 import { GOALS, type Goal, type UserProfile } from './metabolism';
 import { toISODate } from './date-utils';
@@ -228,29 +228,6 @@ export function planRate(plan: GoalPlan | null | undefined, logs: BodyLog[], fal
   const st = planStatus(plan, logs, fallbackWeight);
   if (!st || st.state === 'reached') return st ? 0 : null;
   return Math.round(st.rate * 100) / 100;
-}
-
-/* ---------- Fabbisogno reale dal diario ---------- */
-
-/**
- * Fabbisogno reale stimato: calorie medie mangiate − variazione di peso × 7700.
- * Serve un diario abbastanza completo (≥ 10 giornate da almeno 1000 kcal negli ultimi 21 giorni) e ≥ 4 pesate.
- */
-export function estimateTdee(foodLogs: FoodLog[], bodyLogs: BodyLog[], now = Date.now()): { tdee: number; days: number } | null {
-  const from = now - 21 * DAY;
-  const kcal = (l: FoodLog) => l.entries.reduce((a, e) => a + (e.unit === 'g' ? (e.per.kcal * e.qty) / 100 : e.per.kcal * e.qty), 0);
-  const days = foodLogs.filter((l) => new Date(`${l.date}T12:00:00`).getTime() >= from).map(kcal).filter((k) => k >= 1000);
-  const pts = bodyLogs
-    .filter((l) => l.weight != null && new Date(l.date).getTime() >= from)
-    .map((l) => ({ x: new Date(l.date).getTime() / DAY, y: l.weight as number }));
-  if (days.length < 10 || pts.length < 4) return null;
-  const mx = pts.reduce((a, p) => a + p.x, 0) / pts.length;
-  const my = pts.reduce((a, p) => a + p.y, 0) / pts.length;
-  const den = pts.reduce((a, p) => a + (p.x - mx) ** 2, 0);
-  if (den === 0) return null;
-  const slope = pts.reduce((a, p) => a + (p.x - mx) * (p.y - my), 0) / den;
-  const intake = days.reduce((a, b) => a + b, 0) / days.length;
-  return { tdee: Math.round((intake - slope * 7700) / 10) * 10, days: days.length };
 }
 
 /** Testo del piano per la memoria del coach. */

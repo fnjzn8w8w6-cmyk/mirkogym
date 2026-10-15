@@ -13,6 +13,7 @@ import { useBodyLogs } from '@/hooks/use-body-logs';
 import { settle } from '@/lib/firestore';
 import { cn } from '@/lib/cn';
 import { userNutrition } from '@/lib/coach';
+import { useEffectiveProfile } from '@/hooks/use-effective-profile';
 import type { UserProfile } from '@/lib/metabolism';
 import { useRecentFoodLogs } from '@/hooks/use-athlete';
 import { useSessions } from '@/hooks/use-sessions';
@@ -185,11 +186,13 @@ export function GoalCard({ compact }: { compact?: boolean }) {
   const { sessions, groupOf } = useSessions();
   const fc = useMemo(() => (st && st.state !== 'reached' ? forecast(bodyLogs, targetWeight(st.phase)) : null), [st, bodyLogs]);
   const lastScale = bodyLogs.find((b) => b.weight != null);
+  // peso e massa grassa attuali per le calorie
+  const eff = useEffectiveProfile();
   const water = useMemo(() => {
-    if (!p) return null;
-    const ev = waterEvents(bodyLogs, foodLogs, sessions, userNutrition(p, settings).target, groupOf).slice(-1)[0];
+    if (!eff) return null;
+    const ev = waterEvents(bodyLogs, foodLogs, sessions, userNutrition(eff, settings).target, groupOf).slice(-1)[0];
     return ev && Date.now() - new Date(`${ev.date}T12:00:00`).getTime() <= 4 * 86400000 ? ev : null;
-  }, [p, bodyLogs, foodLogs, sessions, settings, groupOf]);
+  }, [eff, bodyLogs, foodLogs, sessions, settings, groupOf]);
   if (!p) return null;
 
   if (!plan || !st) {
@@ -209,7 +212,7 @@ export function GoalCard({ compact }: { compact?: boolean }) {
 
   const ph = st.phase;
   const next = plan.phases[plan.current + 1];
-  const nut = userNutrition(p, settings);
+  const nut = userNutrition(eff ?? p, settings);
   const tone =
     st.state === 'reached' || st.state === 'on-track' || st.state === 'ahead' ? 'text-accent-400' : st.state === 'behind' ? 'text-warning' : 'text-danger';
   const dot = st.state === 'reached' ? '🏁' : st.state === 'on-track' ? '🟢' : st.state === 'ahead' ? '🔵' : st.state === 'behind' ? '🟡' : '🔴';

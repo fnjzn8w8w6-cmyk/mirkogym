@@ -1,11 +1,13 @@
 import type { BodyLog, Session, WeekCalories } from '@/types';
 import { mondayISO } from './date-utils';
 import { callAI, callAIJson, num, oneOf, str, strArr, type AIOptions } from './ai';
-import { GOALS, EXPERIENCE, MACRO_STYLE_LABEL, nutrition, type Goal, type MacroStyle, type Nutrition, type UserProfile } from './metabolism';
+import { GOALS, EXPERIENCE, MACRO_STYLE_LABEL, nutrition, tdee, type Goal, type MacroStyle, type Nutrition, type UserProfile } from './metabolism';
 import { PRIORITY_KEYS, SLOT_IDS, SLOT_LABEL, type CoachPrefs } from './program-generator';
 import { NAME_IT } from './exercise-library';
 import { planRate, type GoalPlan } from './goal-plan';
 import { sessionTonnage } from './analytics';
+import { energyModel } from './energy';
+import { METABOLISM_RELIABLE_DAYS, robustSlope, settledFrom } from './body-model';
 
 /* =====================================================================
  * PERSONAL TRAINER — richiesta in linguaggio naturale → preferenze strutturate
@@ -84,20 +86,33 @@ export interface NutritionPrefs {
   summary?: string;
 }
 
-/** Obiettivi dell'utente: calorie con la correzione del check-in e stile dei macro scelto con il coach. */
+/** Metabolismo dal diario abbastanza affidabile da sostituire il consumo calcolato. */
+export const metabolismReliable = (m: MetabolismState | null | undefined): boolean =>
+  Boolean(m && m.days >= METABOLISM_RELIABLE_DAYS && (m.span ?? 0) >= METABOLISM_RELIABLE_DAYS && !m.anomalous);
+
+/**
+ * Obiettivi dell'utente. `p` deve avere peso e massa grassa attuali (useEffectiveProfile).
+ * Consumo usato: quello fissato il lunedì per la settimana; altrimenti il metabolismo dal diario (se affidabile),
+ * altrimenti il consumo calcolato voce per voce (salvato o, se manca, stimato con gli allenamenti previsti).
+ * `force` serve al calcolo del lunedì per provare un consumo e una correzione precisi.
+ */
 export const userNutrition = (
   p: UserProfile,
-  s: { kcalAdjust?: number; nutritionPrefs?: NutritionPrefs; goalPlan?: GoalPlan | null; metabolism?: MetabolismState | null; weekCal?: WeekCalories },
+  s: { kcalAdjust?: number; nutritionPrefs?: NutritionPrefs; goalPlan?: GoalPlan | null; metabolism?: MetabolismState | null; weekCal?: WeekCalories; energy?: { total: number } | null },
+  force?: { tdee: number; adjust: number },
 ): Nutrition => {
   // Obiettivo a fasi: la fase in corso decide tipo di obiettivo e ritmo (calorie)
   const phase = s.goalPlan?.phases[s.goalPlan.current];
   const prof = phase ? { ...p, goal: phase.type } : p;
+  const rate = phase ? planRate(s.goalPlan, [], p.weightKg) : null;
+  const style = s.nutritionPrefs?.style ?? 'standard';
+  if (force) return nutrition(prof, force.adjust, style, rate, force.tdee);
   // Aggiornamento settimanale: per tutta la settimana valgono i numeri fissati il lunedì
   const wk = s.weekCal && s.weekCal.week === mondayISO() ? s.weekCal : null;
+  if (wk) return nutrition(prof, wk.adjust, style, rate, wk.tdee ?? wk.formula ?? tdee(prof));
   // Con il metabolismo reale le correzioni non servono più (lo misura già)
-  const real = wk ? wk.tdee : (s.metabolism?.tdee ?? null);
-  const adjust = wk ? wk.adjust : (s.kcalAdjust ?? 0);
-  return nutrition(prof, wk ? adjust : real ? 0 : adjust, s.nutritionPrefs?.style ?? 'standard', phase ? planRate(s.goalPlan, [], p.weightKg) : null, real);
+  if (s.metabolism && metabolismReliable(s.metabolism)) return nutrition(prof, 0, style, rate, s.metabolism.tdee);
+  return nutrition(prof, s.kcalAdjust ?? 0, style, rate, s.energy?.total ?? energyModel(p).total);
 };
 
 /** Metabolismo reale salvato (aggiornato una volta al giorno, ±50 kcal). */
@@ -106,6 +121,12 @@ export interface MetabolismState {
   date: string;
   days: number;
   sd: number;
+  /** giorni di calendario coperti dalle pesate */
+  span?: number;
+  /** il dato del diario è troppo lontano dal consumo calcolato (probabile acqua/glicogeno): non si usa */
+  anomalous?: boolean;
+  /** valore ricavato da diario e peso, prima del controllo */
+  measured?: number;
 }
 
 export const DEFAULT_NUTRITION: NutritionPrefs = { diet: 'onnivora', meals: 4, allergies: '', dislikes: '', likes: '', cooking: 'medio' };
@@ -339,18 +360,24 @@ export interface Adaptive {
   message: string;
 }
 
-export function adaptiveCalories(logs: BodyLog[], profile: UserProfile, expectedRate: number | null = null): Adaptive | null {
-  const since = Date.now() - 28 * 86400000;
-  const pts = logs
-    .filter((l) => l.weight != null && new Date(l.date).getTime() >= since)
-    .map((l) => ({ x: new Date(l.date).getTime() / 86400000, y: l.weight as number }))
-    .sort((a, b) => a.x - b.x);
+export function adaptiveCalories(logs: BodyLog[], profile: UserProfile, expectedRate: number | null = null, now = Date.now()): Adaptive | null {
+  const since = now - 28 * 86400000;
+  // una pesata al giorno (media), ultime 4 settimane, senza la prima settimana di assestamento (acqua e glicogeno)
+  const settled = settledFrom(logs) ?? '';
+  const byDay = new Map<string, number[]>();
+  for (const l of logs)
+    if (l.weight != null && l.date >= settled && new Date(`${l.date}T12:00:00`).getTime() >= since) byDay.set(l.date, [...(byDay.get(l.date) ?? []), l.weight]);
+  const pts = [...byDay.entries()]
+    .map(([d, w]) => ({ t: new Date(`${d}T12:00:00`).getTime(), w: w.reduce((a, b) => a + b, 0) / w.length }))
+    .sort((a, b) => a.t - b.t);
   if (pts.length < 4) return null;
-  const span = pts[pts.length - 1].x - pts[0].x;
-  if (span < 10) return null;
-  const mx = pts.reduce((a, p) => a + p.x, 0) / pts.length;
-  const my = pts.reduce((a, p) => a + p.y, 0) / pts.length;
-  const slope = pts.reduce((a, p) => a + (p.x - mx) * (p.y - my), 0) / pts.reduce((a, p) => a + (p.x - mx) ** 2, 0); // kg/giorno
+  const span = (pts[pts.length - 1].t - pts[0].t) / 86400000;
+  // almeno 2 settimane di pesate
+  if (span < 13.5) return null;
+  // pendenza robusta: una pesata gonfia d'acqua non sposta il risultato
+  const slope = robustSlope(pts);
+  if (slope == null) return null;
+  const my = pts.reduce((a, p) => a + p.w, 0) / pts.length;
   const actual = slope * 7;
   const expected = expectedRate ?? EXPECTED_RATE[profile.goal] * my;
   // 1 kg di tessuto ≈ 7700 kcal

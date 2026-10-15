@@ -142,7 +142,8 @@ export const HELP = {
   'body-weekcal': {
     title: 'Aggiornamento settimanale delle calorie',
     body: [
-      'Ogni lunedì l\'app confronta l\'andamento del peso con le calorie che hai registrato e stima quanto consumi davvero (come le app di nutrizione più avanzate).',
+      'Ogni lunedì l\'app calcola quanto consumi (basale, passi, allenamenti fatti, digestione), lo confronta con l\'andamento del peso e con il diario, e corregge se il peso non va come previsto (come le app di nutrizione più avanzate). Se il peso cambia troppo in fretta per quello che mangi è acqua: quella settimana non corregge.',
+      'Cambi di al massimo 200 kcal a settimana: se il calcolo cambia di più, il resto arriva nelle settimane dopo.',
       'Poi fissa l\'obiettivo della settimana: resta uguale fino al lunedì dopo, così sai sempre cosa mangiare. Check-in, coach e analisi usano questi stessi numeri e non ne propongono altri.',
       'Ritmo di riferimento: in massa +0,25-0,5% del peso a settimana, in definizione −0,5-1%. Se non ti convince puoi annullare l\'aggiornamento della settimana.',
     ],
@@ -186,11 +187,13 @@ export const HELP = {
   },
   'body-bf-chart': { title: 'Massa grassa', body: ['Le misure di massa grassa nel tempo e, se impostato, il percorso verso la massa grassa obiettivo.'] },
   'body-metabolism': {
-    title: 'Il tuo metabolismo',
+    title: 'Il tuo consumo',
     body: [
-      'Le calorie che consumi davvero, calcolate da quanto mangi (diario) e da come cambia il peso reale: è più preciso delle formule.',
-      'Si aggiorna ogni giorno, ma l\'obiettivo calorico si muove al massimo di 50 kcal al giorno per non oscillare.',
-      'Servono almeno 7 giornate complete nel diario nelle ultime 3 settimane e pesate che coprano almeno 10 giorni, dalla prima all\'ultima comprese (es. dal 5 al 14 del mese). Non serve pesarsi ogni giorno. Prima di allora si usa la formula.',
+      'Quante calorie consumi al giorno, calcolate voce per voce: metabolismo basale (dalla massa magra, se conosco la massa grassa), movimento (passi + movimento quotidiano), allenamenti (da ogni sessione registrata: durata, serie all\'ora, esercizi per le gambe e consumo dopo l\'allenamento) e digestione (dai macro del diario: le proteine costano di più).',
+      'Gli allenamenti sono la media degli ultimi 14 giorni: contano anche nei giorni di riposo. I passi, se non li inserisci, li stimo dal livello di attività.',
+      'Poi lo verifico con diario e peso: se le due cose non tornano di oltre il 20% (di solito acqua e glicogeno dopo un cambio di dieta) il dato del diario non viene usato. La prima settimana di pesate non conta.',
+      'L\'obiettivo calorico si aggiorna il lunedì e cambia al massimo di 200 kcal a settimana.',
+      'Per la verifica col diario servono almeno 7 giornate complete nelle ultime 3 settimane e pesate che coprano almeno 10 giorni dopo la prima settimana. Non serve pesarsi ogni giorno.',
     ],
   },
   'body-measurements': { title: 'Misure', body: ['Le circonferenze registrate, con la differenza rispetto alla misura precedente.'] },
