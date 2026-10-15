@@ -230,7 +230,7 @@ export function GoalStatus() {
         <div>
           <div className="text-base font-bold text-fg">Pesati per ricevere il tuo giudizio</div>
           <p className="text-sm text-fg-2">
-            Registra il peso 3–4 volte a settimana: dopo circa 2 settimane ti dico se sei nell'obiettivo. Pesate recenti: {n}.
+            Registra il peso 3–4 volte a settimana: dopo circa 2 settimane ti dico se sei nell'obiettivo (la prima settimana di pesate non conta: acqua e glicogeno). Pesate recenti: {n}.
           </p>
         </div>
       </Card>

@@ -200,7 +200,9 @@ export function robustSlope(points: { t: number; w: number }[]): number | null {
  */
 export function estimateMetabolism(foodLogs: FoodLog[], logs: BodyLog[], modelTdee: number, now = Date.now()): Metabolism | null {
   const from = toISODate(new Date(now - 21 * DAY));
-  const days = completeDays(foodLogs).filter((d) => d.date >= from);
+  // oggi è ancora in corso (diario a metà): contano solo i giorni finiti
+  const today = toISODate(new Date(now));
+  const days = completeDays(foodLogs).filter((d) => d.date >= from && d.date < today);
   const weighs = recentWeighs(logs, now);
   if (days.length < 7 || weighs.length < 4) return null;
   const span = weighSpan(logs, now);

@@ -116,7 +116,9 @@ export function energyModel(
 
   // digestione: giornate del diario abbastanza piene (≥ 60% della mediana e ≥ 800 kcal)
   const fromIso = new Date(from).toLocaleDateString('sv-SE');
-  const logged = foodLogs.filter((l) => l.date >= fromIso && l.entries.length && l.recap?.complete !== false).map(macrosOf);
+  // oggi è ancora in corso (diario a metà): contano solo i giorni finiti
+  const todayIso = new Date(now).toLocaleDateString('sv-SE');
+  const logged = foodLogs.filter((l) => l.date >= fromIso && l.date < todayIso && l.entries.length && l.recap?.complete !== false).map(macrosOf);
   const kcals = logged.map((m) => m.kcal).sort((x, y) => x - y);
   const med = kcals.length ? kcals[Math.floor(kcals.length / 2)] : 0;
   const full = logged.filter((m) => m.kcal >= 800 && m.kcal >= med * 0.6);

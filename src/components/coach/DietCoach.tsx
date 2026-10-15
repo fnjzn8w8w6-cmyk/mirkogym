@@ -206,7 +206,7 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
     const nextPrefs = prefChange ? applyDietChange(prefs, change, text) : prefs;
     const nextAdjust = prefChange ? adjust + change.kcalDelta : adjust;
     // con l'aggiornamento settimanale attivo la richiesta del dietologo sposta l'obiettivo di questa settimana
-    const nextWeek = settings.weekCal && prefChange && change.kcalDelta ? { ...settings.weekCal, adjust: settings.weekCal.adjust + change.kcalDelta, target: settings.weekCal.target + change.kcalDelta } : settings.weekCal;
+    const nextWeek = settings.weekCal && prefChange && change.kcalDelta ? { ...settings.weekCal, adjust: settings.weekCal.adjust + change.kcalDelta, intent: (settings.weekCal.intent ?? settings.weekCal.adjust) + change.kcalDelta, target: settings.weekCal.target + change.kcalDelta } : settings.weekCal;
     const target = userNutrition(profile, { ...settings, kcalAdjust: nextAdjust, nutritionPrefs: nextPrefs, weekCal: nextWeek });
     const pp = planPrefs(nextPrefs, settings.favoriteRecipes ?? []);
     const notes: string[] = [];
@@ -285,7 +285,7 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
           ...(proposal.prefChange ? { nutritionPrefs: proposal.prefs, kcalAdjust: proposal.adjust } : {}),
           // calorie chieste al dietologo: valgono subito per questa settimana
           ...(proposal.prefChange && settings.weekCal && proposal.adjust !== adjust
-            ? { weekCal: { ...settings.weekCal, adjust: settings.weekCal.adjust + (proposal.adjust - adjust), target: settings.weekCal.target + (proposal.adjust - adjust) } }
+            ? { weekCal: { ...settings.weekCal, adjust: settings.weekCal.adjust + (proposal.adjust - adjust), intent: (settings.weekCal.intent ?? settings.weekCal.adjust) + (proposal.adjust - adjust), target: settings.weekCal.target + (proposal.adjust - adjust) } }
             : {}),
           ...(planOk && proposal.plan ? { weekPlan: proposal.plan } : {}),
         }),

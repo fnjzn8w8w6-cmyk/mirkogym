@@ -31,8 +31,10 @@ export function useMetabolismSync() {
     if (!ready || !energy) return;
     const today = todayISO();
     const e = settings.energy;
-    const energyDue = !e || e.date !== today || e.steps !== energy.steps || e.stepsSource !== energy.stepsSource;
-    const metaDue = settings.metabolism?.date !== today && foodLogs.length > 0;
+    const energyDue =
+      !e || e.date !== today || e.steps !== energy.steps || e.stepsSource !== energy.stepsSource || e.tefSource !== energy.tefSource || e.eatSource !== energy.eatSource;
+    // ricalcolo anche se il valore salvato è del vecchio calcolo (senza controllo di plausibilità)
+    const metaDue = (settings.metabolism?.date !== today || (settings.metabolism != null && settings.metabolism.span == null)) && foodLogs.length > 0;
     if (!energyDue && !metaDue) return;
     const t = window.setTimeout(() => {
       const patch: Parameters<typeof update>[0] = {};
