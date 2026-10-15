@@ -28,7 +28,9 @@ export function weightTrend(logs: BodyLog[], until = Date.now()): TrendPoint[] {
   if (!days.length) return [];
   const out: TrendPoint[] = [];
   let trend = avg(byDay.get(days[0])!);
-  for (let t = dayKey(days[0]); t <= until; t += DAY) {
+  // fino a oggi compreso, a qualsiasi ora (i punti stanno a mezzogiorno: prima delle 12 la pesata di oggi restava fuori)
+  const last = dayKey(toISODate(new Date(until)));
+  for (let t = dayKey(days[0]); t <= last; t += DAY) {
     const date = toISODate(new Date(t));
     const w = byDay.get(date);
     if (w) trend += ALPHA * (avg(w) - trend);
