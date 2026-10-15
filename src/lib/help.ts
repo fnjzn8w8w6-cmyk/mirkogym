@@ -361,6 +361,13 @@ export const HELP = {
       'Niente cambia senza la tua conferma: attiva solo quelle che vuoi e premi Salva check-in.',
     ],
   },
+  'goal-photo-account': {
+    title: 'Account Puter',
+    body: [
+      'La foto obiettivo è creata con Puter, gratis entro la quota del tuo account Puter. La prima volta l\'app usa un account temporaneo anonimo.',
+      'Con "Cambia account Puter" esci da quello attuale: al prossimo "Genera" si apre la finestra di Puter e puoi entrare (o registrarti) con la tua email. Le foto già create restano nell\'app.',
+    ],
+  },
   'goal-plan': {
     title: 'Obiettivo a fasi',
     body: ['Descrivi a parole dove vuoi arrivare: il coach crea le fasi con le date, controllando che il ritmo sia sicuro. Calorie e macro seguono la fase in corso.'],

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { NewBadge } from '@/components/ui/Help';
+import { HelpTip, NewBadge } from '@/components/ui/Help';
 import { useSettings } from '@/hooks/use-settings';
 import { useBodyLogs } from '@/hooks/use-body-logs';
 import { useEffectiveProfile } from '@/hooks/use-effective-profile';
@@ -10,7 +10,7 @@ import { photoId, usePhotos } from '@/hooks/use-photos';
 import { useGoalPhotos } from '@/hooks/use-goal-photos';
 import { PHASE_EMOJI } from '@/lib/goal-plan';
 import { coachNow } from '@/lib/goal-coach';
-import { ensurePuterUser, generateGoalPhoto, goalPrompt, loadPuter, projectPhases } from '@/lib/goal-photo';
+import { ensurePuterUser, generateGoalPhoto, goalPrompt, loadPuter, projectPhases, puterAccount, switchPuterAccount } from '@/lib/goal-photo';
 import { cn } from '@/lib/cn';
 
 const CONSENT = 'vl.goalphoto.consent';
@@ -89,13 +89,35 @@ function GoalPhotoModal({ onClose, startPhase }: { onClose: () => void; startPha
   const [puterReady, setPuterReady] = useState<'loading' | 'ok' | string>('loading');
   const [photo, setPhoto] = useState<string | null>(null);
 
+  const [account, setAccount] = useState<{ name: string; temp: boolean } | null>(null);
+  const [switching, setSwitching] = useState(false);
+
   // Puter si carica subito: al tocco su "Genera" la sua finestra deve aprirsi senza attese
   useEffect(() => {
     loadPuter().then(
-      () => setPuterReady('ok'),
+      (puter) => {
+        setPuterReady('ok');
+        void puterAccount(puter).then(setAccount);
+      },
       (e: Error) => setPuterReady(e.message),
     );
   }, []);
+
+  // esce dall'account Puter attuale: alla prossima foto Puter chiede con quale account entrare (es. la tua email)
+  const changeAccount = async () => {
+    if (!window.puter) return;
+    setSwitching(true);
+    try {
+      await switchPuterAccount(window.puter);
+      setAccount(null);
+      setState({ kind: 'idle' });
+      setSavedNote('Uscito da Puter: al prossimo "Genera" scegli con quale account entrare (o creane uno con la tua email).');
+    } catch {
+      setSavedNote('Non sono riuscito a uscire da Puter: riprova.');
+    } finally {
+      setSwitching(false);
+    }
+  };
 
   // ultima foto del check-in (o, se manca, l'ultima foto del corpo)
   const source = useMemo(() => {
@@ -137,6 +159,7 @@ function GoalPhotoModal({ onClose, startPhase }: { onClose: () => void; startPha
       setState({ kind: 'busy', step: 'Accesso a Puter…' });
       // prima cosa dopo il tocco: la finestra di Puter si apre solo durante un tocco
       await ensurePuterUser(puter);
+      void puterAccount(puter).then(setAccount);
       setState({ kind: 'busy', step: "L'AI sta creando la tua foto obiettivo… (fino a 1 minuto)" });
       // la foto è quella di oggi: l'AI parte dal fisico di oggi e arriva a fine fase (anche passando per le fasi prima)
       const weeks = projections.slice(0, projections.indexOf(pr) + 1).reduce((t, x) => t + x.weeks, 0);
@@ -156,7 +179,7 @@ function GoalPhotoModal({ onClose, startPhase }: { onClose: () => void; startPha
         : /auth_window_closed/.test(raw)
           ? 'La finestra di Puter è stata chiusa prima di finire: riprova.'
           : /insufficient|funds|credit|quota|limit|402|429/i.test(raw)
-            ? 'Quota gratuita di Puter esaurita per oggi (o per questo mese).'
+            ? 'Quota gratuita di Puter esaurita per questo account: aspetta che si rinnovi o usa "Cambia account Puter" qui sotto.'
             : 'Non sono riuscito a generare la foto.';
       setState({ kind: 'error', message: `${message}\nDettagli: ${raw.slice(0, 400)}` });
     }
@@ -295,6 +318,20 @@ function GoalPhotoModal({ onClose, startPhase }: { onClose: () => void; startPha
               </button>
             )}
             {puterReady !== 'ok' && puterReady !== 'loading' && <p className="text-xs text-danger">Puter non si carica: {puterReady}</p>}
+            {puterReady === 'ok' && (account || window.puter?.auth.isSignedIn()) && !busy && (
+              <div className="space-y-1 rounded-md bg-surface-2 px-3 py-2 text-xs text-fg-2">
+                <div className="break-all">
+                  Account Puter: <strong className="text-fg">{account ? `${account.name}${account.temp ? ' (temporaneo)' : ''}` : 'collegato'}</strong>
+                </div>
+                <span className="flex items-center gap-1.5">
+                  <button type="button" className="font-semibold text-accent-400" disabled={switching} onClick={() => void changeAccount()}>
+                    Cambia account Puter
+                  </button>
+                  <NewBadge since="2026-10-15" className="ml-0" />
+                  <HelpTip id="goal-photo-account" />
+                </span>
+              </div>
+            )}
             <p className="text-xs text-fg-3">
               È una simulazione dell'AI basata sui numeri realistici del tuo piano: il risultato vero dipende da allenamento, dieta e genetica. {state.kind === 'done' ? `Modello: ${state.model}.` : ''}
             </p>

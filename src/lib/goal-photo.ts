@@ -12,7 +12,12 @@ const SCRIPT = 'https://js.puter.com/v2/';
 const MODELS = ['gemini-3.1-flash-image', 'gemini-2.5-flash-image-preview'];
 
 interface PuterAI {
-  auth: { isSignedIn(): boolean; signIn(o?: { attempt_temp_user_creation?: boolean }): Promise<unknown> };
+  auth: {
+    isSignedIn(): boolean;
+    signIn(o?: { attempt_temp_user_creation?: boolean }): Promise<unknown>;
+    signOut?(): void | Promise<void>;
+    getUser?(): Promise<{ username?: string; is_temp?: boolean }>;
+  };
   ai: { txt2img(prompt: string, o?: Record<string, unknown>): Promise<HTMLImageElement> };
   quiet?: boolean;
 }
@@ -134,9 +139,48 @@ async function toDataUrl(img: HTMLImageElement): Promise<string> {
   });
 }
 
-/** Accesso a Puter (utente temporaneo): da chiamare subito al tocco, prima di qualsiasi altra attesa. */
+/** Dopo "Cambia account" il prossimo accesso apre la finestra di Puter per entrare con la tua email (niente utente temporaneo). */
+const CHOOSE_KEY = 'vl.puter.choose';
+const chooseNext = (): boolean => {
+  try {
+    return localStorage.getItem(CHOOSE_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+
+/** Accesso a Puter (utente temporaneo, o il tuo account dopo "Cambia account"): da chiamare subito al tocco, prima di qualsiasi altra attesa. */
 export async function ensurePuterUser(puter: PuterAI): Promise<void> {
-  if (!puter.auth.isSignedIn()) await puter.auth.signIn({ attempt_temp_user_creation: true });
+  if (puter.auth.isSignedIn()) return;
+  if (chooseNext()) {
+    await puter.auth.signIn();
+    try {
+      localStorage.removeItem(CHOOSE_KEY);
+    } catch {
+      /* ignorato */
+    }
+  } else await puter.auth.signIn({ attempt_temp_user_creation: true });
+}
+
+/** Esce dall'account Puter di questo telefono: alla prossima foto scegli con quale account entrare. */
+export async function switchPuterAccount(puter: PuterAI): Promise<void> {
+  await puter.auth.signOut?.();
+  try {
+    localStorage.setItem(CHOOSE_KEY, '1');
+  } catch {
+    /* ignorato */
+  }
+}
+
+/** Nome dell'account Puter in uso (null = nessuno o non disponibile). */
+export async function puterAccount(puter: PuterAI): Promise<{ name: string; temp: boolean } | null> {
+  if (!puter.auth.isSignedIn() || !puter.auth.getUser) return null;
+  try {
+    const u = await puter.auth.getUser();
+    return u?.username ? { name: u.username, temp: Boolean(u.is_temp) } : null;
+  } catch {
+    return null;
+  }
 }
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : typeof e === 'object' ? JSON.stringify(e) : String(e)).slice(0, 300);
