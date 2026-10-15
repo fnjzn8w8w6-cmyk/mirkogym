@@ -416,6 +416,24 @@ export interface BodyPoints {
   hy: number;
 }
 /** Immagini complete (caricate solo quando servono). */
+/** Foto obiettivo generata dall'AI (miniatura e dati; l'immagine grande si carica a parte). */
+export interface GoalPhoto {
+  id: string;
+  createdAt: number;
+  /** fase del piano (posizione e tipo) e numeri usati per crearla */
+  phaseIndex: number;
+  phaseType: string;
+  phaseLabel: string;
+  weight: number;
+  bf: number;
+  /** da dove parte: peso e grasso del giorno della foto */
+  fromWeight: number;
+  fromBf: number;
+  model: string;
+  /** miniatura JPEG come data URL (~15 KB) */
+  thumb: string;
+}
+
 export interface PhotoImages {
   front: string;
   side?: string;

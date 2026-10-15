@@ -16,7 +16,7 @@ import {
   type DocumentReference,
   type Unsubscribe,
 } from 'firebase/firestore';
-import type { ActiveSession, BackupFile, BodyLog, BodyPoints, Day, FoodLog, Mesocycle, PhotoImages, ProgressPhoto, Schedule, Session, Settings, UserRecipe } from '@/types';
+import type { ActiveSession, BackupFile, BodyLog, BodyPoints, Day, FoodLog, GoalPhoto, Mesocycle, PhotoImages, ProgressPhoto, Schedule, Session, Settings, UserRecipe } from '@/types';
 import type { CheckIn } from './checkin';
 import type { Food } from './foods';
 import { db } from './firebase';
@@ -37,6 +37,8 @@ const recipesCol = (uid: string) => collection(userDoc(uid), 'recipes');
 /** Foto dei progressi: metadati + miniatura (leggeri) e immagini complete in documenti separati. */
 const photosCol = (uid: string) => collection(userDoc(uid), 'photos');
 const photoImagesCol = (uid: string) => collection(userDoc(uid), 'photoImages');
+const goalPhotosCol = (uid: string) => collection(userDoc(uid), 'goalPhotos');
+const goalImagesCol = (uid: string) => collection(userDoc(uid), 'goalPhotoImages');
 const checkInsCol = (uid: string) => collection(userDoc(uid), 'checkIns');
 const myFoodsRef = (uid: string) => doc(userDoc(uid), 'config', 'foods');
 
@@ -247,6 +249,25 @@ export const getPhotoImages = async (uid: string, id: string): Promise<PhotoImag
   const d = await getDoc(ref);
   return d.exists() ? (d.data() as PhotoImages) : null;
 };
+/* ---------- Foto obiettivo (AI) ---------- */
+export function subscribeGoalPhotos(uid: string, cb: (p: GoalPhoto[]) => void, onError: OnError): Unsubscribe {
+  return onSnapshot(goalPhotosCol(uid), (snap) => cb(snap.docs.map((d) => ({ ...(d.data() as GoalPhoto), id: d.id })).sort((a, b) => b.createdAt - a.createdAt)), onError);
+}
+export const saveGoalPhoto = (uid: string, meta: GoalPhoto, image: string) =>
+  Promise.all([setDoc(doc(goalPhotosCol(uid), meta.id), clean(meta)), setDoc(doc(goalImagesCol(uid), meta.id), { image })]).then(() => meta.id);
+export const getGoalPhotoImage = async (uid: string, id: string): Promise<string | null> => {
+  const ref = doc(goalImagesCol(uid), id);
+  try {
+    const c = await getDocFromCache(ref);
+    if (c.exists()) return (c.data() as { image: string }).image;
+  } catch {
+    /* non ancora sul telefono */
+  }
+  const d = await getDoc(ref);
+  return d.exists() ? (d.data() as { image: string }).image : null;
+};
+export const deleteGoalPhoto = (uid: string, id: string) => Promise.all([deleteDoc(doc(goalPhotosCol(uid), id)), deleteDoc(doc(goalImagesCol(uid), id))]);
+
 /** Salva il corpo riconosciuto in una foto (posizione nei dati, sagoma insieme alle immagini). */
 export const savePhotoBody = (uid: string, id: string, body: BodyPoints | null, maskV: number, mask?: string) =>
   Promise.all([
