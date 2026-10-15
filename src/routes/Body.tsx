@@ -70,7 +70,8 @@ export default function Body() {
   const [period, setPeriod] = useState(90);
   const [params, setParams] = useSearchParams();
   const rawTab = params.get('tab');
-  const tab: BodyTab = rawTab === 'muscles' || rawTab === 'checkin' ? rawTab : rawTab === 'weight' ? 'weight' : 'muscles';
+  // senza scelta si apre su Peso e misure (la prima tab)
+  const tab: BodyTab = rawTab === 'muscles' || rawTab === 'checkin' ? rawTab : 'weight';
   const [chartKind, setChartKind] = useState<'weight' | 'bf'>('weight');
   const [showAll, setShowAll] = useState(false);
   // Peso: pesate + peso reale (media mobile esponenziale) + pesate gonfiate da acqua
@@ -148,8 +149,8 @@ export default function Body() {
           value={tab}
           onChange={(t) => setParams({ tab: t }, { replace: true })}
           options={[
-            { value: 'muscles', label: 'Muscoli' },
             { value: 'weight', label: 'Peso e misure' },
+            { value: 'muscles', label: 'Muscoli' },
             { value: 'checkin', label: 'Check-in e foto' },
           ]}
         />
@@ -233,7 +234,7 @@ export default function Body() {
                     )}
                   </div>
                   {weightData.length > 1 ? (
-                    <WeightChart data={weightData} unit=" kg" label="Pesate" plan={goalPaths.w} height="h-36" />
+                    <WeightChart data={weightData} unit=" kg" label="Pesate" plan={clipPath(goalPaths.w, period)} height="h-36" />
                   ) : (
                     <p className="mt-2 text-base text-fg-3">Servono almeno 2 pesate nel periodo.</p>
                   )}
@@ -259,7 +260,7 @@ export default function Body() {
                     )}
                   </div>
                   {bfData.length > 1 ? (
-                    <WeightChart data={bfData} unit="%" label="BF" plan={goalPaths.bf} height="h-36" />
+                    <WeightChart data={bfData} unit="%" label="BF" plan={clipPath(goalPaths.bf, period)} height="h-36" />
                   ) : (
                     <p className="mt-2 text-base text-fg-3">Servono almeno 2 misure della massa grassa nel periodo.</p>
                   )}
@@ -356,3 +357,31 @@ function EnergyDots({ value }: { value: number }) {
   );
 }
 
+
+/**
+ * Percorso dell'obiettivo dentro la finestra del grafico: il periodo scelto all'indietro e metà periodo in avanti,
+ * con i punti ai bordi interpolati (altrimenti il grafico si allargherebbe sempre fino alla fine del piano).
+ */
+function clipPath(path: { t: number; plan: number }[] | undefined, days: number): { t: number; plan: number }[] | undefined {
+  if (!path?.length) return path;
+  const now = Date.now();
+  const a = now - days * 86400000;
+  const b = now + (days / 2) * 86400000;
+  const at = (t: number) => {
+    for (let i = 1; i < path.length; i++) {
+      const p0 = path[i - 1];
+      const p1 = path[i];
+      if (t >= p0.t && t <= p1.t) return p0.plan + ((p1.plan - p0.plan) * (t - p0.t)) / Math.max(1, p1.t - p0.t);
+    }
+    return null;
+  };
+  const inside = path.filter((p) => p.t > a && p.t < b);
+  const start = Math.max(a, path[0].t);
+  const end = Math.min(b, path[path.length - 1].t);
+  if (start >= end) return undefined;
+  const s0 = at(start);
+  const e0 = at(end);
+  return [...(s0 != null ? [{ t: start, plan: s0 }] : []), ...inside, ...(e0 != null ? [{ t: end, plan: e0 }] : [])].filter(
+    (p, i, arr) => i === 0 || p.t !== arr[i - 1].t,
+  );
+}
