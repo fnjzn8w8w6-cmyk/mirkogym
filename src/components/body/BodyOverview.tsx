@@ -14,7 +14,8 @@ import { useDayTarget } from '@/hooks/use-habits';
 import { explainWeek, undoWeekCalories } from '@/lib/calorie-week';
 import { cn } from '@/lib/cn';
 import { planRate } from '@/lib/goal-plan';
-import { NewBadge, SectionTitle } from '@/components/ui/Help';
+import { HelpTip, NewBadge, SectionTitle } from '@/components/ui/Help';
+import { bodyRarity } from '@/lib/population';
 import { useWeekCalc } from '@/hooks/use-metabolism';
 import type { BodyLog } from '@/types';
 import { BF_SOURCE_IT, bodyFatNow, type BodyFatNow } from '@/lib/bodyfat-estimate';
@@ -97,6 +98,19 @@ export function CompositionCard() {
           ))}
         </div>
       </div>
+      {/* confronto con la popolazione: solo con una misura vera e solo le frasi a tuo favore */}
+      {bfNow &&
+        bodyRarity({ sex: p.sex, age: p.age, bf, ffmi: c.ffmi }).map((t, i) => (
+          <p key={t} className="mt-2 flex items-start gap-1.5 text-sm font-semibold text-accent-400">
+            <span>🌍 {t}</span>
+            {i === 0 && (
+              <>
+                <NewBadge since="2026-10-15" className="ml-0 shrink-0" />
+                <HelpTip id="population-rarity" className="shrink-0" />
+              </>
+            )}
+          </p>
+        ))}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Chip tone="accent">{bfCategory(bf, p.sex)}</Chip>
         <span className="text-xs text-fg-3">

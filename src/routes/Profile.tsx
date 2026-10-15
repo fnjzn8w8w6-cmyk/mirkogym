@@ -18,7 +18,7 @@ import { userNutrition } from '@/lib/coach';
 import { Button } from '@/components/ui/Button';
 import { settle } from '@/lib/firestore';
 import { GoalCard } from '@/components/goal/GoalPlan';
-import { SectionTitle } from '@/components/ui/Help';
+import { HelpTip, NewBadge, SectionTitle } from '@/components/ui/Help';
 import { cn } from '@/lib/cn';
 import { useEffectiveProfile } from '@/hooks/use-effective-profile';
 
@@ -158,6 +158,12 @@ export default function Profile() {
                       {r.nextLabel && ` · ${r.nextLabel}`}
                       {r.estimated && <span className="text-fg-2"> · standard stimato</span>}
                     </div>
+                    {r.rarity && (
+                      <div className="mt-1 flex items-start gap-1.5 text-xs font-semibold text-accent-400">
+                        <span>🌍 {r.rarity}</span>
+                        <NewBadge since="2026-10-15" className="ml-0 shrink-0" />
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -168,7 +174,10 @@ export default function Profile() {
               {showAllRanks ? 'Mostra meno' : `Mostra tutti i ranghi (${ranks.length})`}
             </Button>
           )}
-          <p className="mt-2 text-xs text-fg-3">Tutti gli esercizi che hai fatto almeno 2 volte nelle ultime 8 settimane, dai più frequenti. Standard indicativi basati sul rapporto 1RM stimato / peso corporeo.</p>
+          <p className="mt-2 flex items-start gap-1.5 text-xs text-fg-3">
+            <span>Tutti gli esercizi che hai fatto almeno 2 volte nelle ultime 8 settimane, dai più frequenti. Standard indicativi basati sul rapporto 1RM stimato / peso corporeo. 🌍 = stima rispetto alla popolazione adulta.</span>
+            <HelpTip id="population-rarity" />
+          </p>
         </section>
 
         <GoalCard compact />

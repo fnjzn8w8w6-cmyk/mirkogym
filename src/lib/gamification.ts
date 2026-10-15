@@ -1,4 +1,5 @@
 import type { BodyLog, ExerciseLog, FoodLog, Session } from '@/types';
+import { strengthRarity } from './population';
 import { epley1RM, isLegGroup, sessionSetCount, sessionTonnage, weekStreak, workingSets } from './analytics';
 import { libraryIdOf } from './seed-data';
 
@@ -417,6 +418,8 @@ export interface LiftRank {
   estimated: boolean;
   perHand: boolean;
   bodyweightBased: boolean;
+  /** "Solo il 4% degli uomini adulti…": confronto con la popolazione, solo quando è un complimento */
+  rarity: string | null;
 }
 
 /** Obiettivo per il prossimo rango: a corpo libero in ripetizioni (o zavorra se servono più di 20), altrimenti in kg di 1RM. */
@@ -506,6 +509,7 @@ export function liftRanks(
       estimated: std.estimated,
       perHand: std.perHand,
       bodyweightBased: Boolean(share),
+      rarity: strengthRarity({ ratio, ratios: std.ratios, sex, kg: Math.round(best), name: e.name, estimated: std.estimated, bodyweightBased: Boolean(share), perHand: std.perHand }),
     });
   }
   return out;
