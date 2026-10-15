@@ -17,6 +17,7 @@ import { useBodyLogs } from './use-body-logs';
 import { useEffectiveProfile } from './use-effective-profile';
 import { energyText } from '@/lib/energy';
 import { checkPlan, compOf, feasibilityText } from '@/lib/goal-feasibility';
+import { goalCoachText } from '@/lib/goal-coach';
 import { composition } from '@/lib/metabolism';
 
 /*
@@ -112,7 +113,7 @@ export function useAthlete() {
     const plan = settings.goalPlan;
     const text =
       athleteText(report) +
-      (plan && p ? `\n${planText(plan, planStatus(plan, bodyLogs, p.weightKg))}\n${feasibilityText(p, checkPlan(p, compOf(p.weightKg, composition(p).bf.value), plan.phases, plan.current))}` : '') +
+      (plan && p ? `\n${planText(plan, planStatus(plan, bodyLogs, p.weightKg))}\n${goalCoachText(p, plan, bodyLogs) ?? feasibilityText(p, checkPlan(p, compOf(p.weightKg, composition(p).bf.value), plan.phases, plan.current))}` : '') +
       (lastCheck ? `\nUltimo check-in (${new Date(lastCheck.date).toLocaleDateString('it-IT')}): ${lastCheck.summary.slice(0, 400)}` : '') +
       (settings.coachAnalysis ? `\nUltima analisi del coach: ${settings.coachAnalysis.text.slice(0, 500)}` : '') +
       (t ? `\n${calorieText(t.target, settings.weekCal, resolveCycling({ enabled: settings.calorieCycling, manual: settings.carbCycling, sessions, perWeek: p?.daysPerWeek ?? days.length }))}` : '') +

@@ -12,6 +12,8 @@ import { useData } from './data-context';
 import { useEffectiveProfile } from './use-effective-profile';
 import { useWeekCalc } from './use-metabolism';
 import { compOf, goalProposal } from '@/lib/goal-feasibility';
+import { coachProposal, targetFromPlan } from '@/lib/goal-coach';
+import { useBodyLogs } from './use-body-logs';
 import { composition } from '@/lib/metabolism';
 import type { UserProfile } from '@/lib/metabolism';
 
@@ -90,6 +92,7 @@ export function useProposals() {
   const foodLogs = useRecentFoodLogs(35);
   const cyclingNow = useCyclingDays();
   const eff = useEffectiveProfile();
+  const { bodyLogs } = useBodyLogs();
   return useMemo(() => {
     if (!settings.profile) return [];
     const list = buildProposals({
@@ -107,9 +110,12 @@ export function useProposals() {
     // obiettivo: se con i dati di oggi il piano non è più realistico, il coach propone la versione aggiornata
     const plan = settings.goalPlan;
     if (plan && eff) {
-      const g = goalProposal(eff, compOf(eff.weightKg, composition(eff).bf.value), plan);
-      if (g) list.unshift({ id: g.id, kind: 'goal', emoji: '🎯', title: g.title, detail: g.detail, phases: g.phases, summary: g.summary });
+      const now = compOf(eff.weightKg, composition(eff).bf.value);
+      // coach adattivo (obiettivo finale): percorso dai progressi reali; altrimenti la verifica del piano a fasi
+      const c = targetFromPlan(plan) ? coachProposal(eff, now, plan, bodyLogs) : null;
+      const g = c ?? (targetFromPlan(plan) ? null : goalProposal(eff, now, plan));
+      if (g) list.unshift({ id: g.id, kind: 'goal', emoji: '🎯', title: g.title, detail: g.detail, phases: g.phases, summary: g.summary, ...(c ? { target: c.target } : {}) });
     }
     return list;
-  }, [settings, sessions, days, foodLogs, report, ideal, meso.mesocycle, meso.currentWeek, meso.totalWeeks, cyclingNow, eff]);
+  }, [settings, sessions, days, foodLogs, report, ideal, meso.mesocycle, meso.currentWeek, meso.totalWeeks, cyclingNow, eff, bodyLogs]);
 }

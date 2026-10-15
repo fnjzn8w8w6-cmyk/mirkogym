@@ -186,6 +186,15 @@ export const HELP = {
     ],
   },
   'body-bf-chart': { title: 'Massa grassa', body: ['Le misure di massa grassa nel tempo e, se impostato, il percorso verso la massa grassa obiettivo.'] },
+  'goal-coach': {
+    title: 'Coach adattivo',
+    body: [
+      'Conta solo il tuo obiettivo finale (peso e percentuale di grasso). Le fasi (massa pulita, ricomposizione, definizione) le decide il coach in base a come rispondi davvero.',
+      'A ogni check-in guarda pesate e misure della massa grassa delle ultime settimane: quanta massa magra e quanto grasso stai mettendo o perdendo. Se metti soprattutto muscolo la massa si ferma prima (niente chili inutili), se prendi grasso propone una massa più lenta o una definizione prima.',
+      'La data di arrivo è una forchetta che si stringe man mano che il coach ti conosce. Per conoscerti servono almeno 3 misure della massa grassa in 3 settimane: fai la foto a ogni check-in (una foto sbaglia di ±2–3%, la tendenza di più foto è affidabile).',
+      'Ogni cambio di percorso è una proposta: si applica solo se tocchi Conferma. Calorie e macro seguono la fase in corso.',
+    ],
+  },
   'goal-check': {
     title: 'Verifica del coach',
     body: [

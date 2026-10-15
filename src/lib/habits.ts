@@ -172,7 +172,7 @@ export type Proposal =
   | { id: string; kind: 'cheat'; emoji: string; title: string; detail: string; weekday: number }
   | { id: string; kind: 'cycling'; emoji: string; title: string; detail: string; weekdays: number[] }
   | { id: string; kind: 'meso'; emoji: string; title: string; detail: string; days: Day[]; diff: TrainingDiff[] }
-  | { id: string; kind: 'goal'; emoji: string; title: string; detail: string; phases: GoalPhase[]; summary: string };
+  | { id: string; kind: 'goal'; emoji: string; title: string; detail: string; phases: GoalPhase[]; summary: string; target?: { weight: number; bf: number; date?: string } };
 
 export function buildProposals(ctx: {
   sessions: Session[];

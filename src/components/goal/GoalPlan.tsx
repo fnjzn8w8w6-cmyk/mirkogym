@@ -21,6 +21,10 @@ import { forecast, waterEvents } from '@/lib/body-model';
 import { HelpTip, NewBadge, SectionTitle } from '@/components/ui/Help';
 import { GoalPhotoButton } from './GoalPhoto';
 import { GoalCheck, currentComp } from './GoalCheck';
+import { CoachSection } from './GoalCoach';
+import { coachPlan, etaText, observeResponse, pathToPhases, whatISee, whyNow, type GoalTarget } from '@/lib/goal-coach';
+import { toISODate } from '@/lib/date-utils';
+import { targetFromPlan } from '@/lib/goal-coach';
 import { checkPlan, planVerdict } from '@/lib/goal-feasibility';
 import {
   PHASE_EMOJI,
@@ -62,6 +66,21 @@ export function GoalPlanEditor({
     onChange(p);
   };
   const edit = (i: number, patch: Partial<GoalPhase>) => plan && set(reflow({ ...plan, phases: plan.phases.map((ph, j) => (j === i ? { ...ph, ...patch, note: undefined } : ph)) }));
+  // coach adattivo: dall'obiettivo finale il coach calcola il percorso (fasi) con i tuoi dati reali
+  const { bodyLogs } = useBodyLogs();
+  const nowComp = currentComp(profile, current).comp;
+  const response = useMemo(() => observeResponse({ ...profile, weightKg: current.weight }, bodyLogs), [profile, current.weight, bodyLogs]);
+  const adapt = (base: GoalPlan, t: GoalTarget): GoalPlan => {
+    const cp = coachPlan({ ...profile, weightKg: current.weight }, nowComp, t, response);
+    if (!cp) return { ...base, target: t };
+    const start = base.target?.start ?? { weight: Math.round(nowComp.weight * 10) / 10, bf: Math.round(nowComp.bf * 10) / 10, date: toISODate(new Date()) };
+    return { ...base, target: { ...t, start }, phases: pathToPhases(cp.path), current: 0, summary: `${whyNow(cp)} Arrivo stimato ${etaText(cp)}.` };
+  };
+  const cpNow = useMemo(
+    () => (plan?.target ? coachPlan({ ...profile, weightKg: current.weight }, nowComp, plan.target, response) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [plan?.target?.weight, plan?.target?.bf, response, current.weight],
+  );
 
   return (
     <div className="space-y-3">
@@ -86,14 +105,69 @@ export function GoalPlanEditor({
       ) : (
         <Button fullWidth variant={plan ? 'secondary' : 'primary'} disabled={text.trim().length < 8} icon={<Target className="h-5 w-5" />} onClick={async () => {
           const p = await ai.run((o) => interpretGoal(text, profile, current, o));
-          if (p) set(p);
+          if (!p) return;
+          // con peso e % di grasso finali il percorso lo calcola il coach adattivo
+          const t = targetFromPlan(p);
+          set(t ? adapt({ ...p, target: undefined }, { weight: t.weight, bf: t.bf, date: t.date }) : p);
         }}>
           {plan ? 'Ricrea il piano' : 'Crea il mio piano'}
         </Button>
       )}
       {ai.error && <p className="text-sm text-danger" role="alert">{ai.error}</p>}
 
-      {plan && !ai.busy && (
+      {plan?.target && !ai.busy && (
+        <div className="space-y-3">
+          <div className="rounded-lg border border-violet-500/40 bg-violet-500/10 p-3">
+            <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-fg-3">
+              Obiettivo finale <NewBadge /> <HelpTip id="goal-coach" />
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-xs text-fg-3">
+              <label>
+                Peso (kg)
+                <input key={`w${plan.createdAt}`} inputMode="decimal" aria-label="Obiettivo finale: peso" className="mt-0.5 w-full rounded border border-line bg-surface px-2 py-1 text-sm text-fg" defaultValue={plan.target.weight} onBlur={(e) => { const v = Number(e.target.value.replace(',', '.')); if (v > 35 && v < 250 && v !== plan.target!.weight) set(adapt(plan, { ...plan.target!, weight: v })); }} />
+              </label>
+              <label>
+                Grasso (%)
+                <input key={`b${plan.createdAt}`} inputMode="decimal" aria-label="Obiettivo finale: massa grassa" className="mt-0.5 w-full rounded border border-line bg-surface px-2 py-1 text-sm text-fg" defaultValue={plan.target.bf} onBlur={(e) => { const v = Number(e.target.value.replace(',', '.')); if (v > 3 && v < 45 && v !== plan.target!.bf) set(adapt(plan, { ...plan.target!, bf: v })); }} />
+              </label>
+              <label>
+                Data desiderata
+                <input type="date" aria-label="Obiettivo finale: data desiderata" className="mt-0.5 w-full rounded border border-line bg-surface px-1 py-1 text-sm text-fg" value={plan.target.date ?? ''} onChange={(e) => set({ ...plan, target: { ...plan.target!, date: e.target.value || undefined } })} />
+              </label>
+            </div>
+            {cpNow ? (
+              <div className="mt-3 space-y-2 text-sm text-fg-2">
+                <p>🧑‍🏫 {whyNow(cpNow)}</p>
+                <p>
+                  📅 Arrivo stimato <strong className="text-fg">{etaText(cpNow)}</strong>
+                  {plan.target.date && new Date(`${plan.target.date}T12:00:00`).getTime() < cpNow.early && (
+                    <span className="block text-xs text-warning">La data che desideri è prima di quanto realistico con i tuoi dati di oggi.</span>
+                  )}
+                </p>
+                <p className="text-xs text-fg-3">{whatISee(cpNow.response)}</p>
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-warning">Con questi numeri non trovo un percorso realistico in modo naturale (entro 5 anni): prova un peso o una % di grasso diversi.</p>
+            )}
+          </div>
+          <div className="text-xs font-bold uppercase tracking-wider text-fg-3">Percorso del coach (si aggiorna con i tuoi progressi, sempre con la tua conferma)</div>
+          <ol className="relative space-y-2 border-l-2 border-violet-500/40 pl-4">
+            {plan.phases.map((p, i) => (
+              <li key={`${plan.createdAt}-${i}`} className="relative rounded-lg border border-line-subtle bg-surface-2 p-3 text-sm">
+                <span className="absolute -left-[27px] top-3 flex h-6 w-6 items-center justify-center rounded-full bg-violet-500 text-xs">{i + 1}</span>
+                <span className="font-display text-base font-extrabold text-fg">
+                  {PHASE_EMOJI[p.type]} {p.label}
+                </span>
+                <span className="block text-xs text-fg-2">
+                  Fino a circa {kg((p.weightMin + p.weightMax) / 2)} kg al {p.targetBf}% · {fmtDate(p.start)} → {fmtDate(p.end)}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {plan && !plan.target && !ai.busy && (
         <div className="space-y-2">
           {plan.summary && <p className="text-sm text-fg-2">🧠 {plan.summary}</p>}
           <ol className="relative space-y-3 border-l-2 border-violet-500/40 pl-4">
@@ -218,6 +292,8 @@ export function GoalCard({ compact }: { compact?: boolean }) {
   const next = plan.phases[plan.current + 1];
   // verifica del coach: il piano è raggiungibile con i tuoi dati?
   const verdict = planVerdict(checkPlan(p, currentComp(p, { weight: st.current, bf: st.bf }).comp, plan.phases, plan.current));
+  // coach adattivo: c'è un obiettivo finale (peso e grasso), le fasi le ripianifica lui
+  const adaptive = targetFromPlan(plan) != null;
   const nut = userNutrition(eff ?? p, settings);
   const tone =
     st.state === 'reached' || st.state === 'on-track' || st.state === 'ahead' ? 'text-accent-400' : st.state === 'behind' ? 'text-warning' : 'text-danger';
@@ -285,7 +361,8 @@ export function GoalCard({ compact }: { compact?: boolean }) {
           {st.state === 'ahead' || st.state === 'behind' ? ` di ${Math.abs(st.weeksOff)} sett.` : ''}
           {st.state !== 'reached' && st.state !== 'expired' ? ` · ${Math.round(st.weeksLeft)} settimane rimaste` : ''}
         </div>
-        {verdict !== 'ok' && (
+        {adaptive && <CoachSection />}
+        {!adaptive && verdict !== 'ok' && (
           <button type="button" onClick={() => setOpen(true)} className={cn('block w-full rounded-md px-3 py-2 text-left text-sm', verdict === 'no' ? 'bg-danger/10 text-fg' : 'bg-warning/10 text-fg')}>
             {verdict === 'no' ? '❌' : '🟡'} <strong>Il coach:</strong> {verdict === 'no' ? 'con i tuoi dati questo piano non è realistico nei tempi previsti.' : 'il piano è fattibile ma al limite.'}{' '}
             <span className="font-semibold text-accent-400">Vedi le alternative →</span> <NewBadge />

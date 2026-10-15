@@ -38,6 +38,8 @@ export interface GoalPlan {
   current: number;
   /** cosa conta di più (scelto dalle alternative del coach): peso e grasso insieme, % di grasso o peso */
   priority?: 'both' | 'bf' | 'weight';
+  /** coach adattivo: obiettivo finale (le fasi le calcola il coach dai progressi reali, con la tua conferma) */
+  target?: { weight: number; bf: number; date?: string; start?: { weight: number; bf: number; date: string } };
 }
 
 export const PHASE_EMOJI: Record<Goal, string> = { bulk: '💪', cut: '🔥', maintain: '⚖️', strength: '🏋️' };

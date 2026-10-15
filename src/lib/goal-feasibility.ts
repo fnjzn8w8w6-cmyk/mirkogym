@@ -26,11 +26,11 @@ export interface Comp {
   fat: number;
 }
 export const compOf = (weight: number, bf: number): Comp => ({ weight, bf, lean: weight * (1 - bf / 100), fat: (weight * bf) / 100 });
-const fromLean = (lean: number, weight: number): Comp => ({ weight, lean, fat: weight - lean, bf: ((weight - lean) / weight) * 100 });
+export const fromLean = (lean: number, weight: number): Comp => ({ weight, lean, fat: weight - lean, bf: ((weight - lean) / weight) * 100 });
 
 const LEVEL_IT: Record<UserProfile['experience'], string> = { beginner: 'neofita', intermediate: 'intermedio', advanced: 'avanzato' };
 
-const BULK_MAX = 0.005;
+export const BULK_MAX = 0.005;
 const BULK_OK = 0.0025;
 
 /** FFMI: massa magra in rapporto all'altezza (normalizzato a 1,80 m). */
@@ -67,7 +67,7 @@ function leanAfter(p: UserProfile, lean: number, weeks: number): number {
 }
 
 /** In massa con il surplus giusto ~55% del peso preso è massa magra. */
-const LEAN_SHARE = 0.55;
+export const LEAN_SHARE = 0.55;
 
 /**
  * Massa "pulita" di b settimane: ogni settimana il peso sale quanto serve al muscolo che puoi mettere
@@ -86,11 +86,11 @@ function leanBulk(p: UserProfile, start: Comp, weeks: number): Comp {
 }
 
 /** Percentuale minima di grasso sensata (non la proponiamo mai sotto). */
-const minBf = (p: UserProfile) => (p.sex === 'f' ? 15 : 7);
+export const minBf = (p: UserProfile) => (p.sex === 'f' ? 15 : 7);
 /** Calo massimo a settimana in definizione (frazione del peso): 0,7%, 0,5% quando sei già asciutto. */
 const cutRate = (p: UserProfile, bf: number) => (bf < (p.sex === 'f' ? 20 : 12) ? 0.005 : 0.007);
 /** Settimane per scendere da un peso all'altro mantenendo la massa magra. */
-function cutWeeks(p: UserProfile, from: Comp, toWeight: number): number {
+export function cutWeeks(p: UserProfile, from: Comp, toWeight: number): number {
   let w = from.weight;
   let n = 0;
   while (w > toWeight + 0.01 && n < 520) {

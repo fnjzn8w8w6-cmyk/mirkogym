@@ -29,7 +29,7 @@ import { settle } from '@/lib/firestore';
 import { cn } from '@/lib/cn';
 import { MicButton, appendText } from '@/components/ui/MicButton';
 import { formatTonnage } from '@/lib/analytics';
-import type { UserProfile } from '@/lib/metabolism';
+import { composition, type UserProfile } from '@/lib/metabolism';
 import { checkInDue, checkInSummary, evaluate, weekStats, type CheckIn, type CheckInAnswers } from '@/lib/checkin';
 import { loadRecipes, rescalePlan, setCustomMeal, type WeekPlan } from '@/lib/recipes';
 import { DEFAULT_NUTRITION, planPrefs } from '@/components/food/NutritionPlanner';
@@ -254,7 +254,19 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
         if (pr.kind === 'cycling') cycling = pr.weekdays;
         // obiettivo aggiornato con numeri realistici (stesse date finali)
         if (pr.kind === 'goal' && settings.goalPlan) {
-          const gp = { ...settings.goalPlan, phases: pr.phases, summary: pr.summary, createdAt: Date.now() };
+          const gp = {
+            ...settings.goalPlan,
+            phases: pr.phases,
+            summary: pr.summary,
+            createdAt: Date.now(),
+            // coach adattivo: obiettivo finale e punto di partenza; il percorso riparte da oggi
+            ...(pr.target
+              ? {
+                  current: 0,
+                  target: { ...pr.target, start: settings.goalPlan.target?.start ?? { weight: profile.weightKg, bf: composition(profile).bf.value, date: toISODate(new Date()) } },
+                }
+              : {}),
+          };
           patch.goalPlan = gp;
           const ph = gp.phases[gp.current];
           if (ph && settings.profile) patch.profile = { ...settings.profile, goal: ph.type };
