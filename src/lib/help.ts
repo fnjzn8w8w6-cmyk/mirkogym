@@ -365,7 +365,7 @@ export const HELP = {
     title: 'Quanto sei raro',
     body: [
       'Le frasi con 🌍 confrontano i tuoi numeri con quelli della popolazione adulta del tuo sesso (per il corpo anche della tua fascia d\'età). Sono stime, non un censimento: per la forza si usano studi e standard di sollevamento sul rapporto tra massimale e peso corporeo, per il corpo quante persone hanno insieme poca massa grassa e tanta massa muscolare per l\'altezza (FFMI), dai valori misurati in grandi indagini sulla popolazione.',
-      'Compaiono solo quando sono un traguardo (per il corpo se sei tra il 30% con la condizione fisica migliore), mai come confronto negativo, e per il corpo solo con una misura vera della massa grassa (check-in con foto, plicometro, bilancia, DEXA). Per la forza si confrontano i fondamentali col bilanciere: panca, squat, stacco, lento, rematore e lat machine.',
+      'Sono dati, non giudizi: compaiono sempre, a qualunque livello. Per il corpo serve una misura vera della massa grassa (check-in con foto, plicometro, bilancia, DEXA), perché la stima del questionario sbaglia molto con chi è muscoloso. Per la forza si confrontano i fondamentali col bilanciere: panca, squat, stacco, lento, rematore e lat machine.',
     ],
   },
   'goal-photo-account': {

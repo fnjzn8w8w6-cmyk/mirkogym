@@ -3,7 +3,7 @@
  * - Forza: 1RM / peso corporeo con distribuzione log-normale della popolazione generale (soprattutto non allenata),
  *   mediana un po' sopra la soglia del rango Bronzo; tarata su studi di forza e standard di sollevamento.
  * - Corpo: massa grassa (DXA, grandi indagini di popolazione) per sesso ed età e FFMI (massa magra per l'altezza).
- * Le frasi si mostrano SOLO quando sono un complimento: chi è sotto la media non vede confronti.
+ * Le frasi si mostrano sempre, come dato: tono neutro, senza giudizi.
  */
 import type { Sex } from './metabolism';
 
@@ -39,11 +39,8 @@ const BF_MEAN: Record<Sex, number[]> = { m: [22, 24.5, 26.5], f: [32, 35, 37] };
 const BF_SD = 6.5;
 /** FFMI medio e deviazione standard. */
 const FFMI: Record<Sex, { mean: number; sd: number }> = { m: { mean: 19.5, sd: 2.2 }, f: { mean: 15.8, sd: 2 } };
-/** Sotto questa soglia non si festeggia: troppo poco grasso non è un traguardo. */
-const MIN_BF: Record<Sex, number> = { m: 7, f: 15 };
-
-/** Si mostra solo se fai meglio di almeno il 60% (sempre un complimento). */
-const SHOW_FROM = 0.6;
+/** Sotto questa soglia la stima non ha senso (misura sbagliata o valore non sano): nessuna frase. */
+const MIN_BF: Record<Sex, number> = { m: 4, f: 10 };
 
 /** Articolo italiano davanti alla percentuale: "il 4%", "l'8%", "lo 0,5%". */
 function withArticle(n: string): string {
@@ -61,38 +58,35 @@ function pctText(share: number): string {
 }
 
 const who = (sex: Sex) => (sex === 'f' ? 'delle donne' : 'degli uomini');
+/** Prima lettera maiuscola (inizio frase: "Il 45%", "L'85%", "Lo 0,5%"). */
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
-/** Frase sulla forza (null = non è un complimento o non c'è uno standard affidabile). */
+/** Frase sulla forza: sempre, come dato (null = nessuno standard affidabile per questo esercizio). */
 export function strengthRarity(o: { ratio: number; ratios: number[]; sex: Sex; kg: number; name: string; estimated: boolean; bodyweightBased: boolean; perHand: boolean }): string | null {
   // solo i fondamentali con standard noti, col bilanciere (manubri e corpo libero non si confrontano bene)
   if (o.estimated || o.bodyweightBased || o.perHand || !(o.kg > 0)) return null;
   const above = strengthShareAbove(o.ratio, o.ratios);
-  if (1 - above < SHOW_FROM) return null;
   const lift = o.name.toLowerCase();
+  const adults = `${who(o.sex)} adult${o.sex === 'f' ? 'e' : 'i'}`;
   if (above <= 0.1) {
     const s = pctText(above);
-    return `${s.startsWith('meno') ? 'Meno dello 0,1%' : `Solo ${s}`} ${who(o.sex)} adult${o.sex === 'f' ? 'e' : 'i'} arriva a ${o.kg} kg di ${lift} al tuo peso.`;
+    return `${s.startsWith('meno') ? 'Meno dello 0,1%' : `Solo ${s}`} ${adults} arriva a ${o.kg} kg di ${lift} al tuo peso.`;
   }
-  return `Sei più forte di circa ${pctText(1 - above)} ${who(o.sex)} adult${o.sex === 'f' ? 'e' : 'i'} in ${lift}.`;
+  return `Sei più forte di circa ${pctText(Math.max(0.01, 1 - above))} ${adults} in ${lift}.`;
 }
 
-/** Quota massima della popolazione per mostrare la frase sul corpo (sopra non è un traguardo da segnalare). */
-const BODY_SHOW_MAX = 0.3;
-
 /**
- * Frase sul corpo, una sola e neutra: quanti hanno una condizione fisica come la tua o migliore (poco grasso e tanto
- * muscolo per l'altezza, in un punteggio unico). Nessun confronto per chi non è tra i primi: null = non si mostra nulla.
+ * Frase sul corpo, una sola e neutra, sempre: quanti hanno una condizione fisica come la tua o migliore
+ * (poco grasso e tanto muscolo per l'altezza, in un punteggio unico; chi è nella media sta al 50%).
  */
 export function bodyRarity(o: { sex: Sex; age: number; bf: number; ffmi: number }): string | null {
   if (o.bf < MIN_BF[o.sex]) return null;
   const band = ageBand(o.age);
-  // punteggio unico della condizione fisica: quanto sei sotto la media di grasso + quanto sei sopra la media di muscolo
-  // per l'altezza (in deviazioni standard, pesi uguali); chi è nella media sta al 50%
   const zFat = (BF_MEAN[o.sex][band] - o.bf) / BF_SD;
   const f = FFMI[o.sex];
   const zMuscle = (o.ffmi - f.mean) / f.sd;
   const share = 1 - normalCdf((zFat + zMuscle) / Math.SQRT2);
-  if (share > BODY_SHOW_MAX) return null;
-  const s = pctText(share);
-  return `${s.startsWith('meno') ? 'Meno dello 0,1%' : `Solo ${s}`} ${who(o.sex)} ${AGE_TXT[band]} ha una condizione fisica come la tua.`;
+  const s = pctText(Math.min(0.99, share));
+  const start = share <= 0.1 ? (s.startsWith('meno') ? 'Meno dello 0,1%' : `Solo ${s}`) : cap(s);
+  return `${start} ${who(o.sex)} ${AGE_TXT[band]} ha una condizione fisica come la tua o migliore.`;
 }
