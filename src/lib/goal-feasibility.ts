@@ -7,7 +7,7 @@
  * - definizione: la massa magra si mantiene (un neofita può guadagnarne pochissima); calo al massimo ~0,7% del peso
  *   a settimana, 0,5% quando si è già asciutti.
  */
-import type { GoalPhase } from './goal-plan';
+import type { GoalPhase, GoalPlan } from './goal-plan';
 import type { UserProfile } from './metabolism';
 import type { Goal } from './metabolism';
 
@@ -336,3 +336,24 @@ export function feasibilityText(p: UserProfile, checks: PhaseCheck[]): string {
 }
 
 export const levelLabel = (p: UserProfile) => LEVEL_IT[p.experience];
+
+/**
+ * Proposta per il check-in: se con i dati di oggi il piano non è più realistico, la versione aggiornata più vicina
+ * a quello che volevi (tiene la % di grasso finale se l'avevi indicata, altrimenti il peso), con le stesse date finali.
+ */
+export function goalProposal(p: UserProfile, now: Comp, plan: GoalPlan, today = Date.now()): { id: string; title: string; detail: string; phases: GoalPhase[]; summary: string } | null {
+  const checks = checkPlan(p, now, plan.phases, plan.current, today);
+  if (planVerdict(checks) === 'ok') return null;
+  const alts = alternatives(p, now, plan.phases, plan.current, today).filter((a) => a.phases.length);
+  const last = plan.phases[plan.phases.length - 1];
+  const pick = alts.find((a) => a.id === (last?.targetBf != null ? 'bf' : 'weight')) ?? alts[0];
+  if (!pick) return null;
+  const why = checks.flatMap((c) => c.issues)[0];
+  return {
+    id: `goal-${pick.id}-${pick.end}`,
+    title: `Obiettivo aggiornato: ${pick.result}`,
+    detail: `${why ? `${why} ` : ''}Proposta: ${pick.title.charAt(0).toLowerCase()}${pick.title.slice(1)}. ${pick.detail}`,
+    phases: applyAlternative(plan.phases, plan.current, pick, now.weight, today),
+    summary: `${pick.title}: ${pick.result}. ${pick.detail}`,
+  };
+}

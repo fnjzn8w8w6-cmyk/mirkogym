@@ -11,6 +11,7 @@ import type { AthleteReport } from './athlete';
 import { PAIN_EXERCISES } from './athlete';
 import { applyTrainingChange, type TrainingDiff, type TrainingEdit } from './training-edits';
 import type { IdealVolume } from './training-model';
+import type { GoalPhase } from './goal-plan';
 
 const DAY = 86400000;
 export const WEEKDAYS = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
@@ -170,7 +171,8 @@ export type Proposal =
   | { id: string; kind: 'reorder'; emoji: string; title: string; detail: string; dayId: string }
   | { id: string; kind: 'cheat'; emoji: string; title: string; detail: string; weekday: number }
   | { id: string; kind: 'cycling'; emoji: string; title: string; detail: string; weekdays: number[] }
-  | { id: string; kind: 'meso'; emoji: string; title: string; detail: string; days: Day[]; diff: TrainingDiff[] };
+  | { id: string; kind: 'meso'; emoji: string; title: string; detail: string; days: Day[]; diff: TrainingDiff[] }
+  | { id: string; kind: 'goal'; emoji: string; title: string; detail: string; phases: GoalPhase[]; summary: string };
 
 export function buildProposals(ctx: {
   sessions: Session[];

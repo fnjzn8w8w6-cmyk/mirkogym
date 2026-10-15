@@ -252,6 +252,13 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
           if (moved) schedule = [moved, ...schedule.filter((d) => d.id !== pr.dayId)].map((d, i) => ({ ...d, order: i + 1 }));
         }
         if (pr.kind === 'cycling') cycling = pr.weekdays;
+        // obiettivo aggiornato con numeri realistici (stesse date finali)
+        if (pr.kind === 'goal' && settings.goalPlan) {
+          const gp = { ...settings.goalPlan, phases: pr.phases, summary: pr.summary, createdAt: Date.now() };
+          patch.goalPlan = gp;
+          const ph = gp.phases[gp.current];
+          if (ph && settings.profile) patch.profile = { ...settings.profile, goal: ph.type };
+        }
       }
       if (plan && plan.source !== 'nutrizionista') {
         try {

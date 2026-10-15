@@ -243,8 +243,12 @@ export interface Forecast {
 
 /** Quando arrivi al peso obiettivo al ritmo attuale: forchetta all'80%. */
 export function forecast(logs: BodyLog[], target: number, now = Date.now()): Forecast | null {
-  const from = toISODate(new Date(now - 21 * DAY));
-  const tr = weightTrend(logs, now).filter((p) => p.date >= from);
+  // ultime 3 settimane, senza la prima settimana di pesate (acqua e glicogeno), come metabolismo e correzioni
+  const last21 = toISODate(new Date(now - 21 * DAY));
+  const settled = settledFrom(logs) ?? '';
+  const from = settled > last21 ? settled : last21;
+  // la tendenza riparte dalla prima pesata dopo l'assestamento
+  const tr = weightTrend(logs.filter((l) => l.date >= from), now).filter((p) => p.date >= from);
   if (tr.filter((p) => p.weight != null).length < 4 || tr.length < 10) return null;
   const n = tr.length;
   const mx = avg(tr.map((_, i) => i));

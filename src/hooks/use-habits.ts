@@ -11,6 +11,8 @@ import { fromISODate, mondayISO, toISODate, todayISO } from '@/lib/date-utils';
 import { useData } from './data-context';
 import { useEffectiveProfile } from './use-effective-profile';
 import { useWeekCalc } from './use-metabolism';
+import { compOf, goalProposal } from '@/lib/goal-feasibility';
+import { composition } from '@/lib/metabolism';
 import type { UserProfile } from '@/lib/metabolism';
 
 /** Giorni con più calorie (allenamento) o null se le calorie sono uguali tutti i giorni. */
@@ -87,9 +89,10 @@ export function useProposals() {
   const { ideal } = useTrainingModel();
   const foodLogs = useRecentFoodLogs(35);
   const cyclingNow = useCyclingDays();
+  const eff = useEffectiveProfile();
   return useMemo(() => {
     if (!settings.profile) return [];
-    return buildProposals({
+    const list = buildProposals({
       sessions,
       days,
       foodLogs,
@@ -101,5 +104,12 @@ export function useProposals() {
       hasPlan: Boolean(settings.weekPlan),
       mesoEnding: Boolean(meso.mesocycle) && meso.currentWeek >= meso.totalWeeks,
     });
-  }, [settings, sessions, days, foodLogs, report, ideal, meso.mesocycle, meso.currentWeek, meso.totalWeeks, cyclingNow]);
+    // obiettivo: se con i dati di oggi il piano non è più realistico, il coach propone la versione aggiornata
+    const plan = settings.goalPlan;
+    if (plan && eff) {
+      const g = goalProposal(eff, compOf(eff.weightKg, composition(eff).bf.value), plan);
+      if (g) list.unshift({ id: g.id, kind: 'goal', emoji: '🎯', title: g.title, detail: g.detail, phases: g.phases, summary: g.summary });
+    }
+    return list;
+  }, [settings, sessions, days, foodLogs, report, ideal, meso.mesocycle, meso.currentWeek, meso.totalWeeks, cyclingNow, eff]);
 }
