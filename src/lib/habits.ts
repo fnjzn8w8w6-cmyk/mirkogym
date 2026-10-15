@@ -5,6 +5,7 @@
  * - giorni a rischio (allenamenti saltati, sgarri ricorrenti) → proposte nel check-in.
  */
 import type { Day, FoodLog, Session } from '@/types';
+import { toISODate } from './date-utils';
 import type { Nutrition, UserProfile } from './metabolism';
 import type { CoachPrefs } from './program-generator';
 import type { AthleteReport } from './athlete';
@@ -68,6 +69,20 @@ export function dayNutrition(base: Nutrition, weekday: number, cycling: number[]
   const rest = -Math.round((bonus * cycling.length) / (7 - cycling.length) / 10) * 10;
   const delta = training ? bonus : rest;
   return { ...base, target: base.target + delta, carbs: Math.max(60, base.carbs + Math.round(delta / 4)), delta, training };
+}
+
+/**
+ * Obiettivo di un giorno del diario (stesse regole del diario): tipo scelto nel diario, altrimenti per i giorni passati
+ * allenamento fatto o no, per oggi e i prossimi i giorni di allenamento previsti. Così "in obiettivo" vuol dire la stessa cosa ovunque.
+ */
+export function logTargetFn(base: Nutrition, cycling: number[] | null | undefined, sessions: Session[], today = toISODate(new Date())) {
+  const trainedOn = new Set(sessions.map((x) => toISODate(new Date(x.date))));
+  return (l: Pick<FoodLog, 'date' | 'dayType'>): { kcal: number; protein: number } => {
+    const wd = (new Date(`${l.date}T12:00:00`).getDay() + 6) % 7;
+    const trained = l.dayType ? l.dayType === 'training' : l.date < today ? trainedOn.has(l.date) : undefined;
+    const n = dayNutrition(base, wd, cycling, trained);
+    return { kcal: n.target, protein: n.protein };
+  };
 }
 
 export const weekTargets = (base: Nutrition, cycling: number[] | null | undefined): Nutrition[] => Array.from({ length: 7 }, (_, d) => dayNutrition(base, d, cycling));

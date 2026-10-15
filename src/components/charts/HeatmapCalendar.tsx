@@ -55,7 +55,7 @@ export function HeatmapCalendar({ counts, days = 90 }: { counts: Map<string, num
                 onClick={() => c.inRange && setHover(c)}
                 onMouseLeave={() => setHover(null)}
               >
-                <title>{`${formatShortDate(c.date)}: ${c.count ? `${c.count} sessione${c.count > 1 ? 'i' : ''}` : 'riposo'}`}</title>
+                <title>{`${formatShortDate(c.date)}: ${c.count ? `${c.count} ${c.count > 1 ? 'sessioni' : 'sessione'}` : 'riposo'}`}</title>
               </rect>
             )),
           )}
@@ -64,7 +64,7 @@ export function HeatmapCalendar({ counts, days = 90 }: { counts: Map<string, num
       <div className="mt-2 flex items-center justify-between text-sm text-fg-3">
         <span>
           {hover
-            ? `${formatShortDate(hover.date)} · ${hover.count ? `${hover.count} sessione${hover.count > 1 ? 'i' : ''}` : 'riposo'}`
+            ? `${formatShortDate(hover.date)} · ${hover.count ? `${hover.count} ${hover.count > 1 ? 'sessioni' : 'sessione'}` : 'riposo'}`
             : `${total} giorni di allenamento`}
         </span>
         <span className="flex items-center gap-1.5">

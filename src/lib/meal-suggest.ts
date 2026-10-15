@@ -213,8 +213,3 @@ export function suggestMeals(input: {
   for (const s of ranked) if (picked.length < (input.count ?? 3) && !picked.includes(s)) picked.push(s);
   return picked;
 }
-
-/** Il pasto vuoto più adatto all'ora (colazione al mattino, poi pranzo, cena, altrimenti spuntino). */
-export function emptyMeals(entries: DiaryEntry[]): DiaryMeal[] {
-  return (['colazione', 'pranzo', 'cena', 'spuntini'] as DiaryMeal[]).filter((m) => m === 'spuntini' || !entries.some((e) => e.meal === m));
-}

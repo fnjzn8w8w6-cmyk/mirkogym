@@ -9,6 +9,8 @@ import { weekKey, weeklyQuests } from '@/lib/quests';
 import { userNutrition } from '@/lib/coach';
 import { useEffectiveProfile } from './use-effective-profile';
 import { weekStreak } from '@/lib/analytics';
+import { logTargetFn } from '@/lib/habits';
+import { useCyclingDays } from './use-habits';
 
 const WEEK = 7 * 86400000;
 
@@ -19,11 +21,21 @@ export function useStatsExtra(): StatsExtra {
   const { settings } = useSettings();
   const foodLogs = useRecentFoodLogs(180);
   const eff = useEffectiveProfile();
+  const { sessions } = useSessions();
+  const cycling = useCyclingDays();
   return useMemo(() => {
     const bodyweight = bodyLogs.find((b) => b.weight != null)?.weight ?? eff?.weightKg;
     const t = eff ? userNutrition(eff, settings) : null;
-    return { foodLogs, target: t ? { kcal: t.target, protein: t.protein } : null, quests: settings.questsDone?.length ?? 0, bodyweight, groupOf };
-  }, [foodLogs, bodyLogs, settings, groupOf, eff]);
+    return {
+      foodLogs,
+      target: t ? { kcal: t.target, protein: t.protein } : null,
+      // "in obiettivo" con l'obiettivo del giorno, come nel diario
+      ...(t ? { targetOf: logTargetFn(t, cycling, sessions) } : {}),
+      quests: settings.questsDone?.length ?? 0,
+      bodyweight,
+      groupOf,
+    };
+  }, [foodLogs, bodyLogs, settings, groupOf, eff, cycling, sessions]);
 }
 
 /** Livello, traguardi, ranghi di forza, sfide settimanali e striscia dell'utente. */
@@ -51,6 +63,7 @@ export function useProgress() {
         body: bodyLogs.filter((b) => b.date >= key),
         planned: Math.max(1, settings.profile?.daysPerWeek ?? days.length),
         target: extra.target ?? null,
+        targetOf: extra.targetOf,
         groupOf,
       },
       key,

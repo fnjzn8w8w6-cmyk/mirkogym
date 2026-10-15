@@ -42,7 +42,7 @@ export function FatalError({ error }: { error: Error }) {
       <h1 className="text-xl text-fg">Impossibile connettersi</h1>
       <p className="mt-2 max-w-sm text-base text-fg-2">
         {isAuth
-          ? "Attiva l'accesso Anonimo in Firebase Console → Authentication → Metodo di accesso."
+          ? "Attiva i metodi di accesso (Email/password e Anonimo) in Firebase Console → Authentication → Metodo di accesso."
           : isRules
             ? 'Le regole di sicurezza Firestore bloccano l’accesso. Copia il file firestore.rules in Firebase Console.'
             : 'Controlla la connessione e riprova.'}

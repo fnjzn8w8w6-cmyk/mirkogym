@@ -4,6 +4,7 @@
  */
 import type { BodyLog } from '@/types';
 import { movingAverage7d } from './analytics';
+import { LEAN_SHARE } from './goal-feasibility';
 
 export type BodyFatSource = NonNullable<BodyLog['bodyFatSource']>;
 
@@ -39,7 +40,7 @@ function measured(logs: BodyLog[], l: BodyLog): number {
 
 /**
  * Massa grassa attuale: ultima misura affidabile aggiornata con il trend del peso (media 7 giorni).
- * Chi dimagrisce perde soprattutto grasso (~75% del peso), chi ingrassa ne prende ~60%.
+ * Chi dimagrisce perde soprattutto grasso (~75% del peso), chi ingrassa ne prende ~45% (stessa quota del coach adattivo).
  */
 export function bodyFatNow(bodyLogs: BodyLog[], now = Date.now()): BodyFatNow | null {
   // la stima dal BMI del questionario iniziale non è una misura (sbaglia molto con chi è muscoloso)
@@ -55,10 +56,11 @@ export function bodyFatNow(bodyLogs: BodyLog[], now = Date.now()): BodyFatNow | 
   const atAnchor = [...weights].reverse().find(([d]) => d <= anchor.date) ?? weights[0];
   const last = weights[weights.length - 1];
   if (last[0] <= anchor.date) return { value: round(bf), estimated: false, anchorDate: anchor.date, source };
-  const w0 = anchor.weight ?? atAnchor[1];
+  // stessa misura del peso agli estremi (media 7 giorni): la pesata del giorno della misura ha dentro l'acqua di giornata
+  const w0 = atAnchor[1];
   const w1 = last[1];
   const dw = w1 - w0;
-  const fat = (w0 * bf) / 100 + dw * (dw < 0 ? 0.75 : 0.6);
+  const fat = (w0 * bf) / 100 + dw * (dw < 0 ? 0.75 : 1 - LEAN_SHARE);
   const value = Math.min(60, Math.max(3, (fat / w1) * 100));
   return { value: round(value), estimated: Math.abs(value - bf) >= 0.05, anchorDate: anchor.date, source };
 }

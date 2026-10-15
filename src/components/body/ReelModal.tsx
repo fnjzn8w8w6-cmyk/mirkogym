@@ -15,7 +15,7 @@ import { NewBadge } from '@/components/ui/Help';
 import { shareFile } from '@/lib/share-card';
 import { sessionSetCount, sessionTonnage } from '@/lib/analytics';
 import { daysBetween, fromISODate, toISODate, todayISO } from '@/lib/date-utils';
-import type { BodyLog, BodyPoints } from '@/types';
+import type { BodyLog, BodyPoints, ProgressPhoto } from '@/types';
 import { MuscleFigure } from '@/components/library/MuscleFigure';
 import { dayIntensity, muscleMapFor } from '@/lib/daily-card';
 
@@ -68,7 +68,8 @@ function nearest(logs: BodyLog[], date: string, field: 'weight' | 'bodyFat', max
 }
 
 /** Reel dei progressi: un video con tutte le foto, il confronto primo/ultimo giorno e i numeri del percorso. */
-export function ReelModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+/** `daily` = le foto giornaliere già filtrate (senza quelle dei check-in, anche vecchie senza tipo), come nell'elenco. */
+export function ReelModal({ open, onClose, daily }: { open: boolean; onClose: () => void; daily?: ProgressPhoto[] }) {
   const toast = useToast();
   const { photos, images, body } = usePhotos();
   const { sessions, groupOf } = useSessions();
@@ -100,7 +101,7 @@ export function ReelModal({ open, onClose }: { open: boolean; onClose: () => voi
 
   const data = useMemo(() => {
     // foto giornaliere (non quelle del check-in), in ordine di scatto
-    const all = photos.filter((p) => p.kind !== 'checkin').sort((a, b) => a.date.localeCompare(b.date) || a.createdAt - b.createdAt);
+    const all = (daily ?? photos.filter((p) => p.kind !== 'checkin')).slice().sort((a, b) => a.date.localeCompare(b.date) || a.createdAt - b.createdAt);
     const firstEver = all[0]?.date;
     const from = period === 'tutto' ? '' : toISODate(Date.now() - (Number(period) - 1) * 86400000);
     const sel = all.filter((p) => p.date >= from && p.date <= todayISO());
@@ -126,7 +127,7 @@ export function ReelModal({ open, onClose }: { open: boolean; onClose: () => voi
       bfLast: sel[sel.length - 1].bodyFat ?? nearest(bodyLogs, b, 'bodyFat', 10),
     };
     return { list, summary };
-  }, [photos, sessions, bodyLogs, period]);
+  }, [photos, daily, sessions, bodyLogs, period]);
 
   const create = async () => {
     if (!data.summary) return;

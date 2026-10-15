@@ -58,6 +58,14 @@ export function TimerCamera({ open, onClose, onShot, ghost }: { open: boolean; o
   const [outline, setOutline] = useState<string | null>(null);
   const [showGhost, setShowGhost] = useState(() => readNum(GHOST_KEY, 1) === 1);
 
+  // l'audio dei bip si chiude con la fotocamera (i telefoni ne permettono pochi aperti)
+  useEffect(() => {
+    if (open) return;
+    void audioRef.current?.close().catch(() => undefined);
+    audioRef.current = null;
+  }, [open]);
+  useEffect(() => () => void audioRef.current?.close().catch(() => undefined), []);
+
   // contorno della sagoma (una volta per foto)
   useEffect(() => {
     setOutline(null);

@@ -1,3 +1,4 @@
+import { weekPhaseChanged } from '@/lib/goal-plan';
 import { useState } from 'react';
 import { useSettings } from '@/hooks/use-settings';
 import { useBodyLogs } from '@/hooks/use-body-logs';
@@ -35,7 +36,7 @@ export function EnergyCard() {
   const reliable = metabolismReliable(m);
   const complete = completeDays(foodLogs).length;
   const span = weighSpan(bodyLogs);
-  const wk = settings.weekCal && settings.weekCal.week === mondayISO() ? settings.weekCal : null;
+  const wk = settings.weekCal && settings.weekCal.week === mondayISO() && !weekPhaseChanged(settings.weekCal, settings.goalPlan) ? settings.weekCal : null;
   // consumo su cui sono calcolate le calorie di questa settimana (le settimane vecchie usavano la formula senza allenamenti)
   const weekValue = wk ? (wk.tdee ?? wk.formula ?? tdee(p)) : null;
   const lean = composition(p).lean;

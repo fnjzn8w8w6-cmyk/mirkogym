@@ -59,6 +59,9 @@ export function BarcodeScanner({ open, onClose, onCode }: { open: boolean; onClo
   const [manualError, setManualError] = useState<string | null>(null);
   const [showManual, setShowManual] = useState(false);
   const [torch, setTorch] = useState<{ on: boolean; set: (v: boolean) => void } | null>(null);
+  // ultima callback senza riavviare la fotocamera a ogni render del genitore
+  const onCodeRef = useRef(onCode);
+  onCodeRef.current = onCode;
 
   useEffect(() => {
     if (!open) return;
@@ -109,7 +112,7 @@ export function BarcodeScanner({ open, onClose, onCode }: { open: boolean; onClo
               if (code && hits >= 2 && !stopped) {
                 stopped = true;
                 haptics.setDone();
-                onCode(code);
+                onCodeRef.current(code);
                 return;
               }
             }
@@ -133,7 +136,7 @@ export function BarcodeScanner({ open, onClose, onCode }: { open: boolean; onClo
       window.clearTimeout(timer);
       stream?.getTracks().forEach((t) => t.stop());
     };
-  }, [open, onCode]);
+  }, [open]);
 
   return (
     <Modal open={open} onClose={onClose} title="Scansiona il codice a barre">

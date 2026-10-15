@@ -9,6 +9,7 @@ import { useEffectiveProfile } from './use-effective-profile';
 import { settle } from '@/lib/firestore';
 import { mondayISO, todayISO } from '@/lib/date-utils';
 import { computeWeekCalories } from '@/lib/calorie-week';
+import { weekPhaseChanged } from '@/lib/goal-plan';
 import { metabolismReliable, userNutrition } from '@/lib/coach';
 import { resolveCycling, weekTargets } from '@/lib/habits';
 import { loadRecipes, rescalePlan } from '@/lib/recipes';
@@ -133,13 +134,17 @@ export function useWeekCaloriesSync() {
   // peso e massa grassa attuali, consumo calcolato con gli allenamenti fatti
   const p = useEffectiveProfile();
   const energy = useEnergy();
-  const due = Boolean(p) && settings.weekCal?.week !== mondayISO();
+  // a metà settimana si ricalcola anche quando cambia la fase dell'obiettivo (conferma del coach, check-in, fase dopo)
+  const phaseChanged = settings.weekCal?.week === mondayISO() && weekPhaseChanged(settings.weekCal, settings.goalPlan);
+  const due = Boolean(p) && (settings.weekCal?.week !== mondayISO() || phaseChanged);
   const apply = useApplyWeek();
   useEffect(() => {
     if (!due || !p || !energy || !loaded.settings || !loaded.bodyLogs || !loaded.sessions) return;
     const t = window.setTimeout(() => {
-      void apply(computeWeekCalories(p, settings, bodyLogs, foodLogs, new Date(), energy.total));
-    }, 4000);
+      // ricalcolo della settimana in corso: si riparte dai valori della settimana prima (per "Annulla")
+      const s = phaseChanged ? { ...settings, weekCal: previousWeek(settings.weekCal), kcalAdjust: 0 } : settings;
+      void apply(computeWeekCalories(p, s, bodyLogs, foodLogs, new Date(), energy.total));
+    }, phaseChanged ? 800 : 4000);
     return () => window.clearTimeout(t);
-  }, [due, p, energy, loaded.settings, loaded.bodyLogs, loaded.sessions, settings, bodyLogs, foodLogs, apply]);
+  }, [due, phaseChanged, p, energy, loaded.settings, loaded.bodyLogs, loaded.sessions, settings, bodyLogs, foodLogs, apply]);
 }

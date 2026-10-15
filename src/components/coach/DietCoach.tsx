@@ -162,6 +162,7 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
   const [toPlan, setToPlan] = useState(true);
   const prefs = settings.nutritionPrefs ?? DEFAULT_NUTRITION;
   const adjust = settings.kcalAdjust ?? 0;
+  const kcalReq = settings.kcalRequest ?? 0;
   const current = useMemo(() => userNutrition(profile, settings), [profile, settings]);
   const byId = useMemo(() => new Map((data?.recipes ?? []).map((r) => [r.id, r])), [data]);
 
@@ -206,7 +207,8 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
     const nextPrefs = prefChange ? applyDietChange(prefs, change, text) : prefs;
     const nextAdjust = prefChange ? adjust + change.kcalDelta : adjust;
     // con l'aggiornamento settimanale attivo la richiesta del dietologo sposta l'obiettivo di questa settimana
-    const nextWeek = settings.weekCal && prefChange && change.kcalDelta ? { ...settings.weekCal, adjust: settings.weekCal.adjust + change.kcalDelta, intent: (settings.weekCal.intent ?? settings.weekCal.adjust) + change.kcalDelta, target: settings.weekCal.target + change.kcalDelta } : settings.weekCal;
+    // (la richiesta resta salvata a parte e si somma anche alle settimane dopo, vedi kcalRequest)
+    const nextWeek = settings.weekCal && prefChange && change.kcalDelta ? { ...settings.weekCal, adjust: settings.weekCal.adjust + change.kcalDelta, target: settings.weekCal.target + change.kcalDelta } : settings.weekCal;
     const target = userNutrition(profile, { ...settings, kcalAdjust: nextAdjust, nutritionPrefs: nextPrefs, weekCal: nextWeek });
     const pp = planPrefs(nextPrefs, settings.favoriteRecipes ?? []);
     const notes: string[] = [];
@@ -283,9 +285,10 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
       await settle(
         update({
           ...(proposal.prefChange ? { nutritionPrefs: proposal.prefs, kcalAdjust: proposal.adjust } : {}),
-          // calorie chieste al dietologo: valgono subito per questa settimana
+          // calorie chieste al dietologo: valgono subito per questa settimana e restano per le prossime
+          ...(proposal.prefChange && proposal.adjust !== adjust ? { kcalRequest: kcalReq + (proposal.adjust - adjust) } : {}),
           ...(proposal.prefChange && settings.weekCal && proposal.adjust !== adjust
-            ? { weekCal: { ...settings.weekCal, adjust: settings.weekCal.adjust + (proposal.adjust - adjust), intent: (settings.weekCal.intent ?? settings.weekCal.adjust) + (proposal.adjust - adjust), target: settings.weekCal.target + (proposal.adjust - adjust) } }
+            ? { weekCal: { ...settings.weekCal, adjust: settings.weekCal.adjust + (proposal.adjust - adjust), target: settings.weekCal.target + (proposal.adjust - adjust), request: (settings.weekCal.request ?? 0) + (proposal.adjust - adjust) } }
             : {}),
           ...(planOk && proposal.plan ? { weekPlan: proposal.plan } : {}),
         }),
@@ -305,7 +308,16 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
   };
 
   const reset = async () => {
-    await settle(update({ nutritionPrefs: { ...prefs, style: 'standard', request: '', summary: '' }, kcalAdjust: 0 }));
+    // si toglie solo quello chiesto al dietologo (la correzione automatica dal peso resta)
+    const wk = settings.weekCal;
+    await settle(
+      update({
+        nutritionPrefs: { ...prefs, style: 'standard', request: '', summary: '' },
+        kcalRequest: 0,
+        kcalAdjust: adjust - kcalReq,
+        ...(wk && wk.request ? { weekCal: { ...wk, adjust: wk.adjust - wk.request, target: wk.target - wk.request, request: 0 } } : {}),
+      }),
+    );
     toast.success('Obiettivi riportati allo standard');
   };
 
@@ -527,7 +539,7 @@ export function DietCoach({ profile }: { profile: UserProfile }) {
           <Button size="sm" variant="secondary" icon={<ArrowRight className="h-4 w-4" />} onClick={() => navigate('/food?tab=plan')}>
             Vedi il piano
           </Button>
-          {(adjust !== 0 || (prefs.style && prefs.style !== 'standard')) && (
+          {(kcalReq !== 0 || (prefs.style && prefs.style !== 'standard')) && (
             <Button size="sm" variant="ghost" icon={<RefreshCw className="h-4 w-4" />} onClick={() => void reset()}>
               Torna agli obiettivi standard
             </Button>

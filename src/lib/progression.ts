@@ -19,14 +19,31 @@ export interface PreviousLog extends ExerciseLog {
   deload?: boolean;
 }
 
-/** Log precedenti di un esercizio (per id, fallback per nome se l'id non ha storico), in ordine cronologico. */
+const normName = (s: string) => s.trim().toLowerCase();
+const nameWords = (s: string) => normName(s).split(/[^a-z0-9àèéìòù]+/).filter((w) => w.length > 2);
+
+/**
+ * Stesso esercizio? Le schede vecchie riusano gli stessi id per esercizi diversi (es. "t1e1" = squat in un modello,
+ * panca in un altro): con lo stesso id si controlla anche il nome. Un nome ritoccato ("Panca" → "Panca piana") resta lo stesso.
+ */
+export function sameExerciseName(a: string, b: string): boolean {
+  const x = normName(a);
+  const y = normName(b);
+  if (!x || !y || x === y || x.includes(y) || y.includes(x)) return true;
+  const wa = nameWords(a);
+  const wb = new Set(nameWords(b));
+  const common = wa.filter((w) => wb.has(w)).length;
+  return common >= Math.min(2, wa.length, wb.size);
+}
+
+/** Log precedenti di un esercizio (per id con lo stesso nome, fallback per nome se l'id non ha storico), in ordine cronologico. */
 export function previousLogsFor(exercise: Pick<Exercise, 'id' | 'name'>, sessions: Session[]): PreviousLog[] {
   const sorted = [...sessions].sort((a, b) => a.date - b.date);
   const collect = (match: (l: ExerciseLog) => boolean) =>
     sorted.flatMap((s) =>
       s.logs.filter((l) => match(l) && l.sets.length > 0).map((l) => ({ ...l, date: s.date, deload: s.deload })),
     );
-  const byId = collect((l) => l.exerciseId === exercise.id);
+  const byId = collect((l) => l.exerciseId === exercise.id && sameExerciseName(l.name ?? '', exercise.name));
   if (byId.length) return byId;
   const name = exercise.name.trim().toLowerCase();
   return collect((l) => (l.name ?? '').trim().toLowerCase() === name);

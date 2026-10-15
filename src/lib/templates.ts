@@ -4,13 +4,16 @@ import { SEED_DAYS } from './seed-data';
 
 type Row = [libraryId: string, group: string, sets: number, repMin: number, repMax: number, rir?: string, rest?: string];
 
-const day = (idx: number, subtitle: string, rows: Row[]): Day => ({
+/** Id degli esercizi unici per ogni scheda creata: con lo stesso id lo storico di un altro esercizio darebbe carichi sbagliati. */
+const stampOf = () => Date.now().toString(36).slice(-5);
+
+const day = (idx: number, subtitle: string, rows: Row[], stamp = stampOf()): Day => ({
   id: `day${idx}`,
   order: idx,
   name: `Day ${idx}`,
   subtitle,
   exercises: rows.map(([libraryId, group, sets, repMin, repMax, rir, rest], i): Exercise => ({
-    id: `t${idx}e${i + 1}`,
+    id: `t${idx}e${i + 1}-${stamp}`,
     libraryId,
     name: NAME_IT[libraryId] ?? libraryId.replace(/_/g, ' '),
     group,

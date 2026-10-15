@@ -181,6 +181,8 @@ export interface Settings {
   dietAnalysis?: { day?: SavedAnalysis; week?: SavedAnalysis };
   /** Correzione calorica giornaliera (kcal): usata quando il metabolismo reale non è ancora calcolabile. */
   kcalAdjust?: number;
+  /** Calorie chieste al dietologo (kcal al giorno, + o −): si sommano all'obiettivo di ogni settimana finché non torni allo standard. */
+  kcalRequest?: number;
   /** Aggiornamento settimanale delle calorie: un solo calcolo, fisso per tutta la settimana. */
   weekCal?: WeekCalories;
   /** Calorie diverse nei giorni di allenamento e di riposo (default sì). */
@@ -224,6 +226,10 @@ export interface WeekCalories {
   intent?: number;
   /** ritmo dell'obiettivo a fasi fissato il lunedì (kg/settimana; null = nessun obiettivo a fasi) */
   rate?: number | null;
+  /** fase dell'obiettivo per cui è stata calcolata (tipo|inizio): se cambia a metà settimana si ricalcola */
+  phase?: string | null;
+  /** calorie chieste al dietologo comprese nell'obiettivo (kcal al giorno) */
+  request?: number;
   /** obiettivo medio giornaliero della settimana */
   target: number;
   /** obiettivo medio della settimana prima (null = primo calcolo) */
@@ -323,6 +329,10 @@ export interface BackupFile {
   myFoods?: Food[];
   /** archivio completo dei check-in settimanali */
   checkIns?: CheckIn[];
+  /** foto dei progressi (dati e immagini) */
+  photos?: { meta: ProgressPhoto; images: PhotoImages | null }[];
+  /** foto obiettivo create con l'AI */
+  goalPhotos?: { meta: GoalPhoto; image: string | null }[];
 }
 
 /* ---------- Alimentazione ---------- */

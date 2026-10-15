@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ProgressionChart } from '@/components/charts/ProgressionChart';
 import { VolumeChart } from '@/components/charts/VolumeChart';
-import { computeRecords, epley1RM, exerciseHistory, exerciseKey, formatKg, groupColor, weightForReps } from '@/lib/analytics';
+import { computeRecords, exerciseHistory, workingSets, exerciseKey, formatKg, groupColor, weightForReps } from '@/lib/analytics';
 import { formatDayMonth, formatShortDate } from '@/lib/date-utils';
 
 export default function HistoryExercise() {
@@ -24,7 +24,8 @@ export default function HistoryExercise() {
     return null;
   }, [sessions, key, nameOf, groupOf]);
 
-  const allSets = useMemo(() => history.flatMap((h) => h.sets), [history]);
+  // record solo sulle serie allenanti (il riscaldamento ha tante ripetizioni a carico basso)
+  const allSets = useMemo(() => history.flatMap((h) => workingSets(h.sets)), [history]);
   const records = useMemo(() => computeRecords(allSets), [allSets]);
 
   if (!meta || history.length === 0) {
@@ -139,7 +140,7 @@ export default function HistoryExercise() {
                     ))}
                   </td>
                   <td className="py-2.5 pr-4 text-right align-top font-semibold text-fg">
-                    {Math.max(...h.sets.map((s) => epley1RM(s.weight, s.reps)))}
+                    {h.best1RM}
                   </td>
                 </tr>
               ))}

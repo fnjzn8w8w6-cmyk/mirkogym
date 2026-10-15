@@ -4,7 +4,7 @@ import { callAI, callAIJson, num, oneOf, str, strArr, type AIOptions } from './a
 import { GOALS, EXPERIENCE, MACRO_STYLE_LABEL, nutrition, tdee, type Goal, type MacroStyle, type Nutrition, type UserProfile } from './metabolism';
 import { PRIORITY_KEYS, SLOT_IDS, SLOT_LABEL, type CoachPrefs } from './program-generator';
 import { NAME_IT } from './exercise-library';
-import { planRate, type GoalPlan } from './goal-plan';
+import { planRate, weekPhaseChanged, type GoalPlan } from './goal-plan';
 import { sessionTonnage } from './analytics';
 import { energyModel } from './energy';
 import { METABOLISM_RELIABLE_DAYS, robustSlope, settledFrom } from './body-model';
@@ -110,7 +110,8 @@ export const userNutrition = (
   if (force) return nutrition(prof, force.adjust, style, phase ? (force.rate ?? rateNow()) : null, force.tdee);
   // Aggiornamento settimanale: per tutta la settimana valgono i numeri fissati il lunedì (anche il ritmo dell'obiettivo,
   // così una pesata a metà settimana non sposta le calorie)
-  const wk = s.weekCal && s.weekCal.week === mondayISO() ? s.weekCal : null;
+  // (se nel frattempo è cambiata fase, quei numeri non valgono più: si ricalcola subito)
+  const wk = s.weekCal && s.weekCal.week === mondayISO() && !weekPhaseChanged(s.weekCal, s.goalPlan) ? s.weekCal : null;
   if (wk) return nutrition(prof, wk.adjust, style, phase ? (wk.rate ?? rateNow()) : null, wk.tdee ?? wk.formula ?? tdee(prof));
   const rate = rateNow();
   // Con il metabolismo reale le correzioni non servono più (lo misura già)
@@ -438,23 +439,4 @@ ${convo ? `CONVERSAZIONE:\n${convo}\n` : ''}Utente: ${question.slice(0, 1000)}
 Coach:`;
   const text = await callAI([{ text: prompt }], { temperature: 0.6, label: 'Il coach sta scrivendo…', ...opts });
   return text.trim().slice(0, 2500);
-}
-
-/** Analisi completa del coach su tutto lo storico (tab Analisi). */
-export async function analyzeAthlete(memory: string, profile: UserProfile, opts: AIOptions = {}): Promise<string> {
-  const prompt = `Sei il personal trainer e nutrizionista di questa persona e la segui da tempo. Analizza TUTTO il suo storico qui sotto e scrivi un resoconto personale, concreto, con numeri e nomi di esercizi presi dai dati. Niente consigli generici: ogni frase deve riferirsi a qualcosa che c'è nei dati. In italiano, seconda persona, senza markdown (niente asterischi o #).
-Usa ESATTAMENTE queste 4 sezioni, ognuna con il titolo su una riga e 2-4 righe brevi che iniziano con "• ":
-✅ COSA STA ANDANDO BENE
-⚠️ COSA MIGLIORARE
-🩹 DOLORI E RECUPERO (se non ci sono fastidi segnalati scrivi che è tutto ok e come prevenirli)
-🎯 3 AZIONI PER LA PROSSIMA SETTIMANA
-Se ci sono pochi dati dillo in una riga e dai comunque indicazioni sulla base di quelli disponibili.
-CALORIE: usa SOLO i numeri della riga CALORIE dello storico (li calcola l'app ogni lunedì e li applica da sola): non proporre aumenti o riduzioni diversi; se servono cambiamenti, di' che l'aggiornamento automatico di lunedì ne terrà conto.
-Profilo: ${profile.sex === 'm' ? 'uomo' : 'donna'}, ${profile.age} anni, obiettivo ${GOALS.find((g) => g.value === profile.goal)?.label}, livello ${EXPERIENCE.find((e) => e.value === profile.experience)?.label}.
-STORICO:
-${memory}`;
-  const text = await callAI([{ text: prompt }], { temperature: 0.4, label: 'Il coach analizza il tuo storico…', ...opts });
-  const clean = text.replace(/[*#`]/g, '').trim();
-  if (clean.length < 80) throw new Error('Analisi troppo breve, riprova');
-  return clean.slice(0, 3000);
 }

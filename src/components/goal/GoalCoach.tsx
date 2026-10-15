@@ -57,7 +57,7 @@ export function CoachSection() {
   return (
     <div className="space-y-2 rounded-md border border-violet-500/40 bg-violet-500/10 p-3 text-sm text-fg-2">
       <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-fg-3">
-        Coach adattivo <NewBadge /> <HelpTip id="goal-coach" />
+        Coach adattivo <NewBadge since="2026-10-15" /> <HelpTip id="goal-coach" />
       </div>
       <div className="text-fg">
         🎯 Obiettivo finale: <strong>{kg(target.weight)} kg al {Math.round(target.bf)}%</strong>

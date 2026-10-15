@@ -1,3 +1,4 @@
+import { fromBmi } from '@/lib/bodyfat-estimate';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Segmented } from '@/components/ui/Input';
@@ -87,7 +88,9 @@ export default function Body() {
       .map((p) => ({ t: fromISODate(p.date).getTime(), value: p.weight, trend: p.trend, ...(wset.has(p.date) ? { water: true } : {}) }));
   }, [bodyLogs, period, water]);
   const real = weightData.length ? weightData[weightData.length - 1] : null;
-  const bfData = useMemo(() => series(bodyLogs, 'bodyFat', period), [bodyLogs, period]);
+  // massa grassa: solo misure vere (la stima dal BMI del primo accesso non è una misura, come nel resto dell'app)
+  const bfLogs = useMemo(() => bodyLogs.filter((l) => !fromBmi(l)), [bodyLogs]);
+  const bfData = useMemo(() => series(bfLogs, 'bodyFat', period), [bfLogs, period]);
   const wTrend = useMemo(() => trendDelta(bodyLogs, 'weight', 7), [bodyLogs]);
   // Percorso previsto dall'obiettivo a fasi (dalla fase in corso in poi)
   const goalPaths = useMemo(() => {
@@ -96,12 +99,12 @@ export default function Body() {
     const ts = (iso: string) => new Date(`${iso}T12:00:00`).getTime();
     const phases = plan.phases.slice(plan.current);
     const w = [{ t: ts(phases[0].start), plan: phases[0].startWeight }, ...phases.map((p) => ({ t: ts(p.end), plan: (p.weightMin + p.weightMax) / 2 }))];
-    const lastBf = bodyLogs.find((b) => b.bodyFat != null);
+    const lastBf = bfLogs.find((b) => b.bodyFat != null);
     const bfPts = phases.filter((p) => p.targetBf != null).map((p) => ({ t: ts(p.end), plan: p.targetBf as number }));
     const bf = lastBf && bfPts.length ? [{ t: ts(lastBf.date), plan: lastBf.bodyFat as number }, ...bfPts] : undefined;
     return { w, bf };
-  }, [settings.goalPlan, bodyLogs]);
-  const bfTrend = useMemo(() => trendDelta(bodyLogs, 'bodyFat', 30), [bodyLogs]);
+  }, [settings.goalPlan, bfLogs]);
+  const bfTrend = useMemo(() => trendDelta(bfLogs, 'bodyFat', 30), [bfLogs]);
 
   const openNew = () => {
     setEditing(null);
@@ -132,9 +135,9 @@ export default function Body() {
             { date: todayISO(), kind: 'bf', thumb: await thumbOf(imgs.front), ...(w != null ? { weight: w } : {}), bodyFat: bf, low: r.low, high: r.high, comment: `Stima da foto: ${r.notes}`, hasSide: Boolean(imgs.side), createdAt: Date.now() },
             imgs,
           );
+          // solo la massa grassa: il peso di oggi lo dà la bilancia (una pesata copiata falserebbe trend e metabolismo)
           await save({
             date: todayISO(),
-            weight: latestWeight,
             bodyFat: bf,
             bodyFatSource: 'photo',
             notes: `Stima AI da foto (${r.low}–${r.high}%, affidabilità ${r.confidence})`,

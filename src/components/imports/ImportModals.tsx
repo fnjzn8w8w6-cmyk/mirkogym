@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Camera, Check, FileUp, Trash2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -88,6 +88,8 @@ export function MealPhotoModal({ open, onClose, mealLabel, onAdd }: { open: bool
   const [note, setNote] = useState('');
   const [items, setItems] = useState<FoodGuess[] | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  // l'anteprima del piatto occupa memoria finché non si libera
+  useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview]);
   const close = () => {
     ai.cancel();
     setItems(null);

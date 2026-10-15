@@ -113,6 +113,8 @@ export function athleteReport(input: {
   foodLogs?: FoodLog[];
   bodyLogs?: BodyLog[];
   target?: { kcal: number; protein: number } | null;
+  /** obiettivo del singolo giorno (calorie diverse allenamento/riposo) */
+  targetOf?: (l: FoodLog) => { kcal: number; protein: number };
   painResolved?: Record<string, number>;
   nameOf?: (l: Session['logs'][number]) => string;
   groupOf?: (l: Session['logs'][number]) => string;
@@ -215,7 +217,7 @@ export function athleteReport(input: {
     diet = {
       daysLogged: withFood.length,
       avgKcal: Math.round(avg(kcals) ?? 0),
-      inTarget: t ? kcals.filter((k) => Math.abs(k - t.kcal) <= t.kcal * 0.1).length : 0,
+      inTarget: t ? withFood.filter((l, i) => Math.abs(kcals[i] - (input.targetOf?.(l) ?? t).kcal) <= (input.targetOf?.(l) ?? t).kcal * 0.1).length : 0,
       avgProtein: Math.round(avg(withFood.map(protOf)) ?? 0),
       avgAdherence: r1(avg(logs.filter((l) => l.recap).map((l) => l.recap!.adherence))),
       cheats: cheats.slice(-6),

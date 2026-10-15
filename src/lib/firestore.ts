@@ -291,7 +291,8 @@ export const saveDayType = (uid: string, date: string, dayType: FoodLog['dayType
 export const saveDayAnalysis = (uid: string, date: string, analysis: NonNullable<FoodLog['analysis']>) =>
   setDoc(doc(foodLogsCol(uid), date), { date, analysis }, { merge: true });
 export const saveDayRecap = (uid: string, date: string, recap: NonNullable<FoodLog['recap']>) =>
-  setDoc(doc(foodLogsCol(uid), date), clean({ date, recap, updatedAt: Timestamp.now() }), { merge: true });
+  // mergeFields: il riepilogo si sostituisce tutto (con merge le voci tolte, es. lo sgarro, resterebbero salvate)
+  setDoc(doc(foodLogsCol(uid), date), clean({ date, recap, updatedAt: Timestamp.now() }), { mergeFields: ['date', 'recap', 'updatedAt'] });
 
 export function subscribeRecipes(uid: string, cb: (r: UserRecipe[]) => void, onError: OnError): Unsubscribe {
   return onSnapshot(
@@ -313,7 +314,7 @@ export const saveMyFoods = (uid: string, items: Food[]) => setDoc(myFoodsRef(uid
 /* ---------- Backup / Reset ---------- */
 
 export async function exportAll(uid: string): Promise<BackupFile> {
-  const [sched, settings, sessions, bodyLogs, mesos, foodLogs, recipes, myFoods, checkIns] = await Promise.all([
+  const [sched, settings, sessions, bodyLogs, mesos, foodLogs, recipes, myFoods, checkIns, photos, photoImages, goalPhotos, goalImages] = await Promise.all([
     getDoc(scheduleRef(uid)),
     getDoc(settingsRef(uid)),
     getDocs(sessionsCol(uid)),
@@ -323,7 +324,13 @@ export async function exportAll(uid: string): Promise<BackupFile> {
     getDocs(recipesCol(uid)),
     getDoc(myFoodsRef(uid)),
     getDocs(checkInsCol(uid)),
+    getDocs(photosCol(uid)),
+    getDocs(photoImagesCol(uid)),
+    getDocs(goalPhotosCol(uid)),
+    getDocs(goalImagesCol(uid)),
   ]);
+  const imagesById = new Map(photoImages.docs.map((d) => [d.id, d.data() as PhotoImages]));
+  const goalImageById = new Map(goalImages.docs.map((d) => [d.id, (d.data() as { image?: string }).image ?? null]));
   return {
     app: 'mirkogym',
     version: 1,
@@ -333,21 +340,38 @@ export async function exportAll(uid: string): Promise<BackupFile> {
     sessions: sessions.docs.map((d) => fromSession(d.id, d.data())),
     bodyLogs: bodyLogs.docs.map((d) => fromBodyLog(d.id, d.data())),
     mesocycles: mesos.docs.map((d) => fromMeso(d.id, d.data())),
-    foodLogs: foodLogs.docs.map((d) => ({ date: d.id, entries: (d.data().entries as FoodLog['entries']) ?? [], recap: d.data().recap as FoodLog['recap'] })),
+    foodLogs: foodLogs.docs.map((d) => {
+      const x = d.data() as Partial<FoodLog>;
+      return { date: d.id, entries: x.entries ?? [], recap: x.recap, analysis: x.analysis, dayType: x.dayType };
+    }),
     recipes: recipes.docs.map((d) => ({ ...(d.data() as UserRecipe), id: d.id })),
     myFoods: myFoods.exists() ? ((myFoods.data().items as Food[]) ?? []) : [],
     checkIns: checkIns.docs.map((d) => d.data() as CheckIn),
+    photos: photos.docs.map((d) => ({ meta: { ...(d.data() as ProgressPhoto), id: d.id }, images: imagesById.get(d.id) ?? null })),
+    goalPhotos: goalPhotos.docs.map((d) => ({ meta: { ...(d.data() as GoalPhoto), id: d.id }, image: goalImageById.get(d.id) ?? null })),
   };
 }
 
 type Op = { ref: DocumentReference; data?: DocumentData };
 
+/** Scritture a gruppi: al massimo 450 per gruppo e circa 6 MB (le foto pesano: Firestore accetta fino a 10 MB per richiesta). */
 async function commitInChunks(ops: Op[]): Promise<void> {
-  for (let i = 0; i < ops.length; i += 450) {
+  const MAX_OPS = 450;
+  const MAX_BYTES = 6_000_000;
+  let i = 0;
+  while (i < ops.length) {
     const batch = writeBatch(db());
-    for (const op of ops.slice(i, i + 450)) {
+    let n = 0;
+    let bytes = 0;
+    while (i < ops.length && n < MAX_OPS) {
+      const op = ops[i];
+      const size = op.data ? JSON.stringify(op.data).length : 100;
+      if (n > 0 && bytes + size > MAX_BYTES) break;
       if (op.data) batch.set(op.ref, op.data);
       else batch.delete(op.ref);
+      bytes += size;
+      n++;
+      i++;
     }
     await batch.commit();
   }
@@ -361,6 +385,10 @@ async function deletionOps(uid: string): Promise<Op[]> {
     getDocs(foodLogsCol(uid)),
     getDocs(recipesCol(uid)),
     getDocs(checkInsCol(uid)),
+    getDocs(photosCol(uid)),
+    getDocs(photoImagesCol(uid)),
+    getDocs(goalPhotosCol(uid)),
+    getDocs(goalImagesCol(uid)),
   ]);
   return [
     ...cols.flatMap((c) => c.docs.map((d) => ({ ref: d.ref }))),
@@ -391,7 +419,18 @@ export async function importAll(uid: string, backup: BackupFile): Promise<void> 
       data: { ...clean(m), createdAt: toTs(toMs(m.createdAt)) },
     })),
   ];
-  for (const l of backup.foodLogs ?? []) writes.push({ ref: doc(foodLogsCol(uid), l.date), data: clean({ date: l.date, entries: l.entries, recap: l.recap }) });
+  for (const l of backup.foodLogs ?? [])
+    writes.push({ ref: doc(foodLogsCol(uid), l.date), data: clean({ date: l.date, entries: l.entries, recap: l.recap, analysis: l.analysis, dayType: l.dayType }) });
+  for (const ph of backup.photos ?? []) {
+    if (!ph.meta?.id) continue;
+    writes.push({ ref: doc(photosCol(uid), ph.meta.id), data: clean(ph.meta) });
+    if (ph.images) writes.push({ ref: doc(photoImagesCol(uid), ph.meta.id), data: clean(ph.images) });
+  }
+  for (const g of backup.goalPhotos ?? []) {
+    if (!g.meta?.id) continue;
+    writes.push({ ref: doc(goalPhotosCol(uid), g.meta.id), data: clean(g.meta) });
+    if (g.image) writes.push({ ref: doc(goalImagesCol(uid), g.meta.id), data: { image: g.image } });
+  }
   for (const r of backup.recipes ?? []) writes.push({ ref: doc(recipesCol(uid), r.id), data: clean(r) });
   if (backup.myFoods?.length) writes.push({ ref: myFoodsRef(uid), data: clean({ items: backup.myFoods }) });
   for (const c of backup.checkIns ?? []) writes.push({ ref: doc(checkInsCol(uid), String(c.date)), data: clean(c) });

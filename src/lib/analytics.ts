@@ -248,6 +248,9 @@ const GROUP_COLORS: Record<string, string> = {
   addome: '#D6C3A1',
 };
 
+/** Gruppi delle gambe (le schede importate possono avere Glutei e Polpacci separati). */
+export const isLegGroup = (group: string | undefined): boolean => group === 'Gambe' || group === 'Glutei' || group === 'Polpacci';
+
 export const groupColor = (group: string): string => GROUP_COLORS[group.trim().toLowerCase()] ?? '#A8A8AD';
 
 /* ---------- Muscoli: serie settimanali e recupero ---------- */

@@ -8,9 +8,8 @@ import { useBodyLogs } from '@/hooks/use-body-logs';
 import { useEffectiveProfile } from '@/hooks/use-effective-profile';
 import { photoId, usePhotos } from '@/hooks/use-photos';
 import { useGoalPhotos } from '@/hooks/use-goal-photos';
-import { bodyFatNow } from '@/lib/bodyfat-estimate';
-import { composition } from '@/lib/metabolism';
 import { PHASE_EMOJI } from '@/lib/goal-plan';
+import { coachNow } from '@/lib/goal-coach';
 import { ensurePuterUser, generateGoalPhoto, goalPrompt, loadPuter, projectPhases } from '@/lib/goal-photo';
 import { cn } from '@/lib/cn';
 
@@ -110,8 +109,9 @@ function GoalPhotoModal({ onClose, startPhase }: { onClose: () => void; startPha
 
   const projections = useMemo(() => {
     if (!p || !plan) return [];
-    const bf = bodyFatNow(bodyLogs)?.value ?? composition(p).bf.value;
-    return projectPhases(p, { weight: p.weightKg, bf }, plan.phases, plan.current);
+    // stesso punto di partenza del coach (peso di tendenza e massa grassa aggiornata)
+    const now = coachNow(p, bodyLogs);
+    return projectPhases(p, { weight: now.weight, bf: now.bf }, plan.phases, plan.current, Boolean(plan.target));
   }, [p, plan, bodyLogs]);
   const pr = projections[Math.min(pick, projections.length - 1)];
   // la foto di partenza è sempre quella di oggi

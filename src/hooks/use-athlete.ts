@@ -1,5 +1,5 @@
 import { useMemo, useSyncExternalStore } from 'react';
-import { resolveCycling } from '@/lib/habits';
+import { logTargetFn, resolveCycling } from '@/lib/habits';
 import { mondayISO } from '@/lib/date-utils';
 import type { WeekCalories } from '@/types';
 import { addDays } from 'date-fns';
@@ -105,6 +105,7 @@ export function useAthlete() {
       foodLogs,
       bodyLogs,
       target: t ? { kcal: t.target, protein: t.protein } : null,
+      ...(t ? { targetOf: logTargetFn(t, resolveCycling({ enabled: settings.calorieCycling, manual: settings.carbCycling, sessions, perWeek: p?.daysPerWeek ?? days.length }), sessions) } : {}),
       painResolved: settings.painResolved,
       nameOf,
       groupOf,

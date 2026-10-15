@@ -460,7 +460,7 @@ export default function Settings() {
       <ConfirmDialog
         open={resetStep === 1}
         title="Reset dell'app?"
-        message="Verranno cancellati TUTTI i tuoi dati: sessioni, body log, mesocicli e scheda personalizzata."
+        message="Verranno cancellati TUTTI i tuoi dati: sessioni, scheda, pesate e misure, diario alimentare, check-in, foto dei progressi e foto obiettivo, impostazioni."
         confirmLabel="Continua"
         onCancel={() => setResetStep(0)}
         onConfirm={() => {

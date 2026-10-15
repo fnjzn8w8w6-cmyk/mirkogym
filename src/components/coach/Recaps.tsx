@@ -130,7 +130,7 @@ export function DayRecapForm({
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 rounded-md bg-surface-2 p-3">
         <span className="text-sm text-fg">
-          Giornata registrata tutta? <NewBadge id="complete-day" />
+          Giornata registrata tutta? <NewBadge />
           <span className="block text-xs text-fg-3">Se manca qualche pasto, il calcolo del tuo metabolismo la ignora.</span>
         </span>
         <div className="flex shrink-0 gap-1">

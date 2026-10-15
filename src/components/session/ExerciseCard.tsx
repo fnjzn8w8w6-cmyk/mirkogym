@@ -20,9 +20,10 @@ function PrevCompare({ prevSets, lastDate, sets, lastText, scale }: { prevSets: 
   if (!prevSets.length || !lastDate) return null;
   const working = sets.filter((s) => s.type !== 'warmup');
   const vol = (list: { w: number; r: number }[]) => list.reduce((a, x) => a + x.w * x.r, 0);
+  // solo le serie che hanno la corrispondente della volta scorsa (una serie in più non gonfia il confronto)
   const done = working
     .map((s, i) => ({ s, i }))
-    .filter(({ s }) => s.done && parseNum(s.weight) != null && Number(s.reps) > 0);
+    .filter(({ s, i }) => s.done && parseNum(s.weight) != null && Number(s.reps) > 0 && prevSets[i] != null);
   const today = vol(done.map(({ s }) => ({ w: parseNum(s.weight) ?? 0, r: Number(s.reps) })));
   const before = vol(done.map(({ i }) => prevSets[i]).filter(Boolean).map((p) => ({ w: parseNum(p.weight) ?? 0, r: p.reps })));
   const diff = before > 0 ? Math.round(((today - before) / before) * 100) : null;

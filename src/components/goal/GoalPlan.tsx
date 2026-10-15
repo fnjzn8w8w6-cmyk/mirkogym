@@ -22,7 +22,7 @@ import { HelpTip, NewBadge, SectionTitle } from '@/components/ui/Help';
 import { GoalPhotoButton } from './GoalPhoto';
 import { GoalCheck, currentComp } from './GoalCheck';
 import { CoachSection } from './GoalCoach';
-import { coachPlan, etaText, observeResponse, pathToPhases, whatISee, whyNow, type GoalTarget } from '@/lib/goal-coach';
+import { coachNow, coachPlan, etaText, observeResponse, pathToPhases, whatISee, whyNow, type GoalTarget } from '@/lib/goal-coach';
 import { toISODate } from '@/lib/date-utils';
 import { targetFromPlan } from '@/lib/goal-coach';
 import { checkPlan, planVerdict } from '@/lib/goal-feasibility';
@@ -68,7 +68,8 @@ export function GoalPlanEditor({
   const edit = (i: number, patch: Partial<GoalPhase>) => plan && set(reflow({ ...plan, phases: plan.phases.map((ph, j) => (j === i ? { ...ph, ...patch, note: undefined } : ph)) }));
   // coach adattivo: dall'obiettivo finale il coach calcola il percorso (fasi) con i tuoi dati reali
   const { bodyLogs } = useBodyLogs();
-  const nowComp = currentComp(profile, current).comp;
+  // stesso punto di partenza della card e delle proposte del coach
+  const nowComp = useMemo(() => coachNow({ ...profile, weightKg: current.weight }, bodyLogs), [profile, current.weight, bodyLogs]);
   const response = useMemo(() => observeResponse({ ...profile, weightKg: current.weight }, bodyLogs), [profile, current.weight, bodyLogs]);
   const adapt = (base: GoalPlan, t: GoalTarget): GoalPlan => {
     const cp = coachPlan({ ...profile, weightKg: current.weight }, nowComp, t, response);
@@ -119,7 +120,7 @@ export function GoalPlanEditor({
         <div className="space-y-3">
           <div className="rounded-lg border border-violet-500/40 bg-violet-500/10 p-3">
             <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-fg-3">
-              Obiettivo finale <NewBadge /> <HelpTip id="goal-coach" />
+              Obiettivo finale <NewBadge since="2026-10-15" /> <HelpTip id="goal-coach" />
             </div>
             <div className="grid grid-cols-3 gap-2 text-xs text-fg-3">
               <label>
@@ -294,13 +295,15 @@ export function GoalCard({ compact }: { compact?: boolean }) {
   const verdict = planVerdict(checkPlan(p, currentComp(p, { weight: st.current, bf: st.bf }).comp, plan.phases, plan.current));
   // coach adattivo: c'è un obiettivo finale (peso e grasso), le fasi le ripianifica lui
   const adaptive = targetFromPlan(plan) != null;
+  const recompBar = ph.type === 'maintain' && ph.targetBf != null && ph.startBf != null;
   const nut = userNutrition(eff ?? p, settings);
   const tone =
     st.state === 'reached' || st.state === 'on-track' || st.state === 'ahead' ? 'text-accent-400' : st.state === 'behind' ? 'text-warning' : 'text-danger';
   const dot = st.state === 'reached' ? '🏁' : st.state === 'on-track' ? '🟢' : st.state === 'ahead' ? '🔵' : st.state === 'behind' ? '🟡' : '🔴';
 
   const goNext = async () => {
-    const phases = plan.phases.map((x, i) => (i === plan.current ? { ...x, doneAt: new Date().toISOString().slice(0, 10) } : x));
+    const today = toISODate(new Date());
+    const phases = plan.phases.map((x, i) => (i === plan.current ? { ...x, doneAt: today } : x));
     if (!next) {
       await settle(update({ goalPlan: { ...plan, phases } }));
       toast.success('🏆 Obiettivo completato! Impostane uno nuovo quando vuoi');
@@ -308,8 +311,7 @@ export function GoalCard({ compact }: { compact?: boolean }) {
     }
     // la fase successiva parte da oggi e dal peso attuale, mantenendo la sua durata
     const dur = new Date(next.end).getTime() - new Date(next.start).getTime();
-    const today = new Date().toISOString().slice(0, 10);
-    phases[plan.current + 1] = { ...next, start: today, end: new Date(Date.now() + dur).toISOString().slice(0, 10), startWeight: st.current };
+    phases[plan.current + 1] = { ...next, start: today, end: toISODate(new Date(Date.now() + dur)), startWeight: st.current, ...(st.bf != null ? { startBf: st.bf } : {}) };
     const np = reflow({ ...plan, phases, current: plan.current + 1 });
     await settle(update({ goalPlan: np, profile: { ...p, goal: next.type }, kcalAdjust: 0 }));
     toast.success(`Si parte con la fase "${next.label}": calorie e macro aggiornati`);
@@ -344,23 +346,27 @@ export function GoalCard({ compact }: { compact?: boolean }) {
         </div>
         <div>
           <div className="mb-1 flex justify-between text-xs text-fg-3">
-            <span>{kg(ph.startWeight)} kg</span>
+            {/* ricomposizione: si avanza sulla % di grasso, il peso resta lo stesso */}
+            <span>{recompBar ? `${kg(ph.startBf!)}%` : `${kg(ph.startWeight)} kg`}</span>
             <span className="text-center">
               <span className="font-semibold text-fg">{kg(st.current)} kg reali</span>
               {lastScale?.weight != null && Math.abs(lastScale.weight - st.current) >= 0.2 && <span> (bilancia {kg(lastScale.weight)})</span>}
               {st.bf ? ` · ${kg(st.bf)}%` : ''}
             </span>
-            <span>{kg(targetWeight(ph))} kg</span>
+            <span>{recompBar ? `${ph.targetBf}%` : `${kg(targetWeight(ph))} kg`}</span>
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-surface-3">
             <div className="h-full rounded-full bg-accent-500 shadow-glow" style={{ width: `${Math.round(st.progress * 100)}%` }} />
           </div>
         </div>
-        <div className={cn('text-sm font-semibold', tone)}>
-          {dot} {STATE_LABEL[st.state].charAt(0).toUpperCase() + STATE_LABEL[st.state].slice(1)}
-          {st.state === 'ahead' || st.state === 'behind' ? ` di ${Math.abs(st.weeksOff)} sett.` : ''}
-          {st.state !== 'reached' && st.state !== 'expired' ? ` · ${Math.round(st.weeksLeft)} settimane rimaste` : ''}
-        </div>
+        {/* coach adattivo: tempi e ritmo li dà la sezione del coach (data di arrivo stimata), non le scadenze delle fasi */}
+        {(!adaptive || st.state === 'reached') && (
+          <div className={cn('text-sm font-semibold', tone)}>
+            {dot} {STATE_LABEL[st.state].charAt(0).toUpperCase() + STATE_LABEL[st.state].slice(1)}
+            {st.state === 'ahead' || st.state === 'behind' ? ` di ${Math.abs(st.weeksOff)} sett.` : ''}
+            {st.state !== 'reached' && st.state !== 'expired' ? ` · ${Math.round(st.weeksLeft)} settimane rimaste` : ''}
+          </div>
+        )}
         {adaptive && <CoachSection />}
         {!adaptive && verdict !== 'ok' && (
           <button type="button" onClick={() => setOpen(true)} className={cn('block w-full rounded-md px-3 py-2 text-left text-sm', verdict === 'no' ? 'bg-danger/10 text-fg' : 'bg-warning/10 text-fg')}>
@@ -368,7 +374,7 @@ export function GoalCard({ compact }: { compact?: boolean }) {
             <span className="font-semibold text-accent-400">Vedi le alternative →</span> <NewBadge />
           </button>
         )}
-        {fc && (
+        {fc && !adaptive && (
           <div className="text-sm text-fg-2">
             {fc.wrongWay ? (
               <>📉 Al ritmo delle ultime settimane ({fc.rate >= 0 ? '+' : ''}{fc.rate.toFixed(2).replace('.', ',')} kg/sett) non ti stai avvicinando all'obiettivo.</>
@@ -405,12 +411,12 @@ export function GoalCard({ compact }: { compact?: boolean }) {
             ⚠️ Massa grassa {kg(st.bf ?? 0)}%, sopra il tetto del {ph.targetBf}% che hai indicato per questa fase: valuta con il coach se anticipare il cut o rallentare il surplus.
           </p>
         )}
-        {(st.state === 'reached' || st.state === 'expired') && (
+        {(st.state === 'reached' || (st.state === 'expired' && !adaptive)) && (
           <Button fullWidth onClick={() => void goNext()}>
             {next ? `Passa alla fase "${next.label}" ${PHASE_EMOJI[next.type]}` : 'Segna obiettivo come completato 🏆'}
           </Button>
         )}
-        {st.state === 'late' && st.suggestedEnd && (
+        {!adaptive && st.state === 'late' && st.suggestedEnd && (
           <div className="rounded-md bg-danger-bg p-2 text-sm text-fg-2">
             Con un ritmo sicuro arrivi il <strong className="text-fg">{fmtDate(st.suggestedEnd)}</strong>. Intanto le calorie sono già al massimo sicuro.
             <Button size="sm" className="mt-2" fullWidth variant="secondary" onClick={() => void moveDate()}>
@@ -418,7 +424,7 @@ export function GoalCard({ compact }: { compact?: boolean }) {
             </Button>
           </div>
         )}
-        {next && st.state !== 'reached' && st.state !== 'expired' && (
+        {next && st.state !== 'reached' && (adaptive || st.state !== 'expired') && (
           <p className="text-xs text-fg-3">
             Poi: {PHASE_EMOJI[next.type]} {next.label} fino a {range(next)} kg{next.targetBf ? ` · ${next.targetBf}%` : ''} ({fmtDate(next.end)})
           </p>

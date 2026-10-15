@@ -49,9 +49,14 @@ export function MicButton({ onText, className, size = 'md' }: { onText: (text: s
   const recRef = useRef<Rec | null>(null);
   const mediaRef = useRef<MediaRecorder | null>(null);
   const useRecorder = useRef(false);
+  const alive = useRef(true);
+  const limitRef = useRef<number | undefined>(undefined);
 
   useEffect(
     () => () => {
+      // chiusa la schermata: si ferma tutto senza trascrivere (niente richiesta AI inutile)
+      alive.current = false;
+      window.clearTimeout(limitRef.current);
       recRef.current?.stop();
       mediaRef.current?.state === 'recording' && mediaRef.current.stop();
     },
@@ -70,6 +75,8 @@ export function MicButton({ onText, className, size = 'md' }: { onText: (text: s
       rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
       rec.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
+        window.clearTimeout(limitRef.current);
+        if (!alive.current) return;
         setState('working');
         try {
           const text = await transcribe(new Blob(chunks, { type: rec.mimeType }));
@@ -77,14 +84,14 @@ export function MicButton({ onText, className, size = 'md' }: { onText: (text: s
         } catch (e) {
           toast.error(e instanceof Error ? e.message : 'Trascrizione non riuscita');
         } finally {
-          setState('idle');
+          if (alive.current) setState('idle');
         }
       };
       mediaRef.current = rec;
       rec.start();
       setState('recording');
       // limite di sicurezza: 60 secondi
-      window.setTimeout(() => rec.state === 'recording' && rec.stop(), 60_000);
+      limitRef.current = window.setTimeout(() => rec.state === 'recording' && rec.stop(), 60_000);
     } catch {
       toast.error('Microfono non disponibile: consenti l’accesso nelle impostazioni');
       setState('idle');

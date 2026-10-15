@@ -4,6 +4,7 @@
  */
 import type { BodyLog, FoodLog, Session } from '@/types';
 import { toISODate } from './date-utils';
+import { isLegGroup } from './analytics';
 
 const DAY = 86400000;
 /** Reattività della media mobile esponenziale (0,15 ≈ "memoria" di circa 10 giorni). */
@@ -118,7 +119,7 @@ export function waterEvents(
     if (carbsExcess > 0) reasons.push(`${Math.round(carbsExcess)} g di carboidrati sopra la media`);
     if (target && kcalExcess > target * 0.25 && !reasons.length) reasons.push(`${Math.round(kcalExcess)} kcal sopra l'obiettivo`);
     const legs = sessions.some(
-      (s) => s.date >= p.t - 2.5 * DAY && s.date < p.t && s.logs.some((l) => (groupOf ? groupOf(l) : l.group) === 'Gambe' && l.sets.length >= 3),
+      (s) => s.date >= p.t - 2.5 * DAY && s.date < p.t && s.logs.some((l) => isLegGroup(groupOf ? groupOf(l) : l.group) && l.sets.length >= 3),
     );
     if (legs) reasons.push('allenamento gambe (ritenzione da recupero muscolare)');
     if (!reasons.length) continue;

@@ -13,8 +13,6 @@ import { bodyFatNow } from './bodyfat-estimate';
 
 const DAY = 86400000;
 const WEEK = 7 * DAY;
-/** kcal al giorno per 1 kg/settimana di variazione di peso (7700 kcal/kg ÷ 7) */
-export const KCAL_PER_KG_WEEK = 1100;
 
 export interface GoalPhase {
   type: Goal;
@@ -26,6 +24,8 @@ export interface GoalPhase {
   weightMin: number;
   weightMax: number;
   targetBf?: number;
+  /** massa grassa all'inizio della fase (ricomposizione: l'avanzamento si misura sul grasso, non sul peso) */
+  startBf?: number;
   /** nota del coach (es. data spostata perché il ritmo richiesto non era sicuro) */
   note?: string;
   doneAt?: string;
@@ -45,6 +45,25 @@ export interface GoalPlan {
 export const PHASE_EMOJI: Record<Goal, string> = { bulk: '💪', cut: '🔥', maintain: '⚖️', strength: '🏋️' };
 export const phaseName = (t: Goal) => GOALS.find((g) => g.value === t)?.label ?? t;
 export const targetWeight = (p: GoalPhase) => (p.weightMin + p.weightMax) / 2;
+
+/** Fase in corso come chiave (tipo e inizio): cambia quando si passa alla fase dopo o il coach ripianifica. */
+export const phaseKey = (plan: GoalPlan | null | undefined): string | null => {
+  const ph = plan?.phases[plan.current];
+  return ph ? `${ph.type}|${ph.start}` : null;
+};
+
+const PHASE_DIR: Record<Goal, number> = { cut: -1, bulk: 1, strength: 1, maintain: 0 };
+
+/**
+ * Le calorie della settimana sono state fissate per un'altra fase? (es. conferma del coach a metà settimana)
+ * Per le settimane salvate prima della chiave di fase si guarda il verso del ritmo.
+ */
+export function weekPhaseChanged(w: { phase?: string | null; rate?: number | null } | null | undefined, plan: GoalPlan | null | undefined): boolean {
+  if (!w) return false;
+  if (w.phase !== undefined) return w.phase !== phaseKey(plan);
+  const ph = plan?.phases[plan.current];
+  return Math.sign(w.rate ?? 0) !== (ph ? PHASE_DIR[ph.type] : 0);
+}
 
 /** Ritmi sicuri in % del peso a settimana: [minimo sensato, consigliato, massimo]. */
 const RATES: Record<Goal, [number, number, number]> = {
@@ -213,7 +232,11 @@ export function planStatus(plan: GoalPlan, logs: BodyLog[], fallbackWeight: numb
   const rawRate = weeksLeft > 0.5 ? (to - current) / weeksLeft : to - current;
   const rate = dir === 0 ? 0 : Math.sign(rawRate) * Math.min(Math.abs(rawRate), current * maxPct);
   const weightOk = phase.type === 'cut' ? current <= phase.weightMax : phase.type === 'bulk' ? current >= phase.weightMin : Math.abs(current - to) <= 1;
-  const bfOk = phase.targetBf == null || bf == null || (phase.type === 'cut' ? bf <= phase.targetBf + 1 : true);
+  // ricomposizione (peso fermo, meno grasso): conta la massa grassa, il peso è già "a posto" dal primo giorno
+  const recomp = phase.type === 'maintain' && phase.targetBf != null;
+  const bfOk = recomp
+    ? bf != null && bf <= (phase.targetBf as number) + 0.5
+    : phase.targetBf == null || bf == null || (phase.type === 'cut' ? bf <= phase.targetBf + 1 : true);
   const weeksOff = plannedRate !== 0 ? Math.round(((current - expectedToday) / plannedRate) * 10) / 10 : 0;
   let state: PlanStatus['state'];
   let suggestedEnd: string | undefined;
@@ -224,8 +247,16 @@ export function planStatus(plan: GoalPlan, logs: BodyLog[], fallbackWeight: numb
     suggestedEnd = toISODate(new Date(now + (Math.abs(to - current) / (current * RATES[phase.type][1])) * WEEK));
   } else if (Math.abs(current - expectedToday) <= 0.5) state = 'on-track';
   else state = (current - expectedToday) * dir > 0 ? 'ahead' : 'behind';
-  const bfOver = phase.type !== 'cut' && phase.targetBf != null && bf != null && bf > phase.targetBf + 1;
-  return { phase, index: plan.current, current, bf, rate, rawRate, weeksLeft, expectedToday, weeksOff, state, suggestedEnd, progress: state === 'reached' ? 1 : progress, bfOver };
+  // tetto di grasso in massa (in ricomposizione la % è l'obiettivo da raggiungere, non un tetto)
+  const bfOver = (phase.type === 'bulk' || phase.type === 'strength') && phase.targetBf != null && bf != null && bf > phase.targetBf + 1;
+  // ricomposizione: avanzamento sulla massa grassa (il peso resta fermo)
+  const bfProgress =
+    recomp && phase.startBf != null && bf != null && phase.startBf > (phase.targetBf as number)
+      ? Math.max(0, Math.min(1, (phase.startBf - bf) / (phase.startBf - (phase.targetBf as number))))
+      : recomp
+        ? 0
+        : progress;
+  return { phase, index: plan.current, current, bf, rate, rawRate, weeksLeft, expectedToday, weeksOff, state, suggestedEnd, progress: state === 'reached' ? 1 : bfProgress, bfOver };
 }
 
 /** Variazione di peso settimanale prevista per la fase attiva (per calorie e controlli). */

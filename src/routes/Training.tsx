@@ -14,6 +14,7 @@ import { useMesocycle } from '@/hooks/use-mesocycle';
 import { useActiveSession } from '@/hooks/use-active-session';
 import { formatRelativeDay } from '@/lib/date-utils';
 import { sessionMinutes } from '@/lib/program-generator';
+import { nextDay } from '@/lib/schedule-utils';
 import { cn } from '@/lib/cn';
 import type { Day } from '@/types';
 import History from './History';
@@ -37,12 +38,8 @@ export default function Training() {
   const [starting, setStarting] = useState<string | null>(null);
 
   const lastForDay = (id: string) => sessions.find((s) => s.dayId === id);
-  const next = useMemo(() => {
-    const last = sessions[0];
-    if (!last) return days[0];
-    const idx = days.findIndex((d) => d.id === last.dayId);
-    return days[(idx + 1) % days.length] ?? days[0];
-  }, [sessions, days]);
+  // stesso "prossimo allenamento" della Home
+  const next = useMemo(() => nextDay(days, sessions), [sessions, days]);
 
   const startDay = async (day: Day) => {
     if (activeSession) {

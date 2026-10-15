@@ -7,11 +7,11 @@
  * 3) Propone il percorso aggiornato (si applica solo con la tua conferma) con una forchetta per la data di arrivo.
  */
 import type { BodyLog } from '@/types';
-import type { GoalPhase, GoalPlan } from './goal-plan';
-import type { UserProfile } from './metabolism';
+import { trendWeight, type GoalPhase, type GoalPlan } from './goal-plan';
+import { composition, type UserProfile } from './metabolism';
 import { BULK_MAX, LEAN_SHARE, compOf, fromLean, leanGainPerWeek, minBf, type Comp } from './goal-feasibility';
 import { robustSlope, settledFrom, weightTrend } from './body-model';
-import { fromBmi } from './bodyfat-estimate';
+import { bodyFatNow, fromBmi } from './bodyfat-estimate';
 import { toISODate } from './date-utils';
 
 const DAY = 86400000;
@@ -32,6 +32,16 @@ export interface GoalTarget {
   date?: string;
   /** da dove sei partito (per l'avanzamento) */
   start?: { weight: number; bf: number; date: string };
+}
+
+/**
+ * Da dove parte il coach, uguale per card, proposte, editor e chat: peso di tendenza (senza l'acqua di giornata)
+ * e massa grassa più recente aggiornata col peso (o quella del profilo, o la stima dalle misure).
+ */
+export function coachNow(p: UserProfile, logs: BodyLog[], now = Date.now()): Comp {
+  const weight = trendWeight(logs, p.weightKg);
+  const bf = bodyFatNow(logs, now)?.value ?? p.bodyFatPct ?? composition({ ...p, weightKg: weight }).bf.value;
+  return compOf(weight, bf);
 }
 
 /* ---------- 1) Come rispondi davvero ---------- */
@@ -235,6 +245,7 @@ export function pathToPhases(path: Path, today = Date.now()): GoalPhase[] {
       weightMin: r1(s.to.weight - 0.5),
       weightMax: r1(s.to.weight + 0.5),
       targetBf: s.mode === 'bulk' ? Math.ceil(s.to.bf) : Math.round(s.to.bf),
+      startBf: Math.round(s.from.bf * 10) / 10,
     };
     start = end;
     return ph;
@@ -318,7 +329,8 @@ export function coachProposal(
         : `Percorso aggiornato: arrivo ${etaText(cp)}`;
   const detail = `${whatISee(cp.response)} ${whyNow(cp)} Percorso: ${steps}. Arrivo stimato ${etaText(cp)}.${target.date ? ` Data desiderata: ${fmtDate(target.date)}.` : ''}`;
   return {
-    id: `coach-${cp.path.segments.map((s) => `${s.mode}${s.weeks}`).join('-')}-${iso(cp.mid)}`,
+    // id stabile da un giorno all'altro (fasi e mese di arrivo): "Non ora" vale finché la proposta non cambia davvero
+    id: `coach-${cp.path.segments.map((s) => s.mode).join('-')}-${iso(cp.mid).slice(0, 7)}`,
     title,
     detail,
     phases: pathToPhases(cp.path, today),
@@ -331,9 +343,7 @@ export function coachProposal(
 export function goalCoachText(p: UserProfile, plan: GoalPlan, logs: BodyLog[]): string | null {
   const target = targetFromPlan(plan);
   if (!target) return null;
-  const bfLog = logs.find((l) => l.bodyFat != null && !fromBmi(l));
-  const now = compOf(p.weightKg, p.bodyFatPct ?? bfLog?.bodyFat ?? 18);
-  const cp = coachPlan(p, now, target, observeResponse(p, logs));
+  const cp = coachPlan(p, coachNow(p, logs), target, observeResponse(p, logs));
   if (!cp) return `COACH ADATTIVO: obiettivo finale ${target.weight} kg al ${target.bf}%: nessun percorso realistico trovato.`;
   return `COACH ADATTIVO (calcolato dall'app, NON proporre altre fasi o date): obiettivo finale ${target.weight} kg al ${target.bf}%. ${whyNow(cp)} Arrivo stimato ${etaText(cp)}. ${whatISee(cp.response)}`;
 }

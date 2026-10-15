@@ -12,7 +12,7 @@ import { useData } from './data-context';
 import { useEffectiveProfile } from './use-effective-profile';
 import { useWeekCalc } from './use-metabolism';
 import { compOf, goalProposal } from '@/lib/goal-feasibility';
-import { coachProposal, targetFromPlan } from '@/lib/goal-coach';
+import { coachNow, coachProposal, targetFromPlan } from '@/lib/goal-coach';
 import { useBodyLogs } from './use-body-logs';
 import { composition } from '@/lib/metabolism';
 import type { UserProfile } from '@/lib/metabolism';
@@ -47,7 +47,7 @@ export function useDayTarget(profile: UserProfile | undefined, date = todayISO()
     if (!profile) return null;
     const future = mondayISO(fromISODate(date)) > mondayISO();
     const preview = future && next ? next : null;
-    const base = preview ? userNutrition(eff ?? profile, settings, { tdee: preview.tdee ?? preview.formula ?? 0, adjust: preview.adjust }) : userNutrition(eff ?? profile, settings);
+    const base = preview ? userNutrition(eff ?? profile, settings, { tdee: preview.tdee ?? preview.formula ?? 0, adjust: preview.adjust, rate: preview.rate }) : userNutrition(eff ?? profile, settings);
     const today = todayISO();
     const trainedOn = new Set(sessions.map((s) => toISODate(s.date)));
     const choices = new Map(logs.filter((l) => l.dayType).map((l) => [l.date, l.dayType!]));
@@ -111,8 +111,8 @@ export function useProposals() {
     const plan = settings.goalPlan;
     if (plan && eff) {
       const now = compOf(eff.weightKg, composition(eff).bf.value);
-      // coach adattivo (obiettivo finale): percorso dai progressi reali; altrimenti la verifica del piano a fasi
-      const c = targetFromPlan(plan) ? coachProposal(eff, now, plan, bodyLogs) : null;
+      // coach adattivo (obiettivo finale): percorso dai progressi reali (stesso punto di partenza della card); altrimenti la verifica del piano a fasi
+      const c = targetFromPlan(plan) ? coachProposal(eff, coachNow(eff, bodyLogs), plan, bodyLogs) : null;
       const g = c ?? (targetFromPlan(plan) ? null : goalProposal(eff, now, plan));
       if (g) list.unshift({ id: g.id, kind: 'goal', emoji: '🎯', title: g.title, detail: g.detail, phases: g.phases, summary: g.summary, ...(c ? { target: c.target } : {}) });
     }

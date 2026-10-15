@@ -86,7 +86,7 @@ export function DailyPhotos() {
           setView(null);
         }}
       />
-      <ReelModal open={reel} onClose={() => setReel(false)} />
+      <ReelModal open={reel} onClose={() => setReel(false)} daily={photos} />
       <DailyPhotoModal open={daily != null} onClose={() => setDaily(null)} date={daily?.date} photo={daily?.photo} />
     </Card>
   );

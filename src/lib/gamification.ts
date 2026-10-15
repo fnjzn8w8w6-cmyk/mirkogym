@@ -1,5 +1,5 @@
 import type { BodyLog, ExerciseLog, FoodLog, Session } from '@/types';
-import { epley1RM, sessionSetCount, sessionTonnage, weekStreak, workingSets } from './analytics';
+import { epley1RM, isLegGroup, sessionSetCount, sessionTonnage, weekStreak, workingSets } from './analytics';
 import { libraryIdOf } from './seed-data';
 
 /* ---------- Statistiche aggregate ---------- */
@@ -44,6 +44,8 @@ export interface Stats {
 export interface StatsExtra {
   foodLogs?: FoodLog[];
   target?: { kcal: number; protein: number } | null;
+  /** obiettivo del singolo giorno (calorie diverse allenamento/riposo) */
+  targetOf?: (l: FoodLog) => { kcal: number; protein: number };
   quests?: number;
   bodyweight?: number;
   groupOf?: (l: ExerciseLog) => string;
@@ -91,7 +93,7 @@ export function computeStats(sessions: Session[], bodyLogs: BodyLog[], nameOf: (
   asc.forEach((s, i) => {
     const gs = new Set(s.logs.filter((l) => workingSets(l.sets).length).map(groupOf));
     gs.forEach((g) => g && groups.add(g));
-    if (gs.has('Gambe')) legSessions++;
+    if ([...gs].some((g) => isLegGroup(g))) legSessions++;
     if (i > 0 && s.date - asc[i - 1].date >= 14 * DAY_MS) comebacks++;
     // fastidio segnalato e, entro 3 settimane, una sessione senza fastidi
     if (s.recap && !s.recap.pain.length && asc.slice(0, i).some((p) => p.recap?.pain.length && s.date - p.date <= 21 * DAY_MS)) painManaged++;
@@ -99,6 +101,7 @@ export function computeStats(sessions: Session[], bodyLogs: BodyLog[], nameOf: (
   });
   const food = (extra.foodLogs ?? []).filter((l) => l.entries.length);
   const t = extra.target;
+  const tOf = (l: FoodLog) => (extra.targetOf ? extra.targetOf(l) : t!);
   const recapsAsc = (extra.foodLogs ?? []).filter((l) => l.recap).sort((a, b) => b.date.localeCompare(a.date));
   let noCheatStreak = 0;
   for (const l of recapsAsc) {
@@ -124,8 +127,8 @@ export function computeStats(sessions: Session[], bodyLogs: BodyLog[], nameOf: (
     benchBW: bw > 0 ? Math.round((bench / bw) * 100) : 0,
     bfLogs: bodyLogs.filter((b) => b.bodyFat != null).length,
     dietDays: food.length,
-    dietTargetDays: t ? food.filter((l) => Math.abs(kcalOfLog(l) - t.kcal) <= t.kcal * 0.1).length : 0,
-    proteinDays: t ? food.filter((l) => protOfLog(l) >= t.protein * 0.9).length : 0,
+    dietTargetDays: t ? food.filter((l) => Math.abs(kcalOfLog(l) - tOf(l).kcal) <= tOf(l).kcal * 0.1).length : 0,
+    proteinDays: t ? food.filter((l) => protOfLog(l) >= tOf(l).protein * 0.9).length : 0,
     dayRecaps: recapsAsc.length,
     noCheatStreak,
     quests: extra.quests ?? 0,
@@ -292,14 +295,13 @@ export const ACHIEVEMENTS: Achievement[] = [
     tier: 'bronze',
     progress: (s) => [s.sessions && s.latestHour >= 21 ? 1 : 0, 1],
   },
-  { id: 'deload', title: 'Recupero intelligente', description: 'Completa una sessione di deload', emoji: '🧘', tier: 'bronze', progress: count('deloadSessions', 1) },
+  { id: 'deload', title: 'Scarico consapevole', description: 'Completa una sessione di deload', emoji: '🧘', tier: 'bronze', progress: count('deloadSessions', 1) },
 ];
 
 export const isUnlocked = (a: Achievement, s: Stats): boolean => {
   const [v, t] = a.progress(s);
   return v >= t;
 };
-export const unlockedIds = (s: Stats): Set<string> => new Set(ACHIEVEMENTS.filter((a) => isUnlocked(a, s)).map((a) => a.id));
 
 export const TIER_COLOR: Record<Tier, string> = {
   bronze: '#CD7F32',

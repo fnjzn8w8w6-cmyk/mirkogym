@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSettings } from '@/hooks/use-settings';
+import { effortTarget, scaleLabel } from '@/lib/effort';
 import { Reorder, useDragControls } from 'framer-motion';
 import { Check, ChevronDown, CloudUpload, GripVertical, LayoutTemplate, Library, Pencil, PenLine, Plus, Trash2 } from 'lucide-react';
 import type { Day, Exercise } from '@/types';
@@ -39,10 +41,11 @@ export default function ScheduleEditor() {
   const timer = useRef<number | null>(null);
   const latest = useRef<Day[] | null>(null);
 
-  // Copia locale inizializzata una volta: evita che gli snapshot remoti sovrascrivano l'editing
+  // Copia locale: gli snapshot remoti non sovrascrivono un salvataggio in attesa, ma le modifiche fatte altrove
+  // (coach, altro dispositivo) arrivano quando non stai salvando
   useEffect(() => {
-    if (!days && remoteDays.length) setDays(remoteDays);
-  }, [days, remoteDays]);
+    if (remoteDays.length && !timer.current) setDays(remoteDays);
+  }, [remoteDays]);
 
   // Flush del salvataggio pendente all'uscita
   useEffect(
@@ -293,6 +296,8 @@ export default function ScheduleEditor() {
 }
 
 function ExerciseItem({ exercise, onEdit }: { exercise: Exercise; onEdit: () => void }) {
+  const { settings } = useSettings();
+  const scale = settings.effortScale ?? 'rpe';
   const controls = useDragControls();
   return (
     <Reorder.Item
@@ -321,7 +326,9 @@ function ExerciseItem({ exercise, onEdit }: { exercise: Exercise; onEdit: () => 
             <Chip>
               {exercise.sets}×{exercise.repMin}-{exercise.repMax}
             </Chip>
-            <Chip>RIR {exercise.rirTarget}</Chip>
+            <Chip>
+              {scaleLabel(scale)} {effortTarget(exercise.rirTarget, scale)}
+            </Chip>
           </span>
         </span>
         <Pencil className="mr-2 h-4 w-4 shrink-0 text-fg-3" aria-hidden />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DayRecap, DiaryEntry, FoodLog, UserRecipe } from '@/types';
 import {
   deleteRecipe,
@@ -20,15 +20,19 @@ export function useFoodLog(date: string) {
   const { uid } = useData();
   const [log, setLog] = useState<FoodLog>({ date, entries: [] });
   const [loading, setLoading] = useState(true);
+  // voci aggiornate subito a ogni modifica: due aggiunte ravvicinate non si sovrascrivono
+  const entriesRef = useRef<DiaryEntry[]>([]);
 
   useEffect(() => {
     if (!uid) return;
     setLoading(true);
     setLog({ date, entries: [] });
+    entriesRef.current = [];
     return subscribeFoodLog(
       uid,
       date,
       (l) => {
+        entriesRef.current = l.entries;
         setLog(l);
         setLoading(false);
       },
@@ -38,6 +42,7 @@ export function useFoodLog(date: string) {
 
   const write = useCallback(
     (entries: DiaryEntry[]) => {
+      entriesRef.current = entries;
       setLog((l) => ({ ...l, date, entries }));
       return uid ? settle(saveFoodLog(uid, { date, entries })) : Promise.resolve();
     },
@@ -57,9 +62,9 @@ export function useFoodLog(date: string) {
       return uid ? settle(saveDayRecap(uid, date, r)) : Promise.resolve();
     },
     loading,
-    add: (items: DiaryEntry[]) => write([...log.entries, ...items]),
-    update: (e: DiaryEntry) => write(log.entries.map((x) => (x.id === e.id ? e : x))),
-    remove: (id: string) => write(log.entries.filter((x) => x.id !== id)),
+    add: (items: DiaryEntry[]) => write([...entriesRef.current, ...items]),
+    update: (e: DiaryEntry) => write(entriesRef.current.map((x) => (x.id === e.id ? e : x))),
+    remove: (id: string) => write(entriesRef.current.filter((x) => x.id !== id)),
   };
 }
 

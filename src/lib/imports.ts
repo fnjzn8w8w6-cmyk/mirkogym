@@ -226,6 +226,8 @@ export interface ImportMatch {
 
 export async function importSchedule(files: File[], opts: AIOptions = {}): Promise<{ days: Day[]; unmatched: number; matches: Record<string, ImportMatch> }> {
   const parts = await Promise.all(files.map(fileToPart));
+  // id unici per ogni import (lo storico si collega per id)
+  const stamp = Date.now().toString(36).slice(-5);
   const raw = await callAIJson(
     `Questa è una scheda di allenamento scritta da un personal trainer (foto o PDF). Trascrivila fedelmente, senza aggiungere o togliere esercizi.
 Per ogni giorno: "name" (es. "Giorno A", "Lunedì"), "focus" (es. "Petto e tricipiti").
@@ -294,7 +296,7 @@ Rispondi SOLO con JSON: {"choices":[{"k":1,"id":"id scelto oppure null"}]}`,
       }
       if (!libraryId) unmatched++;
       const lib = libraryId ? ranker.byId.get(libraryId) : undefined;
-      const id = `p${di + 1}e${ei + 1}`;
+      const id = `p${di + 1}e${ei + 1}-${stamp}`;
       matches[id] = { pdf: it, confidence };
       const repMin = Math.round(num(e.repMin, 1, 100) ?? 8);
       const libName = lib ? (NAME_IT[lib.id] ?? lib.n) : '';

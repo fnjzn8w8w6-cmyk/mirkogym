@@ -1,3 +1,4 @@
+import { weekPhaseChanged } from '@/lib/goal-plan';
 import { useMemo, useState } from 'react';
 import { Apple, ChevronRight, FileUp, Plus, RefreshCw, Settings2, ShoppingCart, Shuffle } from 'lucide-react';
 import { DietImportModal } from '@/components/imports/ImportModals';
@@ -265,7 +266,7 @@ export function WhyKcal({ base, day, preview }: { base: Nutrition; day?: Nutriti
   const { settings } = useSettings();
   const [open, setOpen] = useState(false);
   // stessi numeri usati per l'obiettivo: quelli fissati il lunedì (consumo e correzione)
-  const wk = settings.weekCal && settings.weekCal.week === mondayISO() ? settings.weekCal : null;
+  const wk = settings.weekCal && settings.weekCal.week === mondayISO() && !weekPhaseChanged(settings.weekCal, settings.goalPlan) ? settings.weekCal : null;
   // settimana futura: i numeri dell'anteprima
   const real = preview ? (preview.real ? settings.metabolism : null) : wk ? (wk.tdee != null ? settings.metabolism : null) : metabolismReliable(settings.metabolism) ? settings.metabolism : null;
   const adj = preview ? preview.adjust : wk ? wk.adjust : real ? 0 : (settings.kcalAdjust ?? 0);
@@ -335,7 +336,8 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
   const [swap, setSwap] = useState<number | null>(null);
   const [openRecipe, setOpenRecipe] = useState<{ recipe: Recipe; servings: number } | null>(null);
   const [openSimple, setOpenSimple] = useState<SimpleMeal | null>(null);
-  const adjust = settings.kcalAdjust ?? 0;
+  // correzione automatica (senza le calorie chieste al dietologo, mostrate a parte nel dietologo)
+  const adjust = (settings.kcalAdjust ?? 0) - (settings.kcalRequest ?? 0);
   const target = useMemo(() => userNutrition(profile, settings), [profile, settings]);
   const learned = useLearnedFavorites();
   // preferiti + ricette che mangi davvero (imparate dal diario)
@@ -394,11 +396,8 @@ export function NutritionPlanner({ profile, header }: { profile: UserProfile; he
       </div>
       {adjust !== 0 && (
         <p className="mt-2 text-sm text-fg-3">
-          Include la correzione del check-in: {adjust > 0 ? '+' : ''}
-          {adjust} kcal.{' '}
-          <button type="button" className="font-semibold text-accent-400" onClick={() => void settle(update({ kcalAdjust: 0 }))}>
-            Azzera
-          </button>
+          Include la correzione dall'andamento del peso: {adjust > 0 ? '+' : ''}
+          {adjust} kcal (si aggiorna da sola ogni lunedì).
         </p>
       )}
     </Card>

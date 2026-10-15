@@ -230,7 +230,7 @@ function SessionView({ initial }: { initial: ActiveSession }) {
         // Settimana leggera mirata per i gruppi affaticati
         const fat = model.fatigue.get(ex.group);
         if (fat?.light && base.weight != null && !draft.deload)
-          base = { ...base, weight: Math.round(base.weight * 0.7 * 4) / 4, weights: base.weights?.map((w) => (w == null ? w : Math.round(w * 0.7 * 4) / 4)), hint: `Settimana leggera ${ex.group.toLowerCase()} (fatica ${fat.score}/100): −30% e una serie in meno`, type: 'deload' };
+          base = { ...base, weight: Math.round(base.weight * 0.7 * 4) / 4, weights: base.weights?.map((w) => (w == null ? w : Math.round(w * 0.7 * 4) / 4)), hint: `Settimana leggera ${ex.group.toLowerCase()} (fatica ${fat.score}/100): −30% sul carico; se vuoi togli anche l'ultima serie (tasto −)`, type: 'deload' };
         // Autoregolazione: giornata "no" → -10% sul carico suggerito
         const suggestion =
           draft.readiness === 'low' && base.weight != null && !draft.deload

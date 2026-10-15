@@ -58,8 +58,23 @@ export interface PhaseProjection {
   note?: string;
 }
 
-/** Composizione a fine di ogni fase, in ordine, partendo da oggi: lo stesso calcolo della verifica del coach. */
-export function projectPhases(p: UserProfile, now: { weight: number; bf: number }, phases: GoalPhase[], current: number): PhaseProjection[] {
+/**
+ * Composizione a fine di ogni fase, in ordine, partendo da oggi: lo stesso calcolo della verifica del coach.
+ * Con il coach adattivo le fasi sono già il suo percorso realistico: si usano i suoi numeri (stesso modello, niente avvisi).
+ */
+export function projectPhases(p: UserProfile, now: { weight: number; bf: number }, phases: GoalPhase[], current: number, adaptive = false): PhaseProjection[] {
+  if (adaptive) {
+    let from = compOf(now.weight, now.bf);
+    const today = Date.now();
+    return phases.slice(current).map((ph, k) => {
+      const to = compOf((ph.weightMin + ph.weightMax) / 2, ph.targetBf ?? from.bf);
+      const start = Math.max(today, new Date(`${ph.start}T12:00:00`).getTime());
+      const weeks = Math.max(0.5, (new Date(`${ph.end}T12:00:00`).getTime() - start) / (7 * 86400000));
+      const out = { phase: ph, index: current + k, from, to, weeks };
+      from = to;
+      return out;
+    });
+  }
   return checkPlan(p, compOf(now.weight, now.bf), phases, current).map((c) => ({
     phase: c.phase,
     index: c.index,

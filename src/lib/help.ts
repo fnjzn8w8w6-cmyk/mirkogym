@@ -126,18 +126,18 @@ export const HELP = {
     title: 'Settimana leggera (deload mirato)',
     body: [
       'Per ogni gruppo muscolare l\'app calcola un indice di fatica: serie dell\'ultima settimana rispetto alle 4 precedenti, energia e voti dei resoconti, fastidi segnalati.',
-      'Sopra 70/100 quel gruppo fa una settimana leggera: carichi −30% e una serie in meno. Il resto della scheda resta normale.',
+      'Sopra 70/100 quel gruppo fa una settimana leggera: carichi suggeriti −30% e, se vuoi, una serie in meno (la togli con il tasto − sotto le serie). Il resto della scheda resta normale.',
     ],
   },
   'session-swap': {
     title: 'Sostituisci esercizio',
-    body: ['Scegli un esercizio alternativo. Il carico equivalente è calcolato con rapporti di forza standard tra attrezzi (es. manubri ≈ 75% del bilanciere in totale) e poi con i tuoi dati reali quando hai fatto entrambi gli esercizi.'],
+    body: ['Scegli un esercizio alternativo. Il carico equivalente è calcolato con rapporti di forza standard tra attrezzi (es. manubri ≈ 80% del bilanciere in totale) e poi con i tuoi dati reali quando hai fatto entrambi gli esercizi.'],
   },
 
   /* ---------- Corpo ---------- */
   'body-composition': {
     title: 'Composizione corporea',
-    body: ['Peso, massa grassa, massa magra e FFMI (quanto muscolo hai rispetto all\'altezza). La massa grassa parte dall\'ultima misura affidabile (foto del check-in, plicometro, bilancia, DEXA) e tra una misura e l\'altra viene aggiornata dal trend del peso: chi dimagrisce perde circa 75% grasso, chi ingrassa ne prende circa 60%.', 'Le misure della bilancia impedenziometrica si leggono come media di 7 giorni, perché oscillano molto. Senza misure negli ultimi 4 mesi si usa la stima dal questionario.'],
+    body: ['Peso, massa grassa, massa magra e FFMI (quanto muscolo hai rispetto all\'altezza). La massa grassa parte dall\'ultima misura affidabile (foto del check-in, plicometro, bilancia, DEXA) e tra una misura e l\'altra viene aggiornata dal trend del peso: chi dimagrisce perde circa 75% grasso, chi ingrassa ne prende circa 45% (con il surplus giusto il resto è massa magra, come nel coach adattivo).', 'Le misure della bilancia impedenziometrica si leggono come media di 7 giorni, perché oscillano molto. Senza misure negli ultimi 4 mesi si usa la stima dal questionario.'],
   },
   'body-weekcal': {
     title: 'Aggiornamento settimanale delle calorie',
@@ -150,7 +150,7 @@ export const HELP = {
   },
   'body-status': {
     title: 'Sei nell\'obiettivo?',
-    body: ['Confronta la velocità reale con cui cambia il peso con quella necessaria per il tuo obiettivo. Servono almeno 4 pesate in 10 giorni.'],
+    body: ['Confronta la velocità reale con cui cambia il peso con quella necessaria per il tuo obiettivo. Servono almeno 4 pesate distribuite su 2 settimane (senza la prima settimana di assestamento).'],
   },
   'body-muscles': {
     title: 'Muscoli',
@@ -358,7 +358,7 @@ export const HELP = {
     title: 'Proposte del coach',
     body: [
       'Modifiche suggerite dai tuoi dati: spostare un giorno che salti spesso, pianificare uno sgarro ricorrente, aggiornare la scheda a fine mesociclo.',
-      'Niente cambia senza la tua conferma: attiva solo quelle che vuoi e premi Applica.',
+      'Niente cambia senza la tua conferma: attiva solo quelle che vuoi e premi Salva check-in.',
     ],
   },
   'goal-plan': {

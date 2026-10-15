@@ -229,6 +229,8 @@ function startWeight(slot: SlotDef, libraryId: string, p: UserProfile, reps: num
 }
 
 export function generateProgram(p: UserProfile, prefs?: CoachPrefs | null): Day[] {
+  // id unici per ogni scheda generata (lo storico si collega per id: con id riusati arriverebbe quello di un altro esercizio)
+  const stamp = Date.now().toString(36).slice(-5);
   const days = DAY_PLANS[Math.min(6, Math.max(2, p.daysPerWeek))];
   const avoidSlots = new Set(prefs?.avoidSlots ?? []);
   const avoidIds = new Set(prefs?.avoidExercises ?? []);
@@ -263,7 +265,7 @@ export function generateProgram(p: UserProfile, prefs?: CoachPrefs | null): Day[
       const rx = prescribe(p.goal, p.experience, slot.compound, si === 0);
       const priority = priorities.has(slot.group as PriorityKey) || (slotId === 'glute' && priorities.has('Glutei'));
       exercises.push({
-        id: `g${di + 1}e${exercises.length + 1}`,
+        id: `g${di + 1}e${exercises.length + 1}-${stamp}`,
         libraryId: lib,
         name: NAME_IT[lib] ?? lib.replace(/_/g, ' '),
         group: slot.group,

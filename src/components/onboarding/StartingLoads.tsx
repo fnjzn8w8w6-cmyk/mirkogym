@@ -33,8 +33,10 @@ export function StartingLoads() {
     const next = days.map((d) => ({
       ...d,
       exercises: d.exercises.map((e) => {
-        const w = parseNum(values[e.id] ?? '');
-        return w != null && w > 0 ? { ...e, startWeight: w } : e;
+        if (values[e.id] === undefined) return e;
+        const w = parseNum(values[e.id]);
+        // campo svuotato: niente carico di partenza (anche se la scheda ne proponeva uno)
+        return w != null && w > 0 ? { ...e, startWeight: w } : { ...e, startWeight: undefined };
       }),
     }));
     await settle(save(next));

@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { Button } from '@/components/ui/Button';
 import { Segmented } from '@/components/ui/Input';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/Toast';
 import { AIBusy, AINote, useAITask } from '@/components/coach/AIBusy';
@@ -224,6 +225,7 @@ function TrainingCoach({ profile }: { profile: UserProfile }) {
   const ai = useAITask();
   const [msgs, setMsgs] = useThread<TrainProposal>('vl.thread.train');
   const current = settings.coachPrefs;
+  const [confirmReset, setConfirmReset] = useState(false);
 
   const send = async (text: string) => {
     const history = msgs;
@@ -343,14 +345,23 @@ function TrainingCoach({ profile }: { profile: UserProfile }) {
             size="sm"
             variant="ghost"
             icon={<RefreshCw className="h-4 w-4" />}
-            onClick={async () => {
-              await settle(save(generateProgram(profile, null)));
-              await settle(update({ coachPrefs: undefined }));
-              toast.success('Scheda standard ripristinata');
-            }}
+            onClick={() => setConfirmReset(true)}
           >
             Torna alla scheda standard
           </Button>
+          <ConfirmDialog
+            open={confirmReset}
+            title="Tornare alla scheda standard?"
+            message="La scheda attuale viene sostituita da quella generata per il tuo profilo e le preferenze del coach vengono tolte. Lo storico degli allenamenti resta."
+            confirmLabel="Sostituisci"
+            onCancel={() => setConfirmReset(false)}
+            onConfirm={async () => {
+              await settle(save(generateProgram(profile, null)));
+              await settle(update({ coachPrefs: undefined }));
+              setConfirmReset(false);
+              toast.success('Scheda standard ripristinata');
+            }}
+          />
         </Card>
       )}
     </div>

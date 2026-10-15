@@ -8,13 +8,14 @@
 import type { BodyLog, FoodLog, WeekCalories } from '@/types';
 import { adaptiveCalories, metabolismReliable, userNutrition, type MetabolismState, type NutritionPrefs } from './coach';
 import { energyModel } from './energy';
-import { planRate, type GoalPlan } from './goal-plan';
+import { phaseKey, planRate, weekPhaseChanged, type GoalPlan } from './goal-plan';
 import type { UserProfile } from './metabolism';
 import { mondayISO, toISODate } from './date-utils';
 import { addDays } from 'date-fns';
 
 interface CalSettings {
   kcalAdjust?: number;
+  kcalRequest?: number;
   nutritionPrefs?: NutritionPrefs;
   goalPlan?: GoalPlan | null;
   metabolism?: MetabolismState | null;
@@ -51,29 +52,35 @@ export function computeWeekCalories(profile: UserProfile, s: CalSettings, bodyLo
   // la correzione della settimana prima vale solo se calcolata sullo stesso tipo di consumo
   // (le settimane della vecchia formula, che non contava gli allenamenti, ripartono da zero)
   // (si usa la correzione voluta, non quella ridotta dal limite di 200 kcal a settimana, che si recupera nelle settimane dopo)
-  const prevAdjust = prev ? (prev.formula != null && prev.tdee == null ? (prev.intent ?? prev.adjust) : 0) : (s.kcalAdjust ?? 0);
+  // cambio di fase (es. da massa a definizione): si riparte dai numeri della nuova fase, senza correzioni né gradualità
+  const newPhase = weekPhaseChanged(prev, s.goalPlan);
+  const prevAdjust = newPhase ? 0 : prev ? (prev.formula != null && prev.tdee == null ? (prev.intent ?? prev.adjust) : 0) : (s.kcalAdjust ?? 0);
   // obiettivo con un consumo e una correzione precisi
   const baseOf = (t: number, adj: number) => userNutrition(profile, s, { tdee: t, adjust: adj, rate }).target;
   const maxAdj = Math.round(formula * MAX_ADJUST);
   const clampAdj = (a: number) => Math.max(-maxAdj, Math.min(maxAdj, a));
+  // calorie chieste al dietologo: valgono ogni settimana, oltre alla correzione dall'andamento del peso
+  const req = s.kcalRequest ?? 0;
   let target: number;
   // correzione voluta dall'andamento del peso (0 con il metabolismo reale, che la misura già)
-  const intent = tdee ? 0 : clampAdj(prevAdjust + (prev ? (adaptive?.suggestion ?? 0) : 0));
-  if (!prev) {
+  const intent = tdee ? 0 : clampAdj(prevAdjust + (prev && !newPhase ? (adaptive?.suggestion ?? 0) : 0));
+  if (!prev || newPhase) {
     // primo calcolo: si fissano i valori attuali (la prima vera correzione è il lunedì dopo)
-    target = baseOf(used, intent);
+    target = baseOf(used, intent + req);
   } else {
+    // confronti e gradualità senza le calorie chieste al dietologo (si aggiungono dopo, così valgono sempre per intero)
+    const prevBase = prev.target - (prev.request ?? 0);
     // proposta: metabolismo reale, oppure consumo calcolato + correzione dall'andamento del peso
     let cand = baseOf(used, intent);
     // la correzione deve andare nella direzione giusta: se servono più calorie non si scende, e viceversa
     if (adaptive) {
       const need = adaptive.expected - adaptive.actual; // >0 = sei sotto il ritmo
-      if (Math.abs(need) < 0.05) cand = prev.target;
-      else if (need > 0 && cand < prev.target) cand = prev.target + Math.max(adaptive.suggestion, 0);
-      else if (need < 0 && cand > prev.target) cand = prev.target + Math.min(adaptive.suggestion, 0);
+      if (Math.abs(need) < 0.05) cand = prevBase;
+      else if (need > 0 && cand < prevBase) cand = prevBase + Math.max(adaptive.suggestion, 0);
+      else if (need < 0 && cand > prevBase) cand = prevBase + Math.min(adaptive.suggestion, 0);
     }
     // cambi graduali: al massimo ±200 kcal a settimana
-    target = Math.round((prev.target + Math.max(-200, Math.min(200, cand - prev.target))) / 10) * 10;
+    target = Math.round((prevBase + Math.max(-200, Math.min(200, cand - prevBase)) + req) / 10) * 10;
   }
   // correzione da salvare: differenza tra l'obiettivo scelto e quello di base (entro ±15% del consumo)
   const adjust = clampAdj(target - baseOf(used, 0));
@@ -85,6 +92,8 @@ export function computeWeekCalories(profile: UserProfile, s: CalSettings, bodyLo
     adjust,
     intent,
     rate,
+    phase: phaseKey(s.goalPlan),
+    ...(req ? { request: req } : {}),
     target,
     prevTarget,
     prevTdee: prev?.tdee ?? null,

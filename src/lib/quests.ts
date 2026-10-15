@@ -1,6 +1,6 @@
 /** Sfide settimanali: 3 missioni che cambiano ogni lunedì (stesse per tutta la settimana). */
 import type { BodyLog, ExerciseLog, FoodLog, Session } from '@/types';
-import { sessionTonnage, workingSets } from './analytics';
+import { isLegGroup, sessionTonnage, workingSets } from './analytics';
 import { toISODate, weekStart } from './date-utils';
 
 export const QUEST_XP = 150;
@@ -12,8 +12,12 @@ export interface QuestCtx {
   body: BodyLog[];
   planned: number;
   target: { kcal: number; protein: number } | null;
+  /** obiettivo del singolo giorno (calorie diverse allenamento/riposo); senza, l'obiettivo medio */
+  targetOf?: (l: FoodLog) => { kcal: number; protein: number };
   groupOf: (l: ExerciseLog) => string;
 }
+
+const tOf = (c: QuestCtx, l: FoodLog) => (c.targetOf ? c.targetOf(l) : c.target!);
 interface QuestDef {
   id: string;
   emoji: string;
@@ -34,13 +38,13 @@ const POOL: QuestDef[] = [
     id: 'protein',
     emoji: '🥩',
     title: () => 'Raggiungi le proteine in 4 giornate',
-    progress: (c) => cap(c.target ? c.food.filter((l) => prot(l) >= c.target!.protein * 0.9).length : 0, 4),
+    progress: (c) => cap(c.target ? c.food.filter((l) => prot(l) >= tOf(c, l).protein * 0.9).length : 0, 4),
   },
   {
     id: 'target',
     emoji: '🎯',
     title: () => 'Resta nelle calorie obiettivo (±10%) per 4 giornate',
-    progress: (c) => cap(c.target ? c.food.filter((l) => l.entries.length && Math.abs(kcal(l) - c.target!.kcal) <= c.target!.kcal * 0.1).length : 0, 4),
+    progress: (c) => cap(c.target ? c.food.filter((l) => l.entries.length && Math.abs(kcal(l) - tOf(c, l).kcal) <= tOf(c, l).kcal * 0.1).length : 0, 4),
   },
   {
     id: 'volume',
@@ -56,7 +60,7 @@ const POOL: QuestDef[] = [
     id: 'legs',
     emoji: '🦵',
     title: () => 'Allena le gambe almeno 2 volte',
-    progress: (c) => cap(c.week.filter((s) => s.logs.some((l) => workingSets(l.sets).length && c.groupOf(l) === 'Gambe')).length, 2),
+    progress: (c) => cap(c.week.filter((s) => s.logs.some((l) => workingSets(l.sets).length && isLegGroup(c.groupOf(l)))).length, 2),
   },
   { id: 'weigh', emoji: '⚖️', title: () => 'Pesati 3 volte', progress: (c) => cap(c.body.filter((b) => b.weight != null).length, 3) },
   { id: 'clean', emoji: '😇', title: () => '5 giornate senza sgarri (resoconto della dieta)', progress: (c) => cap(c.food.filter((l) => l.recap && !l.recap.cheat).length, 5) },

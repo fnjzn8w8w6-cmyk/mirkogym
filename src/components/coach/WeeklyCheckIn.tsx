@@ -94,9 +94,13 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
     let goalLine: string | undefined;
     if (st) {
       const kg = (v: number) => v.toFixed(1).replace('.', ',');
+      const bfTxt = st.bf != null ? ` · ${kg(st.bf)}% di grasso` : '';
       goalLine =
         st.state === 'reached'
-          ? `🏁 Obiettivo della fase "${st.phase.label}" raggiunto (${kg(st.current)} kg)! Dalla Home puoi passare alla fase successiva.`
+          ? `🏁 Obiettivo della fase "${st.phase.label}" raggiunto (${kg(st.current)} kg${bfTxt})! Dalla Home puoi passare alla fase successiva.`
+          : plan?.target
+            ? // coach adattivo: niente scadenze fisse, il percorso si ricalcola sui progressi reali
+              `🎯 ${st.phase.label}: peso di tendenza ${kg(st.current)} kg${bfTxt}. Il coach adattivo ricalcola il percorso sui tuoi progressi (lo trovi nella card dell'obiettivo).`
           : st.state === 'late'
             ? `⚠️ ${st.phase.label}: con un ritmo sicuro arrivi a ${kg((st.phase.weightMin + st.phase.weightMax) / 2)} kg il ${new Date(st.suggestedEnd!).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}. Correggo le calorie al massimo sicuro e ti propongo di spostare la scadenza.`
             : `🎯 ${st.phase.label}: peso di tendenza ${kg(st.current)} kg, previsto oggi ${kg(st.expectedToday)} kg → ${st.state === 'on-track' ? 'in linea' : st.state === 'ahead' ? `in anticipo di ${Math.abs(st.weeksOff)} sett.` : st.state === 'behind' ? `in ritardo di ${Math.abs(st.weeksOff)} sett.` : 'scadenza superata'}. Mancano ${Math.round(st.weeksLeft)} settimane.`;
@@ -303,7 +307,7 @@ export function WeeklyCheckIn({ profile, autoOpen }: { profile: UserProfile; aut
         </div>
         {due ? (
           <p className="mt-1 text-sm text-fg-2">
-            2 minuti per fare il punto: energia, sonno, fame, dieta. Il coach analizza anche allenamenti e peso e aggiusta calorie e carichi.
+            2 minuti per fare il punto: energia, sonno, fame, dieta. Il coach analizza anche allenamenti e peso e ti propone le modifiche; le calorie si aggiornano da sole ogni lunedì.
           </p>
         ) : (
           last && (

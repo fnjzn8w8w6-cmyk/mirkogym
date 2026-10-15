@@ -3,13 +3,13 @@ import { Modal } from './Modal';
 import { HELP, type HelpId } from '@/lib/help';
 import { cn } from '@/lib/cn';
 
-/** Data di rilascio delle nuove funzioni: l'etichetta NUOVO resta visibile per 21 giorni. */
-const RELEASE = new Date('2026-10-03T00:00:00').getTime();
+/** Data di rilascio delle funzioni senza data propria: l'etichetta NUOVO resta visibile per 21 giorni dal rilascio. */
+const RELEASE = '2026-10-03';
 const NEW_DAYS = 21;
 
-/** Etichetta "NUOVO" accanto alle funzioni appena introdotte. */
-export function NewBadge({ id: _id, className }: { id?: string; className?: string }) {
-  if (Date.now() - RELEASE > NEW_DAYS * 86400000) return null;
+/** Etichetta "NUOVO" accanto alle funzioni appena introdotte (`since` = data di rilascio di quella funzione). */
+export function NewBadge({ since = RELEASE, className }: { since?: string; className?: string }) {
+  if (Date.now() - new Date(`${since}T00:00:00`).getTime() > NEW_DAYS * 86400000) return null;
   return (
     <span className={cn('ml-1.5 inline-block rounded-full bg-accent-500 px-1.5 py-px align-middle text-[9px] font-extrabold tracking-wider text-onaccent', className)}>
       NUOVO
@@ -49,11 +49,11 @@ export function HelpTip({ id, className }: { id: HelpId; className?: string }) {
 }
 
 /** Titolo di sezione con punto interrogativo (e, se serve, etichetta NUOVO). */
-export function SectionTitle({ children, help, isNew, className }: { children: React.ReactNode; help: HelpId; isNew?: boolean; className?: string }) {
+export function SectionTitle({ children, help, isNew, since, className }: { children: React.ReactNode; help: HelpId; isNew?: boolean; since?: string; className?: string }) {
   return (
     <span className={cn('inline-flex items-center gap-1.5', className)}>
       <span>{children}</span>
-      {isNew && <NewBadge />}
+      {isNew && <NewBadge since={since} />}
       <HelpTip id={help} />
     </span>
   );
