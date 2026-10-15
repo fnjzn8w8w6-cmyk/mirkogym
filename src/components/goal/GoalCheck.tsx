@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { HelpTip, NewBadge } from '@/components/ui/Help';
 import { composition, type UserProfile } from '@/lib/metabolism';
 import { PHASE_EMOJI, type GoalPlan } from '@/lib/goal-plan';
-import { alternatives, applyAlternative, checkPlan, compOf, leanGainPerWeek, levelLabel, planVerdict, type Verdict } from '@/lib/goal-feasibility';
+import { alternatives, applyAlternative, checkPlan, compOf, leanGainPerWeek, levelLabel, planVerdict, priorityOf, type Verdict } from '@/lib/goal-feasibility';
 import { cn } from '@/lib/cn';
 
 const kg = (v: number) => (Math.round(v * 10) / 10).toString().replace('.', ',');
@@ -67,6 +67,7 @@ export function GoalCheck({ profile, current, plan, onApply }: { profile: UserPr
                     onApply({
                       ...plan,
                       createdAt: Date.now(),
+                      priority: priorityOf(a.id),
                       phases: applyAlternative(plan.phases, plan.current, a, comp.weight),
                       summary: `${a.title}: ${a.result}. ${a.detail}`,
                     })

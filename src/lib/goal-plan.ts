@@ -36,6 +36,8 @@ export interface GoalPlan {
   summary: string;
   phases: GoalPhase[];
   current: number;
+  /** cosa conta di più (scelto dalle alternative del coach): peso e grasso insieme, % di grasso o peso */
+  priority?: 'both' | 'bf' | 'weight';
 }
 
 export const PHASE_EMOJI: Record<Goal, string> = { bulk: '💪', cut: '🔥', maintain: '⚖️', strength: '🏋️' };

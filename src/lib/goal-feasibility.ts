@@ -204,6 +204,31 @@ function bulkThenCut(p: UserProfile, now: Comp, b: number, totalWeeks: number, f
 }
 
 /**
+ * La data più vicina in cui puoi avere insieme peso e % di grasso finali: massa pulita finché la massa magra basta,
+ * poi definizione (con il 15% di margine). null = non raggiungibile in modo naturale entro 5 anni.
+ */
+function earliestBoth(p: UserProfile, now: Comp, wF: number, bfF: number) {
+  const needLean = wF * (1 - bfF / 100);
+  let lean = now.lean;
+  let w = now.weight;
+  for (let b = 0; b <= 260; b++) {
+    if (b > 0) {
+      const g = leanGainPerWeek(p, lean);
+      const dw = Math.min(g / LEAN_SHARE, w * BULK_MAX);
+      lean += Math.min(g, dw * 0.75);
+      w += dw;
+    }
+    if (lean >= needLean - 0.2) {
+      const peak = fromLean(lean, w);
+      const target = lean / (1 - bfF / 100);
+      const cut = w > target ? Math.ceil(cutWeeks(p, peak, target) / 0.85) : 0;
+      return { b, peak, cutWeeks: cut, total: b + cut };
+    }
+  }
+  return null;
+}
+
+/**
  * Alternative coerenti con la data finale del piano (es. tra un anno):
  * 1) tieni la % di grasso e scopri il peso realistico; 2) tieni il peso e scopri la % realistica;
  * 3) tieni tutti e due e scopri quanto tempo serve davvero.
@@ -259,16 +284,7 @@ export function alternatives(p: UserProfile, now: Comp, phases: GoalPhase[], cur
     // 3) tutti e due: quanta massa e quanto tempo servono davvero
     const needLean = wF * (1 - bfF / 100);
     if (needLean > now.lean + 0.3) {
-      let found: (ReturnType<typeof bulkThenCut> & { b: number; total: number }) | null = null;
-      for (let total = T; total <= 260 && !found; total += 2) {
-        for (let b = 0; b <= total; b++) {
-          const r = bulkThenCut(p, now, b, total, bfF);
-          if (r && r.end.lean >= needLean - 0.2) {
-            found = { ...r, b, total };
-            break;
-          }
-        }
-      }
+      const found = earliestBoth(p, now, wF, bfF);
       if (found && found.total > T) {
         const end = iso(today + found.total * WEEK);
         out.push({
@@ -383,16 +399,71 @@ export function feasibilityText(p: UserProfile, checks: PhaseCheck[]): string {
 
 export const levelLabel = (p: UserProfile) => LEVEL_IT[p.experience];
 
+export type GoalPriority = 'both' | 'bf' | 'weight';
+/** Priorità dell'alternativa scelta (si salva nel piano: il check-in la rispetta). */
+export const priorityOf = (id: string): GoalPriority => (id === 'both' ? 'both' : id === 'weight' ? 'weight' : 'bf');
+
 /**
- * Proposta per il check-in: se con i dati di oggi il piano non è più realistico, la versione aggiornata più vicina
- * a quello che volevi (tiene la % di grasso finale se l'avevi indicata, altrimenti il peso), con le stesse date finali.
+ * Proposta per il check-in, secondo la priorità del piano:
+ * - "tutti e due" (peso e % di grasso finali): la data si ricalcola dai dati di oggi; se cambia di almeno 3 settimane
+ *   propone di anticiparla (vai meglio del previsto) o di posticiparla (vai peggio);
+ * - "% di grasso" o "peso": se il piano non è più realistico, la versione aggiornata che tiene quello che hai scelto,
+ *   con la stessa data finale.
  */
-export function goalProposal(p: UserProfile, now: Comp, plan: GoalPlan, today = Date.now()): { id: string; title: string; detail: string; phases: GoalPhase[]; summary: string } | null {
+export function goalProposal(
+  p: UserProfile,
+  now: Comp,
+  plan: GoalPlan,
+  today = Date.now(),
+): { id: string; title: string; detail: string; phases: GoalPhase[]; summary: string } | null {
+  const last = plan.phases[plan.phases.length - 1];
+  if (!last) return null;
+  const rest = plan.phases.slice(plan.current);
+  if (plan.priority === 'both' && last.targetBf != null) {
+    const wF = (last.weightMin + last.weightMax) / 2;
+    const bfF = last.targetBf;
+    let alt: Alternative | null = null;
+    if (rest.some((x) => x.type === 'bulk' || x.type === 'strength')) {
+      const f = earliestBoth(p, now, wF, bfF);
+      if (f)
+        alt = {
+          id: 'both',
+          title: `Tutti e due: ${itKg(wF)} kg al ${pct(bfF)}`,
+          result: '',
+          detail: `Massa per ${f.b} settimane fino a circa ${itKg(f.peak.weight)} kg, poi definizione per ${f.cutWeeks} settimane.`,
+          phases: [
+            { type: 'bulk', label: rest[0].type === 'bulk' ? rest[0].label : 'Massa', weeks: f.b, weight: r1(f.peak.weight), bf: r1(f.peak.bf) },
+            { type: 'cut', label: last.type === 'cut' ? last.label : 'Definizione', weeks: f.cutWeeks, weight: r1(wF), bf: bfF },
+          ],
+          end: iso(today + f.total * WEEK),
+        };
+    } else if (now.lean >= wF * (1 - bfF / 100) - 0.5) {
+      // già in definizione con il muscolo che serve: conta solo quanto manca a scendere
+      const target = now.lean / (1 - bfF / 100);
+      const weeks = now.weight > target ? Math.ceil(cutWeeks(p, now, target) / 0.85) : 1;
+      alt = {
+        id: 'both',
+        title: `Tutti e due: ${itKg(wF)} kg al ${pct(bfF)}`,
+        result: '',
+        detail: `Definizione per ${weeks} settimane.`,
+        phases: [{ type: 'cut', label: last.label, weeks, weight: r1(wF), bf: bfF }],
+        end: iso(today + weeks * WEEK),
+      };
+    }
+    if (alt) {
+      const diff = Math.round((ts(alt.end) - ts(last.end)) / WEEK);
+      if (Math.abs(diff) < 3) return null;
+      const faster = diff < 0;
+      const title = faster ? `Vai più veloce del previsto: obiettivo anticipato al ${fmtDate(alt.end)}` : `Obiettivo spostato al ${fmtDate(alt.end)}`;
+      const detail = `Con i tuoi dati di oggi (${itKg(now.weight)} kg al ${pct(now.bf)}) ${itKg(wF)} kg al ${pct(bfF)} è realistico entro il ${fmtDate(alt.end)}: ${Math.abs(diff)} settimane ${faster ? 'prima' : 'più tardi'} rispetto al piano. ${alt.detail}`;
+      return { id: `goal-both-${alt.end}`, title, detail, phases: applyAlternative(plan.phases, plan.current, alt, now.weight, today), summary: `${title}. ${alt.detail}` };
+    }
+  }
   const checks = checkPlan(p, now, plan.phases, plan.current, today);
   if (planVerdict(checks) === 'ok') return null;
   const alts = alternatives(p, now, plan.phases, plan.current, today).filter((a) => a.phases.length);
-  const last = plan.phases[plan.phases.length - 1];
-  const pick = alts.find((a) => a.id === (last?.targetBf != null ? 'bf' : 'weight')) ?? alts[0];
+  const want = plan.priority === 'weight' ? 'weight' : plan.priority === 'bf' ? 'bf' : last.targetBf != null ? 'bf' : 'weight';
+  const pick = alts.find((a) => a.id === want) ?? alts[0];
   if (!pick) return null;
   const why = checks.flatMap((c) => c.issues)[0];
   return {
