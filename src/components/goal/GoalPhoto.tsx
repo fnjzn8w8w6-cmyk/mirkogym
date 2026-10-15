@@ -74,7 +74,7 @@ function GoalPhotoModal({ onClose }: { onClose: () => void }) {
   const projections = useMemo(() => {
     if (!p || !plan) return [];
     const bf = bodyFatNow(bodyLogs)?.value ?? composition(p).bf.value;
-    return projectPhases({ weight: p.weightKg, bf }, plan.phases, plan.current);
+    return projectPhases(p, { weight: p.weightKg, bf }, plan.phases, plan.current);
   }, [p, plan, bodyLogs]);
   const pr = projections[Math.min(pick, projections.length - 1)];
   // la foto di partenza è sempre quella di oggi

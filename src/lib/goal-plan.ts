@@ -93,7 +93,7 @@ Regole:
 - "targetBf": massa grassa obiettivo in % se indicata o deducibile, altrimenti null.
 - "end": data di fine fase YYYY-MM-DD SOLO se l'utente indica una data o una durata, altrimenti null. "weeks": durata in settimane se indicata, altrimenti null.
 - Ordina le fasi nell'ordine in cui vanno fatte, la prima parte da oggi.
-- "summary": 2 frasi in italiano che riassumono il piano.
+- "summary": 2 frasi in italiano che riassumono il piano, senza promettere risultati: l'app verifica da sola se i numeri sono realistici.
 Rispondi SOLO con JSON: {"phases":[{"type":"bulk","label":"Massa pulita","weightMin":82,"weightMax":83,"targetBf":17,"end":null,"weeks":null}],"summary":""}`,
     (r) => r as { phases?: unknown; summary?: unknown },
     { prefer: 'flash', temperature: 0.2, label: 'Il coach costruisce il tuo piano…', ...opts },

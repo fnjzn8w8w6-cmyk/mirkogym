@@ -20,6 +20,8 @@ import { useSessions } from '@/hooks/use-sessions';
 import { forecast, waterEvents } from '@/lib/body-model';
 import { HelpTip, NewBadge, SectionTitle } from '@/components/ui/Help';
 import { GoalPhotoButton } from './GoalPhoto';
+import { GoalCheck, currentComp } from './GoalCheck';
+import { checkPlan, planVerdict } from '@/lib/goal-feasibility';
 import {
   PHASE_EMOJI,
   STATE_LABEL,
@@ -130,6 +132,7 @@ export function GoalPlanEditor({
               </li>
             ))}
           </ol>
+          <GoalCheck profile={profile} current={current} plan={plan} onApply={set} />
         </div>
       )}
     </div>
@@ -213,6 +216,8 @@ export function GoalCard({ compact }: { compact?: boolean }) {
 
   const ph = st.phase;
   const next = plan.phases[plan.current + 1];
+  // verifica del coach: il piano è raggiungibile con i tuoi dati?
+  const verdict = planVerdict(checkPlan(p, currentComp(p, { weight: st.current, bf: st.bf }).comp, plan.phases, plan.current));
   const nut = userNutrition(eff ?? p, settings);
   const tone =
     st.state === 'reached' || st.state === 'on-track' || st.state === 'ahead' ? 'text-accent-400' : st.state === 'behind' ? 'text-warning' : 'text-danger';
@@ -280,6 +285,12 @@ export function GoalCard({ compact }: { compact?: boolean }) {
           {st.state === 'ahead' || st.state === 'behind' ? ` di ${Math.abs(st.weeksOff)} sett.` : ''}
           {st.state !== 'reached' && st.state !== 'expired' ? ` · ${Math.round(st.weeksLeft)} settimane rimaste` : ''}
         </div>
+        {verdict !== 'ok' && (
+          <button type="button" onClick={() => setOpen(true)} className={cn('block w-full rounded-md px-3 py-2 text-left text-sm', verdict === 'no' ? 'bg-danger/10 text-fg' : 'bg-warning/10 text-fg')}>
+            {verdict === 'no' ? '❌' : '🟡'} <strong>Il coach:</strong> {verdict === 'no' ? 'con i tuoi dati questo piano non è realistico nei tempi previsti.' : 'il piano è fattibile ma al limite.'}{' '}
+            <span className="font-semibold text-accent-400">Vedi le alternative →</span> <NewBadge />
+          </button>
+        )}
         {fc && (
           <div className="text-sm text-fg-2">
             {fc.wrongWay ? (

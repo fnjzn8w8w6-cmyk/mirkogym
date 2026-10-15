@@ -3,7 +3,9 @@
  * Usa Puter.js con Nano Banana (modello immagini di Google): gratis per l'app (ogni utente usa la quota gratuita di Puter)
  * e senza registrazione (Puter crea un utente temporaneo anonimo al primo uso).
  */
-import { targetWeight, type GoalPhase } from './goal-plan';
+import type { GoalPhase } from './goal-plan';
+import type { UserProfile } from './metabolism';
+import { checkPlan, compOf, type Comp } from './goal-feasibility';
 
 const SCRIPT = 'https://js.puter.com/v2/';
 /** Modelli da provare in ordine (Nano Banana 2, poi Nano Banana). */
@@ -43,13 +45,7 @@ export function loadPuter(): Promise<PuterAI> {
   return loading;
 }
 
-export interface Composition {
-  weight: number;
-  bf: number;
-  lean: number;
-  fat: number;
-}
-const comp = (weight: number, bf: number): Composition => ({ weight, bf, lean: weight * (1 - bf / 100), fat: (weight * bf) / 100 });
+export type Composition = Comp;
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
 export interface PhaseProjection {
@@ -62,45 +58,16 @@ export interface PhaseProjection {
   note?: string;
 }
 
-/**
- * Composizione a fine di ogni fase, in ordine, partendo da oggi.
- * Massa: se manca la massa grassa obiettivo, metà del peso preso è muscolo e metà grasso.
- * Definizione: la massa magra si mantiene (non cresce); il peso realistico è massa magra / (1 − grasso obiettivo).
- */
-export function projectPhases(now: { weight: number; bf: number }, phases: GoalPhase[], current: number): PhaseProjection[] {
-  const out: PhaseProjection[] = [];
-  let cur = comp(now.weight, now.bf);
-  for (let i = current; i < phases.length; i++) {
-    const ph = phases[i];
-    const weeks = Math.max(1, (new Date(`${ph.end}T12:00:00`).getTime() - Math.max(Date.now(), new Date(`${ph.start}T12:00:00`).getTime())) / (7 * 86400000));
-    let to: Composition;
-    let note: string | undefined;
-    if (ph.type === 'cut') {
-      const bf = ph.targetBf ?? Math.max(8, cur.bf - 5);
-      const w = cur.lean / (1 - bf / 100);
-      to = comp(w, bf);
-      if (Math.abs(w - targetWeight(ph)) >= 1)
-        note = `Con ${r1(cur.lean).toString().replace('.', ',')} kg di massa magra (in definizione si mantiene, non cresce) al ${bf}% peseresti circa ${r1(w).toString().replace('.', ',')} kg, non ${r1(targetWeight(ph)).toString().replace('.', ',')}: la foto usa i numeri realistici.`;
-    } else {
-      const w = targetWeight(ph);
-      if (ph.targetBf != null) to = comp(w, ph.targetBf);
-      else {
-        const gain = w - cur.weight;
-        const fat = cur.fat + gain * (gain > 0 ? 0.5 : 0.75);
-        to = comp(w, (fat / w) * 100);
-      }
-      // massa magra in più realistica per chi si allena da un po': ~0,15 kg a settimana
-      const maxLean = cur.lean + 0.15 * weeks;
-      if (to.lean > maxLean + 0.5) {
-        const lean = maxLean;
-        to = { weight: w, lean, fat: w - lean, bf: ((w - lean) / w) * 100 };
-        note = `In ${Math.round(weeks)} settimane si mettono realisticamente circa ${r1(0.15 * weeks).toString().replace('.', ',')} kg di muscolo: a ${r1(w).toString().replace('.', ',')} kg saresti circa al ${Math.round(to.bf)}% di grasso.`;
-      }
-    }
-    out.push({ phase: ph, index: i, from: cur, to, weeks, note });
-    cur = to;
-  }
-  return out;
+/** Composizione a fine di ogni fase, in ordine, partendo da oggi: lo stesso calcolo della verifica del coach. */
+export function projectPhases(p: UserProfile, now: { weight: number; bf: number }, phases: GoalPhase[], current: number): PhaseProjection[] {
+  return checkPlan(p, compOf(now.weight, now.bf), phases, current).map((c) => ({
+    phase: c.phase,
+    index: c.index,
+    from: c.from,
+    to: c.to,
+    weeks: c.weeks,
+    note: c.issues[0] ? `${c.issues[0]} La foto usa i numeri realistici.` : undefined,
+  }));
 }
 
 /** Come appare l'addome a una certa percentuale di grasso (uomo; per la donna le soglie sono circa +7%). */

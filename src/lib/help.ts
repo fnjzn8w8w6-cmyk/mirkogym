@@ -186,6 +186,15 @@ export const HELP = {
     ],
   },
   'body-bf-chart': { title: 'Massa grassa', body: ['Le misure di massa grassa nel tempo e, se impostato, il percorso verso la massa grassa obiettivo.'] },
+  'goal-check': {
+    title: 'Verifica del coach',
+    body: [
+      'Il coach controlla se il tuo obiettivo è raggiungibile nei tempi che hai scelto, con i tuoi dati: sesso, età, altezza, livello di allenamento, peso e massa grassa di oggi.',
+      'Usa ritmi realistici per chi si allena senza aiuti: un neofita mette circa 0,25 kg di massa magra a settimana, un intermedio circa 0,13, un avanzato circa 0,06 (meno per le donne, dopo i 40 anni e vicino al proprio limite). In definizione il muscolo si mantiene: non cresce.',
+      'Se il piano non torna ti propone alternative entro la stessa data: tenere la percentuale di grasso (e scoprire il peso vero), tenere il peso (e scoprire la percentuale vera), oppure quanto tempo serve per avere tutti e due.',
+      'Sono stime: allenamento, sonno, dieta e genetica possono spostarle. Il coach non promette risultati oltre questi numeri.',
+    ],
+  },
   'body-metabolism': {
     title: 'Il tuo consumo',
     body: [
