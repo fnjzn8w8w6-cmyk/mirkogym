@@ -191,6 +191,7 @@ export function subscribeFoodLog(uid: string, date: string, cb: (l: FoodLog) => 
         entries: d.exists() ? ((d.data().entries as FoodLog['entries']) ?? []) : [],
         recap: d.exists() ? (d.data().recap as FoodLog['recap']) : undefined,
         analysis: d.exists() ? (d.data().analysis as FoodLog['analysis']) : undefined,
+        dayType: d.exists() ? (d.data().dayType as FoodLog['dayType']) : undefined,
       }),
     onError,
   );
@@ -199,7 +200,15 @@ export function subscribeFoodLog(uid: string, date: string, cb: (l: FoodLog) => 
 export function subscribeRecentFoodLogs(uid: string, from: string, cb: (l: FoodLog[]) => void, onError: OnError): Unsubscribe {
   return onSnapshot(
     query(foodLogsCol(uid), where('date', '>=', from)),
-    (snap) => cb(snap.docs.map((d) => ({ date: d.id, entries: (d.data().entries as FoodLog['entries']) ?? [], recap: d.data().recap as FoodLog['recap'] }))),
+    (snap) =>
+      cb(
+        snap.docs.map((d) => ({
+          date: d.id,
+          entries: (d.data().entries as FoodLog['entries']) ?? [],
+          recap: d.data().recap as FoodLog['recap'],
+          dayType: d.data().dayType as FoodLog['dayType'],
+        })),
+      ),
     onError,
   );
 }
@@ -244,6 +253,9 @@ export const saveCheckIn = (uid: string, c: CheckIn) => setDoc(doc(checkInsCol(u
 export const deleteCheckIn = (uid: string, date: number) => deleteDoc(doc(checkInsCol(uid), String(date)));
 export const saveFoodLog = (uid: string, log: FoodLog) =>
   setDoc(doc(foodLogsCol(uid), log.date), clean({ date: log.date, entries: log.entries, updatedAt: Timestamp.now() }), { merge: true });
+/** Giorno di allenamento o di riposo scelto da te (null = torna automatico). */
+export const saveDayType = (uid: string, date: string, dayType: FoodLog['dayType'] | null) =>
+  setDoc(doc(foodLogsCol(uid), date), { date, dayType: dayType ?? deleteField() }, { merge: true });
 /** Recap del dietologo salvato dentro la giornata del diario. */
 export const saveDayAnalysis = (uid: string, date: string, analysis: NonNullable<FoodLog['analysis']>) =>
   setDoc(doc(foodLogsCol(uid), date), { date, analysis }, { merge: true });

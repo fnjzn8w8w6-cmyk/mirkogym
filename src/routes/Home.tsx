@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronRight, Dumbbell, Play, Timer } from 'lucide-react';
+import { ChevronRight, Dumbbell, Play, Repeat, Timer } from 'lucide-react';
 import { WeekCard } from '@/components/home/MuscleCard';
 import { useProgress } from '@/hooks/use-progress';
 import { userNutrition } from '@/lib/coach';
@@ -25,7 +25,8 @@ import { formatAgo, formatLongDate, fromISODate, daysBetween, todayISO } from '@
 import { dayGroups, nextDay, plannedSets } from '@/lib/schedule-utils';
 import { MicButton } from '@/components/ui/MicButton';
 import { QUEST_XP } from '@/lib/quests';
-import { settle } from '@/lib/firestore';
+import { saveDayType, settle } from '@/lib/firestore';
+import { useData } from '@/hooks/data-context';
 import { useAthlete } from '@/hooks/use-athlete';
 import { useFoodLog } from '@/hooks/use-food';
 import { entryMacros } from '@/components/food/FoodDiary';
@@ -138,6 +139,7 @@ function TodayDiet({ onOpen }: { onOpen: () => void }) {
   const profile = settings.profile!;
   const w = bodyLogs.find((b) => b.weight != null)?.weight ?? profile.weightKg;
   const dayT = useDayTarget(profile);
+  const { uid } = useData();
   const target = dayT?.day ?? userNutrition({ ...profile, weightKg: w }, settings);
   const t = sumMacros(entries.map(entryMacros));
   return (
@@ -150,9 +152,30 @@ function TodayDiet({ onOpen }: { onOpen: () => void }) {
           <strong className="font-display text-fg">{t.kcal}</strong> / {target.target} kcal
         </span>
       </div>
-      {dayT && dayT.day.delta > 0 && (
-        <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-violet-500/15 px-2.5 py-1 text-xs font-bold text-violet-400">
-          🏋️ Giorno di allenamento: +{Math.round(dayT.day.delta / 4)} g carboidrati <NewBadge />
+      {dayT?.cycling && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {/* tocca per dire se oggi ti alleni: calorie e macro cambiano subito */}
+          <button
+            type="button"
+            disabled={dayT.source === 'workout'}
+            onClick={(e) => {
+              // non aprire la Dieta: qui si cambia solo il tipo di giorno
+              e.stopPropagation();
+              if (uid) void settle(saveDayType(uid, todayISO(), dayT.day.training ? 'rest' : 'training'));
+            }}
+            aria-label={`${dayT.day.training ? 'Giorno di allenamento' : 'Giorno di riposo'}: tocca per cambiare`}
+            className="inline-flex items-center gap-1 rounded-full bg-violet-500/15 px-2.5 py-1 text-xs font-bold text-violet-400 disabled:opacity-100"
+          >
+            {dayT.day.training ? `🏋️ Giorno di allenamento: +${Math.round(dayT.day.delta / 4)} g carboidrati` : `🌙 Giorno di riposo: ${Math.round(dayT.day.delta / 4)} g carboidrati`}
+            {dayT.source !== 'workout' && <Repeat className="h-3 w-3 opacity-70" aria-hidden />}
+          </button>
+          <NewBadge />
+          {dayT.rebalance !== 0 && (
+            <span className="w-full text-xs text-fg-3">
+              {dayT.rebalance > 0 ? '+' : '−'}
+              {Math.abs(dayT.rebalance)} kcal oggi per {dayT.reasons.join(' e ')}
+            </span>
+          )}
         </div>
       )}
       <div className="mt-3 grid grid-cols-3">

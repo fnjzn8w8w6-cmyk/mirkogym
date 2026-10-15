@@ -7,8 +7,9 @@ import { useMesocycle } from './use-mesocycle';
 import { useAthlete, useRecentFoodLogs } from './use-athlete';
 import { useTrainingModel } from './use-training-model';
 import { userNutrition } from '@/lib/coach';
-import { buildProposals, dayNutrition, learnedFavorites, resolveCycling, weekTargets, weekdayOf } from '@/lib/habits';
-import { fromISODate, toISODate, todayISO } from '@/lib/date-utils';
+import { buildProposals, learnedFavorites, resolveCycling, weekDays, weekTargets } from '@/lib/habits';
+import { fromISODate, mondayISO, toISODate, todayISO } from '@/lib/date-utils';
+import { useData } from './data-context';
 import type { UserProfile } from '@/lib/metabolism';
 
 /** Giorni con più calorie (allenamento) o null se le calorie sono uguali tutti i giorni. */
@@ -22,21 +23,45 @@ export function useCyclingDays(): number[] | null {
   );
 }
 
-/** Obiettivo nutrizionale di un giorno (con le calorie che seguono la scheda, se attive). */
+/**
+ * Obiettivo nutrizionale di un giorno (con le calorie che seguono la scheda, se attive).
+ * Il tipo del giorno (allenamento/riposo) tiene conto della tua scelta nel diario e dell'allenamento fatto o in corso;
+ * se cambia il numero di allenamenti della settimana, i giorni che restano compensano (media settimanale invariata).
+ */
 export function useDayTarget(profile: UserProfile | undefined, date = todayISO()) {
   const { settings } = useSettings();
   const { sessions } = useSessions();
   const { bodyLogs } = useBodyLogs();
+  const { activeSession } = useData();
+  const logs = useRecentFoodLogs(21);
   const cycling = useCyclingDays();
   return useMemo(() => {
     if (!profile) return null;
     const w = bodyLogs.find((b) => b.weight != null)?.weight ?? profile.weightKg;
     const base = userNutrition({ ...profile, weightKg: w }, settings);
-    const trainedThatDay = sessions.some((s) => toISODate(s.date) === date);
-    // giorni passati senza allenamento = riposo; oggi e futuro seguono i giorni abituali
-    const trained = trainedThatDay ? true : date < todayISO() ? false : undefined;
-    return { base, cycling, day: dayNutrition(base, weekdayOf(fromISODate(date)), cycling, trained), week: weekTargets(base, cycling) };
-  }, [profile, settings, sessions, bodyLogs, date, cycling]);
+    const today = todayISO();
+    const trainedOn = new Set(sessions.map((s) => toISODate(s.date)));
+    const choices = new Map(logs.filter((l) => l.dayType).map((l) => [l.date, l.dayType!]));
+    const { days, reasons } = weekDays(base, cycling, mondayISO(fromISODate(date)), today, (d) => ({
+      trained: trainedOn.has(d),
+      active: d === today && Boolean(activeSession),
+      choice: choices.get(d),
+    }));
+    const me = days.find((d) => d.date === date)!;
+    return {
+      base,
+      cycling,
+      day: me.target,
+      /** chi ha deciso il tipo del giorno */
+      source: me.source,
+      /** kcal aggiunte/tolte a questo giorno per tenere la media della settimana, e perché */
+      rebalance: me.rebalance,
+      reasons,
+      /** i 7 giorni della settimana come sono davvero */
+      weekDays: days,
+      week: weekTargets(base, cycling),
+    };
+  }, [profile, settings, sessions, bodyLogs, date, cycling, logs, activeSession]);
 }
 
 /** Ricette che mangi davvero (dal diario): il piano le propone più spesso. */

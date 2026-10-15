@@ -263,7 +263,7 @@ export function useDietDay(profile: UserProfile) {
       (l: FoodLog): DietDay | null => {
         if (!dayT) return null;
         const wd = (fromISODate(l.date).getDay() + 6) % 7;
-        const trained = trainedOn.has(l.date) ? true : l.date < today ? false : undefined;
+        const trained = trainedOn.has(l.date) ? true : l.date < today ? false : l.dayType ? l.dayType === 'training' : undefined;
         const t = dayNutrition(dayT.base, wd, dayT.cycling, trained);
         const m = sumMacros(l.entries.map(entryMacros));
         return {

@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import { addDays } from 'date-fns';
-import { BookOpen, CalendarDays, Camera, Shuffle, Undo2, ChevronLeft, ChevronRight, ClipboardCopy, Dumbbell, Moon, Plus, Trash2 } from 'lucide-react';
+import { BookOpen, CalendarDays, Camera, Repeat, Shuffle, Undo2, ChevronLeft, ChevronRight, ClipboardCopy, Dumbbell, Moon, Plus, Trash2 } from 'lucide-react';
 import { MealPhotoModal } from '@/components/imports/ImportModals';
 import { useSettings } from '@/hooks/use-settings';
 import { useFoodLog } from '@/hooks/use-food';
+import { useData } from '@/hooks/data-context';
+import { saveDayType, settle } from '@/lib/firestore';
 import { Card } from '@/components/ui/Card';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -47,7 +49,7 @@ export const entryMacros = (e: DiaryEntry): Macros =>
     : { kcal: Math.round(e.per.kcal * e.qty), protein: round1(e.per.protein * e.qty), carbs: round1(e.per.carbs * e.qty), fat: round1(e.per.fat * e.qty) };
 
 /** Calorie giorno per giorno della settimana: più alte nei giorni di allenamento. */
-function WeekCalories({ week, cycling, date }: { week: { target: number }[]; cycling: number[]; date: string }) {
+function WeekCalories({ week, date }: { week: { target: number; training: boolean; changed: boolean }[]; date: string }) {
   const wd = (fromISODate(date).getDay() + 6) % 7;
   const min = Math.min(...week.map((d) => d.target));
   const max = Math.max(...week.map((d) => d.target));
@@ -60,11 +62,11 @@ function WeekCalories({ week, cycling, date }: { week: { target: number }[]; cyc
       </div>
       <div className="mt-4 flex h-28 items-end gap-1.5">
         {week.map((d, i) => {
-          const train = cycling.includes(i);
+          const train = d.training;
           const h = max > min ? 28 + ((d.target - min) / (max - min)) * 44 : 50;
           return (
             <div key={i} className="flex flex-1 flex-col items-center justify-end">
-              <span className={cn('mb-1 text-[10px] font-semibold', train ? 'text-accent-400' : 'text-fg-3')}>{d.target}</span>
+              <span className={cn('mb-1 text-[10px] font-semibold', train ? 'text-accent-400' : 'text-fg-3', d.changed && 'underline decoration-dotted')}>{d.target}</span>
               <span
                 className={cn('w-full rounded-md', train ? 'bg-accent-500' : 'bg-surface-3', i === wd && 'outline outline-2 outline-offset-2 outline-fg')}
                 style={{ height: `${h}px` }}
@@ -82,7 +84,9 @@ function WeekCalories({ week, cycling, date }: { week: { target: number }[]; cyc
           <span className="h-2.5 w-2.5 rounded-sm bg-surface-3" aria-hidden /> riposo
         </span>
       </div>
-      <p className="mt-1.5 text-xs text-fg-3">Se ti alleni in un giorno diverso, le calorie si spostano da sole su quel giorno.</p>
+      <p className="mt-1.5 text-xs text-fg-3">
+        Se ti alleni in un giorno diverso o salti un allenamento, tocca «Giorno di allenamento / riposo» qui sopra: le calorie si spostano e i giorni che restano compensano (numeri sottolineati).
+      </p>
     </Card>
   );
 }
@@ -137,6 +141,7 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
   const [date, setDate] = useState(todayISO());
   const { entries, loading, add, update, remove, recap, saveRecap, analysis, saveAnalysis } = useFoodLog(date);
   const toDietDay = useDietDay(profile);
+  const { uid: uidNow } = useData();
   const { data } = useRecipes();
   const [adding, setAdding] = useState<DiaryMeal | null>(null);
   const [photoFor, setPhotoFor] = useState<DiaryMeal | null>(null);
@@ -225,22 +230,44 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
       </div>
 
       <Card variant="elevated" className="space-y-3 p-4">
-        {dayT && dayT.day.delta !== 0 && (
+        {dayT?.cycling && (
           <div className="flex items-center justify-between gap-2">
-            <span
+            {/* oggi e i giorni futuri: tocca per dire se ti alleni (calorie e macro cambiano subito) */}
+            <button
+              type="button"
+              disabled={date < todayISO() || (dayT.source === 'workout' && date === todayISO())}
+              onClick={() => uidNow && void settle(saveDayType(uidNow, date, dayT.day.training ? 'rest' : 'training'))}
+              aria-label={`${dayT.day.training ? 'Giorno di allenamento' : 'Giorno di riposo'}: tocca per cambiare`}
               className={cn(
-                'inline-flex h-7 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold',
+                'inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold disabled:opacity-100',
                 dayT.day.training ? 'border-accent-500/40 bg-accent-glow text-accent-400' : 'border-line bg-surface-2 text-fg-2',
               )}
             >
               {dayT.day.training ? <Dumbbell className="h-4 w-4" aria-hidden /> : <Moon className="h-4 w-4" aria-hidden />}
               {dayT.day.training ? 'Giorno di allenamento' : 'Giorno di riposo'}
-            </span>
+              {date >= todayISO() && !(dayT.source === 'workout' && date === todayISO()) && <Repeat className="h-3.5 w-3.5 opacity-70" aria-hidden />}
+            </button>
             <span className="flex items-center">
               <NewBadge />
               <HelpTip id="diet-cycling" className="ml-1" />
             </span>
           </div>
+        )}
+        {dayT?.cycling && date >= todayISO() && (
+          <p className="-mt-1 text-xs text-fg-3">
+            {dayT.source === 'workout'
+              ? 'Allenamento fatto o in corso: obiettivo da giorno di allenamento.'
+              : dayT.source === 'manual'
+                ? (
+                  <>
+                    Scelto da te.{' '}
+                    <button type="button" className="font-semibold text-fg-2 underline" onClick={() => uidNow && void settle(saveDayType(uidNow, date, null))}>
+                      Torna automatico
+                    </button>
+                  </>
+                )
+                : 'Automatico, dai tuoi giorni abituali: tocca per cambiarlo se oggi è diverso.'}
+          </p>
         )}
         <div className="grid grid-cols-3 text-center">
           <div>
@@ -273,10 +300,19 @@ export function FoodDiary({ profile }: { profile: UserProfile }) {
             La media della settimana resta <strong className="text-fg">{dayT.base.target.toLocaleString('it-IT')} kcal</strong>.
           </p>
         )}
+        {dayT && dayT.rebalance !== 0 && (
+          <p className="rounded-md bg-surface-2 px-3 py-2 text-sm text-fg-2">
+            <strong className={dayT.rebalance > 0 ? 'text-accent-400' : 'text-fg'}>
+              {dayT.rebalance > 0 ? '+' : '−'}
+              {Math.abs(dayT.rebalance)} kcal
+            </strong>{' '}
+            (soprattutto carboidrati) per {dayT.reasons.join(' e ')}: così la media della settimana resta quella prevista.
+          </p>
+        )}
         <WhyKcal base={dayT?.base ?? target} day={dayT?.day} />
       </Card>
 
-      {dayT?.cycling && <WeekCalories week={dayT.week} cycling={dayT.cycling} date={date} />}
+      {dayT?.cycling && <WeekCalories week={dayT.weekDays.map((d) => ({ target: d.target.target, training: d.target.training, changed: d.rebalance !== 0 || d.source === 'manual' }))} date={date} />}
 
       {date === todayISO() && !loading && (
         <>

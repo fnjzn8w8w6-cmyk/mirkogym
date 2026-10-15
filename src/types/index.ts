@@ -338,6 +338,8 @@ export interface FoodLog {
   recap?: DayRecap;
   /** recap del dietologo su questa giornata (fatto in automatico) */
   analysis?: SavedAnalysis;
+  /** scelta tua per quel giorno: allenamento o riposo (senza = automatico) */
+  dayType?: 'training' | 'rest';
 }
 
 export interface RecipeIngredient {

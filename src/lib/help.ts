@@ -248,7 +248,9 @@ export const HELP = {
     body: [
       'Nei giorni di allenamento mangi circa l\'8% in più (quasi tutto carboidrati, per rendere meglio e recuperare), nei giorni di riposo un po\' meno: la media della settimana resta uguale.',
       'I giorni di allenamento sono quelli in cui ti alleni davvero (l\'app li impara dallo storico); all\'inizio sono distribuiti in base agli allenamenti a settimana.',
-      'Se ti alleni in un giorno di riposo, l\'obiettivo di quel giorno sale in automatico. Puoi spegnere questa funzione in Impostazioni → Allenamento.',
+      'Oggi è diverso dal solito? Tocca «Giorno di allenamento / Giorno di riposo» (nel Diario o nella Home): calorie e macro cambiano subito. Appena inizi un allenamento la giornata diventa da sola di allenamento.',
+      'Se salti un allenamento o ne fai uno in più, i giorni che restano della settimana compensano (soprattutto con i carboidrati), così la media settimanale resta quella prevista. Nessun giorno scende più di 150 kcal sotto il suo obiettivo normale: se non basta, si accetta un piccolo sforamento.',
+      'Puoi spegnere le calorie diverse in Impostazioni → Allenamento.',
     ],
   },
   'diet-plan': {

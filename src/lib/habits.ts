@@ -71,6 +71,86 @@ export function dayNutrition(base: Nutrition, weekday: number, cycling: number[]
 
 export const weekTargets = (base: Nutrition, cycling: number[] | null | undefined): Nutrition[] => Array.from({ length: 7 }, (_, d) => dayNutrition(base, d, cycling));
 
+/** Un giorno della settimana con il suo obiettivo vero (tipo deciso e compensazione). */
+export interface WeekDay {
+  date: string;
+  target: Nutrition & { delta: number; training: boolean };
+  /** tipo previsto dai giorni abituali */
+  planned: boolean;
+  /** chi ha deciso il tipo: tu (interruttore), allenamento fatto/in corso, giorni abituali */
+  source: 'manual' | 'workout' | 'auto';
+  /** kcal aggiunte (+) o tolte (−) per tenere la media della settimana */
+  rebalance: number;
+}
+
+const WD_NAME = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
+/** Un giorno al massimo 150 kcal sotto il suo obiettivo normale, e non più di 350 sopra. */
+const MAX_CUT = 150;
+const MAX_ADD = 350;
+
+/**
+ * Obiettivi veri dei 7 giorni della settimana (da lunedì `monday`):
+ * - giorni passati: allenamento se c'è una sessione, altrimenti riposo;
+ * - oggi: allenamento se c'è una sessione (anche in corso); altrimenti la tua scelta o i giorni abituali;
+ * - giorni futuri: la tua scelta o i giorni abituali.
+ * Se il numero di allenamenti cambia rispetto al previsto, la differenza di calorie si ridistribuisce su oggi e sui giorni
+ * che restano, così la media della settimana resta quella fissata (con dei limiti per non avere giornate troppo basse).
+ */
+export function weekDays(
+  base: Nutrition,
+  cycling: number[] | null | undefined,
+  monday: string,
+  today: string,
+  info: (date: string) => { trained: boolean; active?: boolean; choice?: 'training' | 'rest' },
+): { days: WeekDay[]; reasons: string[] } {
+  const dates = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(`${monday}T12:00:00`);
+    d.setDate(d.getDate() + i);
+    return d.toLocaleDateString('sv-SE');
+  });
+  const days: WeekDay[] = dates.map((date, wd) => {
+    const planned = Boolean(cycling?.includes(wd));
+    const x = info(date);
+    let training: boolean;
+    let source: WeekDay['source'];
+    if (date < today) [training, source] = [x.trained, x.trained ? 'workout' : 'auto'];
+    else if (date === today && (x.trained || x.active)) [training, source] = [true, 'workout'];
+    else if (x.choice) [training, source] = [x.choice === 'training', 'manual'];
+    else [training, source] = [planned, 'auto'];
+    return { date, target: dayNutrition(base, wd, cycling, training), planned, source, rebalance: 0 };
+  });
+  const reasons: string[] = [];
+  if (!cycling?.length || cycling.length >= 7) return { days, reasons };
+  // calorie previste per la settimana contro quelle con i giorni come sono davvero
+  const plannedTotal = weekTargets(base, cycling).reduce((a, d) => a + d.target, 0);
+  const actualTotal = days.reduce((a, d) => a + d.target.target, 0);
+  let diff = plannedTotal - actualTotal;
+  days.forEach((d, wd) => {
+    if (d.target.training !== d.planned && (d.date <= today || d.source === 'manual'))
+      reasons.push(d.target.training ? `allenamento in più ${WD_NAME[wd]}` : `allenamento saltato ${WD_NAME[wd]}`);
+  });
+  // compensano oggi e i giorni che restano (i giorni passati sono andati)
+  const future = days.filter((d) => d.date >= today);
+  if (!diff || !future.length) return { days, reasons };
+  // si distribuisce in parti uguali, rispettando i limiti per giorno
+  for (let round = 0; round < 3 && Math.abs(diff) >= 10; round++) {
+    const open = future.filter((d) => (diff > 0 ? d.rebalance < MAX_ADD : d.rebalance > -MAX_CUT));
+    if (!open.length) break;
+    const each = diff / open.length;
+    for (const d of open) {
+      const next = Math.max(-MAX_CUT, Math.min(MAX_ADD, d.rebalance + each));
+      diff -= next - d.rebalance;
+      d.rebalance = next;
+    }
+  }
+  for (const d of future) {
+    const r = Math.round(d.rebalance / 10) * 10;
+    d.rebalance = r;
+    if (r) d.target = { ...d.target, target: d.target.target + r, carbs: Math.max(60, d.target.carbs + Math.round(r / 4)) };
+  }
+  return { days, reasons };
+}
+
 /* ---------- Gusti ---------- */
 
 /** Ricette che registri spesso nel diario (almeno 2 volte), dalla più frequente. */
