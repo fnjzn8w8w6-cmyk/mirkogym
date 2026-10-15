@@ -9,6 +9,7 @@ import { callAIJson, num, oneOf, str, type AIOptions } from './ai';
 import { GOALS, type Goal, type UserProfile } from './metabolism';
 import { toISODate } from './date-utils';
 import { realWeight } from './body-model';
+import { bodyFatNow } from './bodyfat-estimate';
 
 const DAY = 86400000;
 const WEEK = 7 * DAY;
@@ -193,7 +194,8 @@ export function planStatus(plan: GoalPlan, logs: BodyLog[], fallbackWeight: numb
   const phase = plan.phases[plan.current];
   if (!phase) return null;
   const current = trendWeight(logs, fallbackWeight);
-  const bf = logs.find((l) => l.bodyFat != null)?.bodyFat;
+  // ultima misura affidabile aggiornata col peso (come in Corpo): non la stima dal BMI del primo accesso
+  const bf = bodyFatNow(logs, now)?.value;
   const to = targetWeight(phase);
   const t0 = new Date(`${phase.start}T12:00:00`).getTime();
   const t1 = new Date(`${phase.end}T12:00:00`).getTime();

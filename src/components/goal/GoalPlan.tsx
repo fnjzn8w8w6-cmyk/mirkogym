@@ -19,6 +19,7 @@ import { useRecentFoodLogs } from '@/hooks/use-athlete';
 import { useSessions } from '@/hooks/use-sessions';
 import { forecast, waterEvents } from '@/lib/body-model';
 import { HelpTip, NewBadge, SectionTitle } from '@/components/ui/Help';
+import { GoalPhotoButton } from './GoalPhoto';
 import {
   PHASE_EMOJI,
   STATE_LABEL,
@@ -296,6 +297,7 @@ export function GoalCard({ compact }: { compact?: boolean }) {
             💧 +{kg(water.delta)} kg di acqua il {fmtShort(water.date)} ({water.reason}): rientra in 2–3 giorni. <NewBadge />
           </p>
         )}
+        <GoalPhotoButton />
         {!compact && (
           <div className="grid grid-cols-3 gap-2 text-center">
             {[
