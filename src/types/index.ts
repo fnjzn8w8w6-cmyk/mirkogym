@@ -222,6 +222,8 @@ export interface WeekCalories {
   adjust: number;
   /** correzione voluta dall'andamento del peso (può essere diversa da adjust per il limite di ±200 kcal a settimana) */
   intent?: number;
+  /** ritmo dell'obiettivo a fasi fissato il lunedì (kg/settimana; null = nessun obiettivo a fasi) */
+  rate?: number | null;
   /** obiettivo medio giornaliero della settimana */
   target: number;
   /** obiettivo medio della settimana prima (null = primo calcolo) */

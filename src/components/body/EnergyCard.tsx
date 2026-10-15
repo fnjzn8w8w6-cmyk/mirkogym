@@ -76,8 +76,8 @@ export function EnergyCard() {
       label: 'Allenamenti',
       note:
         e.eatSource === 'sessions'
-          ? `${e.eatSessions} ${e.eatSessions === 1 ? 'sessione' : 'sessioni'} negli ultimi ${ENERGY_WINDOW} giorni (durata, serie, esercizi)`
-          : `${e.eatSessions} a settimana previsti dalla scheda`,
+          ? `${e.eatSessions} ${e.eatSessions === 1 ? 'sessione registrata' : 'sessioni registrate'} negli ultimi ${e.eatDays ?? ENERGY_WINDOW} giorni (durata, serie, esercizi)`
+          : `${e.eatSessions} a settimana previsti dalla scheda: dal 7° giorno di allenamenti registrati uso i tuoi dati veri`,
       value: e.eat,
     },
     {

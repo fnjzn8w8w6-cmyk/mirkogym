@@ -44,6 +44,9 @@ export function sessionKcal(s: Session, weightKg: number, groupOf: (l: ExerciseL
   return Math.round((met - 1) * weightKg * hours * 1.08);
 }
 
+/** Giorni di storico dopo cui gli allenamenti si contano dai dati veri (prima: allenamenti previsti dalla scheda). */
+const MIN_HISTORY = 7;
+
 /** Allenamento tipico quando non c'è ancora storico: 60 minuti, 20 serie, un terzo gambe. */
 const typicalSessionKcal = (weightKg: number) => Math.round((3.5 + 8 * 0.15 + 0.33 - 1) * weightKg * 1 * 1.08);
 
@@ -72,6 +75,8 @@ export interface EnergyBreakdown {
   eat: number;
   /** allenamenti contati e da dove: registrati (ultimi 14 giorni) o previsti dalla scheda */
   eatSessions: number;
+  /** giorni di storico usati per gli allenamenti registrati (fino a 14) */
+  eatDays: number;
   eatSource: 'sessions' | 'planned';
   /** digestione, media al giorno */
   tef: number;
@@ -97,16 +102,20 @@ export function energyModel(
   const neat = Math.round(stepsKcal(steps, p) + b.value * (BASE_NEAT[p.activity] ?? 0.1));
 
   const from = now - ENERGY_WINDOW * DAY;
-  const recent = sessions.filter((s) => s.date >= from && s.date <= now);
   const oldest = sessions.length ? Math.min(...sessions.map((s) => s.date)) : now;
+  // giorni di storico usati: gli ultimi 14, o meno se hai iniziato da poco (almeno 7 per usare i dati veri)
+  const histDays = Math.min(ENERGY_WINDOW, (now - oldest) / DAY);
+  const recent = sessions.filter((s) => s.date >= now - Math.max(histDays, 0) * DAY - 1 && s.date <= now);
   let eat: number;
   let eatSource: EnergyBreakdown['eatSource'];
   let eatSessions: number;
-  if (now - oldest >= ENERGY_WINDOW * DAY) {
-    eat = recent.reduce((a, s) => a + sessionKcal(s, p.weightKg, opts.groupOf), 0) / ENERGY_WINDOW;
+  let eatDays = Math.round(histDays);
+  if (histDays >= MIN_HISTORY) {
+    eat = recent.reduce((a, s) => a + sessionKcal(s, p.weightKg, opts.groupOf), 0) / histDays;
     eatSource = 'sessions';
     eatSessions = recent.length;
   } else {
+    eatDays = 0;
     // storico corto: allenamenti previsti a settimana, con il consumo medio delle sessioni già fatte
     const per = recent.length ? recent.reduce((a, s) => a + sessionKcal(s, p.weightKg, opts.groupOf), 0) / recent.length : typicalSessionKcal(p.weightKg);
     eat = (per * Math.max(0, Math.min(7, p.daysPerWeek))) / 7;
@@ -142,6 +151,7 @@ export function energyModel(
     stepsSource,
     eat: round10(eat),
     eatSessions,
+    eatDays,
     eatSource,
     tef: round10(tef),
     tefSource,

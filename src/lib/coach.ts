@@ -99,17 +99,20 @@ export const metabolismReliable = (m: MetabolismState | null | undefined): boole
 export const userNutrition = (
   p: UserProfile,
   s: { kcalAdjust?: number; nutritionPrefs?: NutritionPrefs; goalPlan?: GoalPlan | null; metabolism?: MetabolismState | null; weekCal?: WeekCalories; energy?: { total: number } | null },
-  force?: { tdee: number; adjust: number },
+  force?: { tdee: number; adjust: number; rate?: number | null },
 ): Nutrition => {
   // Obiettivo a fasi: la fase in corso decide tipo di obiettivo e ritmo (calorie)
   const phase = s.goalPlan?.phases[s.goalPlan.current];
   const prof = phase ? { ...p, goal: phase.type } : p;
-  const rate = phase ? planRate(s.goalPlan, [], p.weightKg) : null;
+  // ritmo dell'obiettivo a fasi (kg/settimana) con il peso di adesso
+  const rateNow = () => (phase ? planRate(s.goalPlan, [], p.weightKg) : null);
   const style = s.nutritionPrefs?.style ?? 'standard';
-  if (force) return nutrition(prof, force.adjust, style, rate, force.tdee);
-  // Aggiornamento settimanale: per tutta la settimana valgono i numeri fissati il lunedì
+  if (force) return nutrition(prof, force.adjust, style, phase ? (force.rate ?? rateNow()) : null, force.tdee);
+  // Aggiornamento settimanale: per tutta la settimana valgono i numeri fissati il lunedì (anche il ritmo dell'obiettivo,
+  // così una pesata a metà settimana non sposta le calorie)
   const wk = s.weekCal && s.weekCal.week === mondayISO() ? s.weekCal : null;
-  if (wk) return nutrition(prof, wk.adjust, style, rate, wk.tdee ?? wk.formula ?? tdee(prof));
+  if (wk) return nutrition(prof, wk.adjust, style, phase ? (wk.rate ?? rateNow()) : null, wk.tdee ?? wk.formula ?? tdee(prof));
+  const rate = rateNow();
   // Con il metabolismo reale le correzioni non servono più (lo misura già)
   if (s.metabolism && metabolismReliable(s.metabolism)) return nutrition(prof, 0, style, rate, s.metabolism.tdee);
   return nutrition(prof, s.kcalAdjust ?? 0, style, rate, s.energy?.total ?? energyModel(p).total);

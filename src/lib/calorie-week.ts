@@ -53,7 +53,7 @@ export function computeWeekCalories(profile: UserProfile, s: CalSettings, bodyLo
   // (si usa la correzione voluta, non quella ridotta dal limite di 200 kcal a settimana, che si recupera nelle settimane dopo)
   const prevAdjust = prev ? (prev.formula != null && prev.tdee == null ? (prev.intent ?? prev.adjust) : 0) : (s.kcalAdjust ?? 0);
   // obiettivo con un consumo e una correzione precisi
-  const baseOf = (t: number, adj: number) => userNutrition(profile, s, { tdee: t, adjust: adj }).target;
+  const baseOf = (t: number, adj: number) => userNutrition(profile, s, { tdee: t, adjust: adj, rate }).target;
   const maxAdj = Math.round(formula * MAX_ADJUST);
   const clampAdj = (a: number) => Math.max(-maxAdj, Math.min(maxAdj, a));
   let target: number;
@@ -84,6 +84,7 @@ export function computeWeekCalories(profile: UserProfile, s: CalSettings, bodyLo
     formula,
     adjust,
     intent,
+    rate,
     target,
     prevTarget,
     prevTdee: prev?.tdee ?? null,
