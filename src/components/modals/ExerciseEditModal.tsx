@@ -6,6 +6,10 @@ import { cn } from '@/lib/cn';
 import { Modal } from '../ui/Modal';
 import { Input, TextArea } from '../ui/Input';
 import { Button } from '../ui/Button';
+import { HelpTip, NewBadge } from '../ui/Help';
+import { RestPicker, restText } from '../ui/Wheel';
+import { parseRestSeconds } from '@/lib/progression';
+import { formatClock } from '@/lib/date-utils';
 
 interface Props {
   open: boolean;
@@ -22,7 +26,8 @@ export function ExerciseEditModal({ open, exercise, onClose, onSave, onDelete }:
   const [repMin, setRepMin] = useState('8');
   const [repMax, setRepMax] = useState('12');
   const [rir, setRir] = useState('1-2');
-  const [rest, setRest] = useState('90 sec');
+  const [rest, setRest] = useState(90);
+  const [restOrig, setRestOrig] = useState('90 sec');
   const [notes, setNotes] = useState('');
   const [startWeight, setStartWeight] = useState('');
 
@@ -34,7 +39,8 @@ export function ExerciseEditModal({ open, exercise, onClose, onSave, onDelete }:
     setRepMin(String(exercise.repMin));
     setRepMax(String(exercise.repMax));
     setRir(exercise.rirTarget);
-    setRest(exercise.rest);
+    setRest(parseRestSeconds(exercise.rest));
+    setRestOrig(exercise.rest);
     setNotes(exercise.notes ?? '');
     setStartWeight(exercise.startWeight != null ? String(exercise.startWeight) : '');
   }, [open, exercise]);
@@ -61,7 +67,8 @@ export function ExerciseEditModal({ open, exercise, onClose, onSave, onDelete }:
       repMin: nMin,
       repMax: nMax,
       rirTarget: rir.trim() || '1-2',
-      rest: rest.trim() || '90 sec',
+      // recupero non toccato: resta com'era scritto (es. "2-3 min")
+      rest: rest === parseRestSeconds(restOrig) ? restOrig : restText(rest),
       notes: notes.trim() || undefined,
       startWeight: sw != null && sw > 0 ? sw : undefined,
     });
@@ -111,9 +118,15 @@ export function ExerciseEditModal({ open, exercise, onClose, onSave, onDelete }:
           <Input label="Rep min" kind="number" value={repMin} onChange={(e) => setRepMin(e.target.value.replace(/\D/g, ''))} />
           <Input label="Rep max" kind="number" value={repMax} onChange={(e) => setRepMax(e.target.value.replace(/\D/g, ''))} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Input label="RIR target (es. 2/1/1)" value={rir} onChange={(e) => setRir(e.target.value)} />
-          <Input label="Recupero (es. 2-3 min)" value={rest} onChange={(e) => setRest(e.target.value)} />
+        <Input label="RIR target (es. 2/1/1)" value={rir} onChange={(e) => setRir(e.target.value)} />
+        <div className="rounded-md border border-line bg-surface-2 px-3 pt-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-1.5 text-sm font-semibold text-fg-2">
+              Recupero <NewBadge since="2026-10-16" className="ml-0" /> <HelpTip id="session-edit" />
+            </span>
+            <span className="font-display text-lg font-extrabold text-fg">{formatClock(rest)}</span>
+          </div>
+          <RestPicker seconds={rest} onChange={setRest} />
         </div>
         <Input label="Carico di partenza (opz.)" kind="decimal" suffix="kg" value={startWeight} onChange={(e) => setStartWeight(e.target.value)} />
         <TextArea label="Note tecniche (opzionale)" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />

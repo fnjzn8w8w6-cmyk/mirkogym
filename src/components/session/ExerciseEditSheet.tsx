@@ -4,7 +4,8 @@ import type { Exercise } from '@/types';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Segmented, Toggle } from '../ui/Input';
-import { HelpTip } from '../ui/Help';
+import { HelpTip, NewBadge } from '../ui/Help';
+import { RestPicker, restText } from '../ui/Wheel';
 import { parseRestSeconds } from '@/lib/progression';
 import { rirRange, rirTargetOf, scaleLabel, type EffortScale } from '@/lib/effort';
 import { formatClock } from '@/lib/date-utils';
@@ -19,7 +20,6 @@ export interface ExerciseEdit {
   scope: 'today' | 'schedule';
 }
 
-const restString = (sec: number) => (sec % 60 === 0 ? `${sec / 60} min` : `${sec} sec`);
 const fmt = (n: number) => String(n).replace('.', ',');
 
 function Stepper({ value, onChange, min, max, step = 1, show, label }: { value: number; onChange: (v: number) => void; min: number; max: number; step?: number; show?: string; label: string }) {
@@ -118,7 +118,8 @@ export function ExerciseEditSheet({
               repMin,
               repMax: Math.max(repMin, repMax),
               rirTarget: rirUnchanged ? exercise.rirTarget : rirTargetOf(rir[0], rir[1]),
-              rest: restString(rest),
+              // recupero non toccato: resta com'era scritto nella scheda (es. "2-3 min")
+              rest: rest === parseRestSeconds(exercise.rest) ? exercise.rest : restText(rest),
               warmup,
               scope,
             })
@@ -147,9 +148,18 @@ export function ExerciseEditSheet({
       <Row title={`Sforzo (${scaleLabel(effortScale)}) a`}>
         <Stepper label="Sforzo massimo" value={hi} onChange={setHi} min={rpe ? 6 : 0} max={rpe ? 10 : 4} step={0.5} />
       </Row>
-      <Row title="Recupero" sub="tra una serie e l'altra">
-        <Stepper label="Recupero" value={rest} onChange={setRest} min={15} max={600} step={15} show={formatClock(rest)} />
-      </Row>
+      <div className="border-b border-line-subtle py-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 text-base font-semibold text-fg">
+              Recupero <NewBadge since="2026-10-16" className="ml-0" />
+            </div>
+            <div className="text-xs text-fg-3">tra una serie e l'altra · scorri le rotelle</div>
+          </div>
+          <span className="font-display text-xl font-extrabold text-fg">{formatClock(rest)}</span>
+        </div>
+        <RestPicker seconds={rest} onChange={setRest} />
+      </div>
       {canWarmup && (
         <div className="border-b border-line-subtle py-1">
           <Toggle checked={warmup} onChange={setWarmup} label="Riscaldamento suggerito" description="serie W prima di quelle allenanti" />

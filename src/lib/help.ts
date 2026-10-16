@@ -116,6 +116,7 @@ export const HELP = {
     body: [
       'Cambia serie, ripetizioni, sforzo e recupero mentre ti alleni.',
       '"Solo oggi" vale per questa sessione; "Anche nella scheda" salva la modifica per le prossime volte.',
+      'Il recupero si sceglie con due rotelle, minuti e secondi (a passi di 5 secondi): scorri col dito o tocca il valore. Lo stesso nella modifica della scheda.',
     ],
   },
   'session-previous': {
