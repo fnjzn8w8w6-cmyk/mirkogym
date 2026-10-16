@@ -354,7 +354,7 @@ function SessionView({ initial }: { initial: ActiveSession }) {
       toast.error(weight == null ? 'Inserisci il peso' : 'Inserisci le ripetizioni');
       return false;
     }
-    unlockAudio();
+    unlockAudio(true);
     if (isWarmup) {
       updateSet(exIdx, setIdx, { done: true, weight: weightStr, isPersonalRecord: false });
       haptics.setDone();

@@ -30,7 +30,7 @@ export function RestTimer({ inSession }: { inSession: boolean }) {
           >
             {t.finished ? (
               <div className="flex h-14 flex-1 items-center justify-center text-lg font-bold text-success" role="status">
-                Recupero finito — vai! 💪
+                {t.lateBy != null ? `Recupero finito da ${formatClock(t.lateBy)} — vai! 💪` : 'Recupero finito — vai! 💪'}
               </div>
             ) : (
               <>

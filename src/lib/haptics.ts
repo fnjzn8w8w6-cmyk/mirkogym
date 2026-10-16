@@ -23,6 +23,15 @@ export const haptics = {
 };
 
 let audioCtx: AudioContext | null = null;
+/**
+ * iPhone: dopo che l'app è stata in secondo piano l'audio può restare "acceso" ma muto.
+ * Quando torni nell'app lo si rifà da capo al primo tocco (solo un tocco può riattivare l'audio su iOS).
+ */
+let staleAudio = false;
+if (typeof document !== 'undefined')
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && audioCtx) staleAudio = true;
+  });
 function context(): AudioContext | null {
   const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Ctx) return null;
@@ -163,11 +172,28 @@ export async function playBeep(id: AlarmId = alarmId): Promise<void> {
   }
 }
 
-/** Da chiamare su un gesto utente (o al ritorno nell'app) per sbloccare/risvegliare l'audio su iOS. */
-export function unlockAudio(): void {
+/**
+ * Da chiamare su un gesto utente (o al ritorno nell'app) per sbloccare/risvegliare l'audio su iOS.
+ * `fromGesture`: dentro un tocco si può ricreare l'audio rimasto muto dopo il secondo piano.
+ */
+export function unlockAudio(fromGesture = false): void {
   try {
+    if (fromGesture && staleAudio && audioCtx) {
+      staleAudio = false;
+      const old = audioCtx;
+      audioCtx = null;
+      void old.close().catch(() => undefined);
+    }
     const ctx = context();
-    if (ctx && ctx.state !== 'running') void ctx.resume().catch(() => undefined);
+    if (!ctx) return;
+    if (ctx.state !== 'running') void ctx.resume().catch(() => undefined);
+    if (fromGesture) {
+      // un suono muto dentro il tocco: su iOS è ciò che sblocca davvero l'audio
+      const src = ctx.createBufferSource();
+      src.buffer = ctx.createBuffer(1, 1, 22050);
+      src.connect(ctx.destination);
+      src.start(0);
+    }
   } catch {
     /* ignorato */
   }
