@@ -220,17 +220,22 @@ export function recheckFood(f: Food): Food {
   return c.check ? { ...f, per100: { ...f.per100, kcal: Math.round(c.kcal) }, check: c.check } : f;
 }
 
+/** Open Food Facts è un servizio gratuito e a volte è sovraccarico: la ricerca per nome si ferma, il codice a barre di solito no. */
+const OFF_DOWN = 'Open Food Facts al momento non risponde (servizio sovraccarico): riprova tra poco. Il codice a barre di solito funziona lo stesso.';
+
 async function offFetch(url: string, ms = 12000): Promise<unknown> {
   const ctrl = new AbortController();
   const t = window.setTimeout(() => ctrl.abort(), ms);
   try {
     const r = await fetch(url, { signal: ctrl.signal });
     if (r.status === 404) return null;
-    if (!r.ok) throw new Error(`Open Food Facts non risponde (${r.status})`);
+    if (!r.ok) throw new Error(OFF_DOWN);
     return await r.json();
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') throw new Error('Open Food Facts non risponde: riprova');
-    if (e instanceof TypeError) throw new Error('Connessione assente: la ricerca dei prodotti richiede internet');
+    // fetch fallisce anche quando il servizio è sovraccarico (risposta 503 senza i permessi per il browser):
+    // "connessione assente" solo se il telefono è davvero offline
+    if (e instanceof TypeError) throw new Error(navigator.onLine === false ? 'Connessione assente: la ricerca dei prodotti richiede internet' : OFF_DOWN);
     throw e;
   } finally {
     window.clearTimeout(t);
