@@ -395,7 +395,7 @@ header.top .grow { flex: 1; min-width: 0; }
 /* =========================================================
    Costanti
    ========================================================= */
-const APP_VERSION = 5; // da aumentare insieme a CACHE in sw.js
+const APP_VERSION = 6; // da aumentare insieme a CACHE in sw.js
 const ZONE = ['Sala', 'Cucina', 'Bar', 'Magazzino', 'Altro'];
 const TIPOLOGIE = ['ARREDO', 'FOOD', 'BEVERAGE', 'STOVIGLIE', 'ACCESSORI', 'IT'];
 const STATI = ['OTTIMO', 'BUONO', 'CATTIVO'];
@@ -1129,8 +1129,8 @@ $('#sKeySave').addEventListener('click', async () => {
   renderHome();
 });
 $('#sModel').addEventListener('change', (e) => lsSet(LS.model, e.target.value));
-$('#sExcel').addEventListener('click', exportExcel);
-$('#btnExcel').addEventListener('click', exportExcel);
+$('#sExcel').addEventListener('click', chooseExcel);
+$('#btnExcel').addEventListener('click', chooseExcel);
 $('#sBackup').addEventListener('click', exportBackup);
 $('#sRestore').addEventListener('click', () => { $('#importFile').value = ''; $('#importFile').click(); });
 $('#importFile').addEventListener('change', importBackup);
@@ -1195,7 +1195,21 @@ function loadScript(src) {
   });
 }
 
-async function exportExcel() {
+async function chooseExcel() {
+  const mode = await choose('Esporta Excel', 'Dove guarderai il file?', [
+    { label: 'Foto dentro le celle (Excel)', value: 'cell' },
+    { label: 'Anteprima iPhone / WhatsApp', value: 'float', cls: 'alt' },
+    { label: 'Annulla', value: null, cls: 'alt' },
+  ]);
+  if (mode) exportExcel(mode);
+}
+
+/**
+ * mode 'cell': foto inserite nella cella come "Inserisci nella cella" di Excel (Excel 365 / 2021+,
+ *   su computer, iPhone e web): sempre centrate, si spostano e si ordinano con la riga.
+ * mode 'float': foto appoggiate sopra la cella, l'unico modo che l'anteprima di iPhone mostra.
+ */
+async function exportExcel(mode) {
   const all = await dbAll();
   if (!all.length) { toast('Nessun oggetto da esportare'); return; }
   busy('Creo il file Excel…');
@@ -1246,12 +1260,13 @@ async function exportExcel() {
     const COL_W = 17;          // larghezza colonna FOTO (caratteri)
     const COL_PX = COL_W * 7 + 5;
 
+    const cellPhotos = [];
     for (let n = 0; n < rows.length; n++) {
       const it = rows[n];
       const r = 4 + n;
       const row = ws.getRow(r);
       row.height = ROW_PT;
-      const vals = ['', it.tipologia || '', it.nome || '', Number(it.qty) || 0, it.stato || '', it.ctm || '', it.zona || '', ''];
+      const vals = [null, it.tipologia || '', it.nome || '', Number(it.qty) || 0, it.stato || '', it.ctm || '', it.zona || '', ''];
       vals.forEach((v, i) => {
         const cell = row.getCell(i + 2);
         cell.value = v;
@@ -1266,7 +1281,12 @@ async function exportExcel() {
       }
       if (it.ctm === 'SI') row.getCell(7).font = { bold: true, color: { argb: 'FF1F5A43' } };
 
-      if (it.photo) {
+      if (it.photo && mode === 'cell') {
+        try {
+          const { blob } = await resizeImage(it.photo, 480, 0.82);
+          cellPhotos.push({ ref: `B${r}`, data: await blob.arrayBuffer() });
+        } catch { /* foto non leggibile: cella vuota */ }
+      } else if (it.photo) {
         try {
           // la foto viene centrata dentro un'immagine grande quanto la cella e agganciata ai suoi
           // angoli (senza scostamenti): resta centrata con qualunque programma la apra
@@ -1344,12 +1364,11 @@ async function exportExcel() {
     rs.getRow(r - 2).getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCEFE4' } };
 
     const buf = await wb.xlsx.writeBuffer();
-    // posizione in pixel dell'angolo di una cella del foglio Inventario (colonna A = 26 px; righe 1-2 = 20 px, riga 3 = 32 px)
-    const cellTopLeft = (col, row) => ({
-      x: col > 0 ? 26 + (col - 1) * COL_PX : 0,
-      y: row < 2 ? row * 20 : row === 2 ? 40 : 72 + (row - 3) * ROW_PX,
-    });
-    const blob = await fixDrawings(buf, cellTopLeft);
+    // Riquadro della foto (in px) come lo disegna l'anteprima di iPhone, che non usa l'aggancio alla
+    // cella ma la posizione assoluta: misure ricavate dall'anteprima stessa (margine ~11 px,
+    // colonna A 26 px, colonna FOTO 138 px, righe 1-3 ~74 px, poi le righe dati).
+    const previewBox = (row) => ({ x: 11 + 26 + (138 - COL_PX) / 2, y: 11 + 74 + (row - 3) * ROW_PX, w: COL_PX, h: ROW_PX });
+    const blob = mode === 'cell' ? await embedInCells(buf, cellPhotos) : await fixDrawings(buf, previewBox);
     busy(false);
     await offerFile(blob, `inventario-${today()}.xlsx`, 'File Excel pronto');
   } catch (e) {
@@ -1358,7 +1377,7 @@ async function exportExcel() {
   }
 }
 
-/** Foto centrata su sfondo bianco, grande quanto la cella (risoluzione doppia), con il bordo della cella. */
+/** Foto centrata su sfondo bianco, grande quanto la cella (risoluzione doppia). */
 async function cellImage(photo, cellW, cellH, pad) {
   const img = await loadImage(photo);
   const S = 2;
@@ -1372,18 +1391,15 @@ async function cellImage(photo, cellW, cellH, pad) {
   const w = img.naturalWidth * k;
   const h = img.naturalHeight * k;
   ctx.drawImage(img, (c.width - w) / 2, (c.height - h) / 2, w, h);
-  ctx.strokeStyle = '#bfbfbf';
-  ctx.lineWidth = S;
-  ctx.strokeRect(S / 2, S / 2, c.width - S, c.height - S);
   return c.toDataURL('image/jpeg', 0.82);
 }
 
 /**
- * ExcelJS scrive le foto con dimensione 0×0 nel riquadro della forma (a:xfrm): Excel la ignora,
- * ma l'anteprima di iPhone (WhatsApp, Mail, File) e Numbers usano proprio quella e non mostrano nulla.
- * Qui scrivo posizione e dimensione reali, come fa Excel.
+ * ExcelJS scrive le foto con dimensione 0×0 nel riquadro della forma (a:xfrm): Excel la ignora
+ * (usa l'aggancio alla cella), ma l'anteprima di iPhone (WhatsApp, Mail, File) usa proprio quella.
+ * Qui scrivo il riquadro calcolato per l'anteprima.
  */
-async function fixDrawings(buf, cellTopLeft) {
+async function fixDrawings(buf, previewBox) {
   const type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
   try {
     if (!window.JSZip) await loadScript(JSZIP_URL);
@@ -1395,20 +1411,14 @@ async function fixDrawings(buf, cellTopLeft) {
       xml = xml.replace(/<xdr:twoCellAnchor[\s\S]*?<\/xdr:twoCellAnchor>/g, (a) => {
         const part = (p) => (a.match(new RegExp(`<xdr:${p}>([\\s\\S]*?)</xdr:${p}>`)) || [])[1] || '';
         const val = (b, t) => Number((b.match(new RegExp(`<xdr:${t}>(\\d+)</xdr:${t}>`)) || [])[1] || 0);
-        const from = part('from');
-        const to = part('to');
-        const corner = (b) => {
-          const c = cellTopLeft(val(b, 'col'), val(b, 'row'));
-          return { x: Math.round(c.x * 9525) + val(b, 'colOff'), y: Math.round(c.y * 9525) + val(b, 'rowOff') };
-        };
-        const p1 = corner(from);
-        const p2 = corner(to);
+        const box = previewBox(val(part('from'), 'row'));
+        const emu = (px) => Math.round(px * 9525);
         id++;
         return a
           .replace(/<a:extLst>[\s\S]*?<\/a:extLst>/, '')
           .replace(/<xdr:cNvPr id="\d+"/, `<xdr:cNvPr id="${id + 1}"`)
           .replace('<a:off x="0" y="0"/><a:ext cx="0" cy="0"/>',
-            `<a:off x="${p1.x}" y="${p1.y}"/><a:ext cx="${Math.max(1, p2.x - p1.x)}" cy="${Math.max(1, p2.y - p1.y)}"/>`);
+            `<a:off x="${emu(box.x)}" y="${emu(box.y)}"/><a:ext cx="${emu(box.w)}" cy="${emu(box.h)}"/>`);
       });
       zip.file(name, xml);
     }
@@ -1416,6 +1426,83 @@ async function fixDrawings(buf, cellTopLeft) {
   } catch (e) {
     return new Blob([buf], { type }); // senza correzione: le foto restano visibili almeno in Excel
   }
+}
+
+/**
+ * Foto DENTRO le celle, come "Inserisci > Immagini > Inserisci nella cella" di Excel.
+ * ExcelJS non lo supporta: aggiungo al file le parti "richData" (stessa struttura che scrive Excel).
+ */
+async function embedInCells(buf, photos) {
+  const type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  if (!window.JSZip) await loadScript(JSZIP_URL);
+  const zip = await JSZip.loadAsync(buf);
+  if (photos.length) {
+    const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+    const RD = 'http://schemas.microsoft.com/office/spreadsheetml/2017/richdata';
+    const n = photos.length;
+    const idx = [...Array(n).keys()];
+    photos.forEach((p, i) => zip.file(`xl/media/cellphoto${i + 1}.jpeg`, p.data));
+
+    zip.file('xl/richData/_rels/richValueRel.xml.rels', head +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      idx.map((i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/cellphoto${i + 1}.jpeg"/>`).join('') +
+      '</Relationships>');
+    zip.file('xl/richData/richValueRel.xml', head +
+      '<richValueRels xmlns="http://schemas.microsoft.com/office/spreadsheetml/2022/richvaluerel" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+      idx.map((i) => `<rel r:id="rId${i + 1}"/>`).join('') + '</richValueRels>');
+    zip.file('xl/richData/rdrichvalue.xml', head +
+      `<rvData xmlns="${RD}" count="${n}">` + idx.map((i) => `<rv s="0"><v>${i}</v><v>5</v></rv>`).join('') + '</rvData>');
+    zip.file('xl/richData/rdrichvaluestructure.xml', head +
+      `<rvStructures xmlns="${RD}" count="1"><s t="_localImage"><k n="_rvRel:LocalImageIdentifier" t="i"/><k n="CalcOrigin" t="i"/></s></rvStructures>`);
+    const flag = (k) => `<key name="${k}"><flag name="ExcludeFromCalcComparison" value="1"/></key>`;
+    zip.file('xl/richData/rdRichValueTypes.xml', head +
+      '<rvTypesInfo xmlns="http://schemas.microsoft.com/office/spreadsheetml/2017/richdata2" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="x" xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><global><keyFlags>' +
+      '<key name="_Self"><flag name="ExcludeFromFile" value="1"/><flag name="ExcludeFromCalcComparison" value="1"/></key>' +
+      ['_DisplayString', '_Flags', '_Format', '_SubLabel', '_Attribution', '_Icon', '_Display', '_CanonicalPropertyNames', '_ClassificationId'].map(flag).join('') +
+      '</keyFlags></global></rvTypesInfo>');
+    zip.file('xl/metadata.xml', head +
+      `<metadata xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:xlrd="${RD}">` +
+      '<metadataTypes count="1"><metadataType name="XLRICHVALUE" minSupportedVersion="120000" copy="1" pasteAll="1" pasteValues="1" merge="1" splitFirst="1" rowColShift="1" clearFormats="1" clearComments="1" assign="1" coerce="1"/></metadataTypes>' +
+      `<futureMetadata name="XLRICHVALUE" count="${n}">` +
+      idx.map((i) => `<bk><extLst><ext uri="{3e2802c4-a4d2-4d8b-9148-e3be6c30e623}"><xlrd:rvb i="${i}"/></ext></extLst></bk>`).join('') +
+      `</futureMetadata><valueMetadata count="${n}">` + idx.map((i) => `<bk><rc t="1" v="${i}"/></bk>`).join('') +
+      '</valueMetadata></metadata>');
+
+    const relsPath = 'xl/_rels/workbook.xml.rels';
+    const rels = await zip.file(relsPath).async('string');
+    const R = 'http://schemas.microsoft.com/office/2017/06/relationships/';
+    zip.file(relsPath, rels.replace('</Relationships>',
+      '<Relationship Id="rIdCellImg1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sheetMetadata" Target="metadata.xml"/>' +
+      '<Relationship Id="rIdCellImg2" Type="http://schemas.microsoft.com/office/2022/10/relationships/richValueRel" Target="richData/richValueRel.xml"/>' +
+      `<Relationship Id="rIdCellImg3" Type="${R}rdRichValue" Target="richData/rdrichvalue.xml"/>` +
+      `<Relationship Id="rIdCellImg4" Type="${R}rdRichValueStructure" Target="richData/rdrichvaluestructure.xml"/>` +
+      `<Relationship Id="rIdCellImg5" Type="${R}rdRichValueTypes" Target="richData/rdRichValueTypes.xml"/>` +
+      '</Relationships>'));
+
+    const ctPath = '[Content_Types].xml';
+    let ct = await zip.file(ctPath).async('string');
+    if (!/Extension="jpeg"/.test(ct)) ct = ct.replace('<Default ', '<Default Extension="jpeg" ContentType="image/jpeg"/><Default ');
+    zip.file(ctPath, ct.replace('</Types>',
+      '<Override PartName="/xl/metadata.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheetMetadata+xml"/>' +
+      '<Override PartName="/xl/richData/rdRichValueTypes.xml" ContentType="application/vnd.ms-excel.rdrichvaluetypes+xml"/>' +
+      '<Override PartName="/xl/richData/rdrichvalue.xml" ContentType="application/vnd.ms-excel.rdrichvalue+xml"/>' +
+      '<Override PartName="/xl/richData/rdrichvaluestructure.xml" ContentType="application/vnd.ms-excel.rdrichvaluestructure+xml"/>' +
+      '<Override PartName="/xl/richData/richValueRel.xml" ContentType="application/vnd.ms-excel.richvaluerel+xml"/>' +
+      '</Types>'));
+
+    // ogni cella FOTO diventa "valore immagine" n. i (vm è 1-based)
+    const sheetPath = 'xl/worksheets/sheet1.xml';
+    let sheet = await zip.file(sheetPath).async('string');
+    photos.forEach((p, i) => {
+      const re = new RegExp(`<c r="${p.ref}"([^>]*?)(/>|>[\\s\\S]*?</c>)`);
+      sheet = sheet.replace(re, (all, attrs) => {
+        const st = (attrs.match(/ s="\d+"/) || [''])[0];
+        return `<c r="${p.ref}"${st} t="e" vm="${i + 1}"><v>#VALUE!</v></c>`;
+      });
+    });
+    zip.file(sheetPath, sheet);
+  }
+  return zip.generateAsync({ type: 'blob', mimeType: type, compression: 'DEFLATE' });
 }
 
 /* =========================================================
