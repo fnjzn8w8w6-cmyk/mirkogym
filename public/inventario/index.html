@@ -253,6 +253,10 @@ header.top .grow { flex: 1; min-width: 0; }
     Inserisci la chiave Gemini per il riconoscimento automatico.
     <button id="keyBannerBtn">Imposta</button>
   </div>
+  <div class="banner hidden" id="updateBanner">
+    È disponibile una nuova versione dell'app.
+    <button id="updateBtn">Aggiorna</button>
+  </div>
   <div class="banner hidden" id="queueBanner"></div>
 
   <div class="toolbar" id="filters"></div>
@@ -377,7 +381,7 @@ header.top .grow { flex: 1; min-width: 0; }
       <p>Cancella tutti gli oggetti da questo telefono.</p>
       <button class="big danger" id="sWipe">Cancella tutti i dati</button>
     </div>
-    <p style="text-align:center;color:var(--muted);font-size:13px">Inventario Ristorante · v1</p>
+    <p style="text-align:center;color:var(--muted);font-size:13px" id="sVersion"></p>
   </div>
 </section>
 
@@ -391,6 +395,7 @@ header.top .grow { flex: 1; min-width: 0; }
 /* =========================================================
    Costanti
    ========================================================= */
+const APP_VERSION = 5; // da aumentare insieme a CACHE in sw.js
 const ZONE = ['Sala', 'Cucina', 'Bar', 'Magazzino', 'Altro'];
 const TIPOLOGIE = ['ARREDO', 'FOOD', 'BEVERAGE', 'STOVIGLIE', 'ACCESSORI', 'IT'];
 const STATI = ['OTTIMO', 'BUONO', 'CATTIVO'];
@@ -1527,6 +1532,25 @@ function busy(text) {
 }
 
 /* =========================================================
+   Aggiornamenti: l'app aperta dalla Home spesso riprende senza ricaricarsi,
+   quindi a ogni ritorno controllo se c'è una versione nuova e propongo di aggiornare
+   (mai da sola: potresti essere in mezzo a una foto)
+   ========================================================= */
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController) $('#updateBanner').classList.remove('hidden');
+  });
+  navigator.serviceWorker.register('sw.js').then((reg) => {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') reg.update().catch(() => {});
+    });
+  }).catch(() => {});
+}
+$('#updateBtn').addEventListener('click', () => location.reload());
+
+/* =========================================================
    Avvio
    ========================================================= */
 (async function start() {
@@ -1542,7 +1566,8 @@ function busy(text) {
     alertBox('Archivio non disponibile', 'Il browser non permette di salvare dati (forse sei in navigazione privata).\n' + (e && e.message || ''));
   }
   processQueue();
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  $('#sVersion').textContent = `Inventario Ristorante · versione ${APP_VERSION}`;
+  registerServiceWorker();
 })();
 </script>
 </body>
