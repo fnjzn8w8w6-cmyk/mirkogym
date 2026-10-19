@@ -395,7 +395,7 @@ header.top .grow { flex: 1; min-width: 0; }
 /* =========================================================
    Costanti
    ========================================================= */
-const APP_VERSION = 6; // da aumentare insieme a CACHE in sw.js
+const APP_VERSION = 7; // da aumentare insieme a CACHE in sw.js
 const ZONE = ['Sala', 'Cucina', 'Bar', 'Magazzino', 'Altro'];
 const TIPOLOGIE = ['ARREDO', 'FOOD', 'BEVERAGE', 'STOVIGLIE', 'ACCESSORI', 'IT'];
 const STATI = ['OTTIMO', 'BUONO', 'CATTIVO'];
@@ -1288,14 +1288,20 @@ async function exportExcel(mode) {
         } catch { /* foto non leggibile: cella vuota */ }
       } else if (it.photo) {
         try {
-          // la foto viene centrata dentro un'immagine grande quanto la cella e agganciata ai suoi
-          // angoli (senza scostamenti): resta centrata con qualunque programma la apra
-          const base64 = await cellImage(it.photo, COL_PX, ROW_PX, (ROW_PX - IMG_BOX) / 2);
+          // Excel usa l'aggancio alla cella (scostamenti calcolati sulle sue misure);
+          // l'anteprima di iPhone usa invece il riquadro assoluto, corretto dopo in fixDrawings
+          const { blob, width, height } = await resizeImage(it.photo, 240, 0.82);
+          const base64 = await blobToDataURL(blob);
           const id = wb.addImage({ base64, extension: 'jpeg' });
+          const k = IMG_BOX / Math.max(width, height);
+          const w = Math.round(width * k);
+          const h = Math.round(height * k);
+          const x = Math.round((COL_PX - w) / 2);
+          const y = Math.round((ROW_PX - h) / 2);
           ws.addImage(id, {
-            tl: { nativeCol: 1, nativeColOff: 0, nativeRow: r - 1, nativeRowOff: 0 },
-            br: { nativeCol: 2, nativeColOff: 0, nativeRow: r, nativeRowOff: 0 },
-            editAs: 'twoCell',
+            tl: { nativeCol: 1, nativeColOff: x * 9525, nativeRow: r - 1, nativeRowOff: y * 9525 },
+            br: { nativeCol: 1, nativeColOff: (x + w) * 9525, nativeRow: r - 1, nativeRowOff: (y + h) * 9525 },
+            editAs: 'oneCell',
           });
         } catch { /* foto non leggibile: cella vuota */ }
       }
@@ -1364,10 +1370,10 @@ async function exportExcel(mode) {
     rs.getRow(r - 2).getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCEFE4' } };
 
     const buf = await wb.xlsx.writeBuffer();
-    // Riquadro della foto (in px) come lo disegna l'anteprima di iPhone, che non usa l'aggancio alla
-    // cella ma la posizione assoluta: misure ricavate dall'anteprima stessa (margine ~11 px,
-    // colonna A 26 px, colonna FOTO 138 px, righe 1-3 ~74 px, poi le righe dati).
-    const previewBox = (row) => ({ x: 11 + 26 + (138 - COL_PX) / 2, y: 11 + 74 + (row - 3) * ROW_PX, w: COL_PX, h: ROW_PX });
+    // Posizione della foto (in px) come la disegna l'anteprima di iPhone, che non usa l'aggancio alla
+    // cella ma la posizione assoluta: misure ricavate dall'anteprima stessa (inizio colonna FOTO a 37 px,
+    // larga 138 px; prima riga dati a 89 px, poi righe da ROW_PX).
+    const previewBox = (row, w, h) => ({ x: 37 + (138 - w) / 2, y: 89 + (row - 3) * ROW_PX + (ROW_PX - h) / 2, w, h });
     const blob = mode === 'cell' ? await embedInCells(buf, cellPhotos) : await fixDrawings(buf, previewBox);
     busy(false);
     await offerFile(blob, `inventario-${today()}.xlsx`, 'File Excel pronto');
@@ -1375,23 +1381,6 @@ async function exportExcel(mode) {
     busy(false);
     alertBox('Esportazione non riuscita', String(e && e.message || e));
   }
-}
-
-/** Foto centrata su sfondo bianco, grande quanto la cella (risoluzione doppia). */
-async function cellImage(photo, cellW, cellH, pad) {
-  const img = await loadImage(photo);
-  const S = 2;
-  const c = document.createElement('canvas');
-  c.width = Math.round(cellW * S);
-  c.height = Math.round(cellH * S);
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, c.width, c.height);
-  const k = Math.min((c.width - 2 * pad * S) / img.naturalWidth, (c.height - 2 * pad * S) / img.naturalHeight);
-  const w = img.naturalWidth * k;
-  const h = img.naturalHeight * k;
-  ctx.drawImage(img, (c.width - w) / 2, (c.height - h) / 2, w, h);
-  return c.toDataURL('image/jpeg', 0.82);
 }
 
 /**
@@ -1411,7 +1400,9 @@ async function fixDrawings(buf, previewBox) {
       xml = xml.replace(/<xdr:twoCellAnchor[\s\S]*?<\/xdr:twoCellAnchor>/g, (a) => {
         const part = (p) => (a.match(new RegExp(`<xdr:${p}>([\\s\\S]*?)</xdr:${p}>`)) || [])[1] || '';
         const val = (b, t) => Number((b.match(new RegExp(`<xdr:${t}>(\\d+)</xdr:${t}>`)) || [])[1] || 0);
-        const box = previewBox(val(part('from'), 'row'));
+        const from = part('from');
+        const to = part('to');
+        const box = previewBox(val(from, 'row'), (val(to, 'colOff') - val(from, 'colOff')) / 9525, (val(to, 'rowOff') - val(from, 'rowOff')) / 9525);
         const emu = (px) => Math.round(px * 9525);
         id++;
         return a
