@@ -1239,9 +1239,7 @@ async function exportExcel() {
     const ROW_PX = ROW_PT / 0.75;
     const COL_W = 17;          // larghezza colonna FOTO (caratteri)
     const COL_PX = COL_W * 7 + 5;
-    // ExcelJS converte le frazioni di cella con unità sue (larghezza×10000, altezza×10000): 1 px = 9525 EMU
-    const colFrac = (px) => Math.min(0.95, (px * 9525) / (COL_W * 10000));
-    const rowFrac = (px) => Math.min(0.95, (px * 9525) / (ROW_PT * 10000));
+    const EMU = 9525; // 1 px in EMU (unità dei disegni di Excel)
 
     for (let n = 0; n < rows.length; n++) {
       const it = rows[n];
@@ -1271,9 +1269,13 @@ async function exportExcel() {
           const k = IMG_BOX / Math.max(width, height);
           const w = Math.round(width * k);
           const h = Math.round(height * k);
+          // ancoraggio a due celle (inizio e fine nella cella FOTO): l'unico che anche
+          // l'anteprima di iPhone, Numbers e WhatsApp mostrano
+          const x = Math.round(Math.max(0, (COL_PX - w) / 2));
+          const y = Math.round(Math.max(0, (ROW_PX - h) / 2));
           ws.addImage(id, {
-            tl: { col: 1 + colFrac(Math.max(0, (COL_PX - w) / 2)), row: r - 1 + rowFrac(Math.max(0, (ROW_PX - h) / 2)) },
-            ext: { width: w, height: h },
+            tl: { nativeCol: 1, nativeColOff: x * EMU, nativeRow: r - 1, nativeRowOff: y * EMU },
+            br: { nativeCol: 1, nativeColOff: (x + w) * EMU, nativeRow: r - 1, nativeRowOff: (y + h) * EMU },
             editAs: 'oneCell',
           });
         } catch { /* foto non leggibile: cella vuota */ }
