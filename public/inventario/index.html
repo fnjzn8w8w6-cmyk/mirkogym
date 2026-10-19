@@ -1240,7 +1240,6 @@ async function exportExcel() {
     const ROW_PX = ROW_PT / 0.75;
     const COL_W = 17;          // larghezza colonna FOTO (caratteri)
     const COL_PX = COL_W * 7 + 5;
-    const EMU = 9525; // 1 px in EMU (unità dei disegni di Excel)
 
     for (let n = 0; n < rows.length; n++) {
       const it = rows[n];
@@ -1264,20 +1263,14 @@ async function exportExcel() {
 
       if (it.photo) {
         try {
-          const { blob, width, height } = await resizeImage(it.photo, 320, 0.8);
-          const base64 = await blobToDataURL(blob);
+          // la foto viene centrata dentro un'immagine grande quanto la cella e agganciata ai suoi
+          // angoli (senza scostamenti): resta centrata con qualunque programma la apra
+          const base64 = await cellImage(it.photo, COL_PX, ROW_PX, (ROW_PX - IMG_BOX) / 2);
           const id = wb.addImage({ base64, extension: 'jpeg' });
-          const k = IMG_BOX / Math.max(width, height);
-          const w = Math.round(width * k);
-          const h = Math.round(height * k);
-          // ancoraggio a due celle (inizio e fine nella cella FOTO): l'unico che anche
-          // l'anteprima di iPhone, Numbers e WhatsApp mostrano
-          const x = Math.round(Math.max(0, (COL_PX - w) / 2));
-          const y = Math.round(Math.max(0, (ROW_PX - h) / 2));
           ws.addImage(id, {
-            tl: { nativeCol: 1, nativeColOff: x * EMU, nativeRow: r - 1, nativeRowOff: y * EMU },
-            br: { nativeCol: 1, nativeColOff: (x + w) * EMU, nativeRow: r - 1, nativeRowOff: (y + h) * EMU },
-            editAs: 'oneCell',
+            tl: { nativeCol: 1, nativeColOff: 0, nativeRow: r - 1, nativeRowOff: 0 },
+            br: { nativeCol: 2, nativeColOff: 0, nativeRow: r, nativeRowOff: 0 },
+            editAs: 'twoCell',
           });
         } catch { /* foto non leggibile: cella vuota */ }
       }
@@ -1358,6 +1351,26 @@ async function exportExcel() {
     busy(false);
     alertBox('Esportazione non riuscita', String(e && e.message || e));
   }
+}
+
+/** Foto centrata su sfondo bianco, grande quanto la cella (risoluzione doppia), con il bordo della cella. */
+async function cellImage(photo, cellW, cellH, pad) {
+  const img = await loadImage(photo);
+  const S = 2;
+  const c = document.createElement('canvas');
+  c.width = Math.round(cellW * S);
+  c.height = Math.round(cellH * S);
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, c.width, c.height);
+  const k = Math.min((c.width - 2 * pad * S) / img.naturalWidth, (c.height - 2 * pad * S) / img.naturalHeight);
+  const w = img.naturalWidth * k;
+  const h = img.naturalHeight * k;
+  ctx.drawImage(img, (c.width - w) / 2, (c.height - h) / 2, w, h);
+  ctx.strokeStyle = '#bfbfbf';
+  ctx.lineWidth = S;
+  ctx.strokeRect(S / 2, S / 2, c.width - S, c.height - S);
+  return c.toDataURL('image/jpeg', 0.82);
 }
 
 /**
