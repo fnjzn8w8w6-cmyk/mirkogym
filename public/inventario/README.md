@@ -11,4 +11,4 @@ Web app a pagina singola (nessun backend) per fare l'inventario fotografico di u
 
 ## File da pubblicare
 `index.html`, `sw.js`, `manifest.json`, `icon-180.png`, `icon-192.png`, `icon-512.png`
-(tutti nella stessa cartella, ad esempio la radice di un repository GitHub con GitHub Pages attivo).
+(cartella `public/inventario`: Vite la copia così com'è e GitHub Pages la pubblica su `/mirkogym/inventario/`).
