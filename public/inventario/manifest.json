@@ -1,0 +1,16 @@
+{
+  "name": "Inventario Ristorante",
+  "short_name": "Inventario",
+  "description": "Inventario fotografico di un ristorante, con riconoscimento automatico degli oggetti",
+  "lang": "it",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f0e7",
+  "theme_color": "#1f3a2e",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

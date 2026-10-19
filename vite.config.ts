@@ -63,6 +63,9 @@ export default defineConfig({
         clientsClaim: true,
         cleanupOutdatedCaches: true,
         navigateFallback: '/mirkogym/index.html',
+        // l'app inventario (public/inventario) ha la sua pagina e il suo service worker
+        navigateFallbackDenylist: [/^\/mirkogym\/inventario\//],
+        globIgnores: ['inventario/**'],
         runtimeCaching: [
           {
             // Libreria esercizi (≈750 KB): disponibile offline dopo il primo caricamento
