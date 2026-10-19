@@ -115,7 +115,6 @@ header.top .grow { flex: 1; min-width: 0; }
 #list .qty { font-size: 20px; font-weight: 700; padding: 0 6px; }
 .tag { font-size: 12px; font-weight: 700; padding: 2px 7px; border-radius: 6px; background: var(--chip); color: var(--ink); }
 .tag.ctm { background: var(--brand); color: var(--brand-ink); }
-.tag.wait { background: var(--accent-soft); color: var(--accent); }
 .empty-state { text-align: center; color: var(--muted); padding: 48px 24px; }
 .empty-state strong { display: block; color: var(--ink); font-size: 19px; margin-bottom: 6px; }
 
@@ -163,19 +162,8 @@ header.top .grow { flex: 1; min-width: 0; }
 .photo { position: relative; border-radius: var(--radius); overflow: hidden; background: var(--chip); }
 .photo img { display: block; width: 100%; max-height: 34vh; object-fit: contain; background: #000; }
 
-.ai {
-  display: flex; align-items: center; gap: 10px; margin: 10px 0 4px; padding: 10px 12px;
-  border-radius: 12px; font-size: 15px; background: var(--chip);
-}
-.ai.run { background: var(--accent-soft); }
-.ai.ok { background: color-mix(in srgb, var(--ok) 15%, var(--surface)); }
-.ai button { margin-left: auto; font-weight: 700; color: var(--brand); padding: 6px 4px; }
-.spin { width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--accent); border-right-color: transparent; animation: spin .8s linear infinite; flex: none; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
 .field { margin-top: 16px; }
 .field > .lab { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
-.field.sugg > .lab::after { content: "suggerito"; text-transform: none; letter-spacing: 0; font-weight: 600; font-size: 12px; color: var(--accent); background: var(--accent-soft); padding: 1px 7px; border-radius: 6px; }
 .text {
   width: 100%; min-height: 54px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface);
   padding: 12px 14px; font-size: 18px;
@@ -210,11 +198,13 @@ header.top .grow { flex: 1; min-width: 0; }
 .card p { margin: 6px 0; color: var(--muted); font-size: 15px; }
 .card .big { margin-top: 10px; }
 .card select.text { appearance: none; -webkit-appearance: none; }
-.keyrow { display: flex; gap: 8px; }
-.keyrow .text { flex: 1; min-width: 0; font-size: 16px; }
-.msg { font-size: 15px; margin-top: 8px; }
-.msg.ok { color: var(--ok); }
-.msg.err { color: var(--danger); }
+.tiplist { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+.tipchip { display: inline-flex; align-items: center; gap: 4px; background: var(--chip); border-radius: 10px; padding: 0 4px 0 12px; height: 42px; font-weight: 600; font-size: 15px; }
+.tipchip button { width: 34px; height: 34px; border-radius: 8px; font-size: 20px; color: var(--muted); }
+.addrow { display: flex; gap: 8px; margin-top: 8px; }
+.addrow .text { flex: 1; min-width: 0; font-size: 16px; min-height: 48px; }
+.seg button.add { border-style: dashed; color: var(--muted); }
+#mInput { margin-bottom: 14px; }
 
 /* Finestre di dialogo */
 .modal { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; padding: 12px; padding-bottom: calc(env(safe-area-inset-bottom) + 12px); }
@@ -249,15 +239,10 @@ header.top .grow { flex: 1; min-width: 0; }
     </button>
   </header>
 
-  <div class="banner hidden" id="keyBanner">
-    Inserisci la chiave Gemini per il riconoscimento automatico.
-    <button id="keyBannerBtn">Imposta</button>
-  </div>
   <div class="banner hidden" id="updateBanner">
     È disponibile una nuova versione dell'app.
     <button id="updateBtn">Aggiorna</button>
   </div>
-  <div class="banner hidden" id="queueBanner"></div>
 
   <div class="toolbar" id="filters"></div>
   <div class="search"><input id="search" type="search" placeholder="Cerca per nome…" autocomplete="off"></div>
@@ -285,7 +270,6 @@ header.top .grow { flex: 1; min-width: 0; }
   </div>
   <div class="body">
     <div class="photo"><img id="fPhoto" alt="Foto dell'oggetto"></div>
-    <div class="ai" id="fAi"></div>
 
     <div class="field" data-f="nome">
       <div class="lab">Nome</div>
@@ -345,20 +329,13 @@ header.top .grow { flex: 1; min-width: 0; }
   </div>
   <div class="body">
     <div class="card">
-      <h3>Chiave Gemini</h3>
-      <p>Resta salvata solo su questo telefono.</p>
-      <div class="keyrow">
-        <input class="text" id="sKey" type="password" placeholder="Incolla qui la chiave (AIza…)" autocomplete="off" autocapitalize="off" spellcheck="false">
-        <button class="iconbtn" id="sKeyShow">Mostra</button>
+      <h3>Tipologie</h3>
+      <p>Le categorie che scegli nella scheda. Nell'Excel gli oggetti sono ordinati in quest'ordine.</p>
+      <div class="tiplist" id="sTipList"></div>
+      <div class="addrow">
+        <input class="text" id="sTipNew" type="text" placeholder="Nuova tipologia (es. TESSILI)" autocomplete="off" autocapitalize="characters">
+        <button class="iconbtn" id="sTipAdd">Aggiungi</button>
       </div>
-      <button class="big" id="sKeySave">Salva e prova la chiave</button>
-      <div class="msg" id="sKeyMsg"></div>
-    </div>
-
-    <div class="card">
-      <h3>Modello</h3>
-      <p>"Automatico" usa il modello Flash più recente disponibile e, se la quota gratuita di un modello finisce, passa a un altro.</p>
-      <select class="text" id="sModel"><option value="">Automatico</option></select>
     </div>
 
     <div class="card">
@@ -385,7 +362,7 @@ header.top .grow { flex: 1; min-width: 0; }
   </div>
 </section>
 
-<div class="modal hidden" id="modal"><div class="box"><h3 id="mTitle"></h3><p id="mText"></p><div class="btns" id="mBtns"></div></div></div>
+<div class="modal hidden" id="modal"><div class="box"><h3 id="mTitle"></h3><p id="mText"></p><input class="text hidden" id="mInput" type="text" autocomplete="off" autocapitalize="characters"><div class="btns" id="mBtns"></div></div></div>
 <div class="busy hidden" id="busy"><div class="box"><div class="spin"></div><span id="busyText">Attendere…</span></div></div>
 <div class="toast hidden" id="toast"></div>
 
@@ -395,24 +372,20 @@ header.top .grow { flex: 1; min-width: 0; }
 /* =========================================================
    Costanti
    ========================================================= */
-const APP_VERSION = 7; // da aumentare insieme a CACHE in sw.js
+const APP_VERSION = 8; // da aumentare insieme a CACHE in sw.js
 const ZONE = ['Sala', 'Cucina', 'Bar', 'Magazzino', 'Altro'];
-const TIPOLOGIE = ['ARREDO', 'FOOD', 'BEVERAGE', 'STOVIGLIE', 'ACCESSORI', 'IT'];
+const TIPOLOGIE_BASE = ['ARREDO', 'FOOD', 'BEVERAGE', 'STOVIGLIE', 'ACCESSORI', 'IT'];
 const STATI = ['OTTIMO', 'BUONO', 'CATTIVO'];
 const CTM = ['SI', 'NO'];
-const AI_FIELDS = ['nome', 'tipologia', 'stato', 'ctm', 'scadenza'];
 const EXCELJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
 const JSZIP_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-const GEMINI = 'https://generativelanguage.googleapis.com/v1beta';
 const LS = {
-  key: 'inv.geminiKey',
-  model: 'inv.geminiModel',        // scelto a mano ('' = automatico)
-  lastGood: 'inv.geminiLastGood',  // ultimo modello che ha risposto
-  models: 'inv.geminiModels',      // elenco modelli disponibili (cache)
-  exhausted: 'inv.geminiExhausted',
   zone: 'inv.zone',
   filter: 'inv.filter',
+  tipologie: 'inv.tipologie',
 };
+// chiavi della vecchia versione con Gemini, cancellate all'avvio
+const LS_OLD = ['inv.geminiKey', 'inv.geminiModel', 'inv.geminiLastGood', 'inv.geminiModels', 'inv.geminiExhausted'];
 const PHOTO_MAX = 1024;
 const PHOTO_QUALITY = 0.78;
 
@@ -420,7 +393,6 @@ const $ = (s) => document.querySelector(s);
 const lsGet = (k, d = null) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
 const needsExpiry = (t) => t === 'FOOD' || t === 'BEVERAGE';
 
@@ -488,14 +460,6 @@ async function resizeImage(blob, max, quality) {
   if (!out) throw new Error('Compressione non riuscita');
   return { blob: out, width: w, height: h };
 }
-function blobToBase64(blob) {
-  return new Promise((resolve, reject) => {
-    const fr = new FileReader();
-    fr.onload = () => resolve(String(fr.result).split(',')[1]);
-    fr.onerror = () => reject(fr.error);
-    fr.readAsDataURL(blob);
-  });
-}
 function blobToDataURL(blob) {
   return new Promise((resolve, reject) => {
     const fr = new FileReader();
@@ -514,185 +478,31 @@ function dataURLToBlob(dataURL) {
 }
 
 /* =========================================================
-   Gemini (chiamato direttamente dal browser)
-   ========================================================= */
-const PROMPT = `Sei un assistente che fa l'inventario di un ristorante chiuso. Guarda la foto e identifica l'oggetto principale inquadrato.
-
-Rispondi SOLO con un oggetto JSON (nessun testo prima o dopo) con queste chiavi:
-- "nome": nome breve in italiano, al massimo 7 parole, con la prima lettera maiuscola (es. "Sedia in legno con braccioli", "Affettatrice elettrica", "Bicchiere da vino"). Per i prodotti confezionati includi marca e formato (es. "Passata di pomodoro Mutti 700 g", "Acqua San Pellegrino 75 cl").
-- "tipologia": esattamente uno tra ARREDO, FOOD, BEVERAGE, STOVIGLIE, ACCESSORI, IT.
-    ARREDO = mobili, tavoli, sedie, sgabelli, banconi, scaffali, lampade, quadri, decorazioni.
-    FOOD = alimenti e ingredienti.
-    BEVERAGE = bevande (vino, birra, liquori, bibite, acqua, succhi, sciroppi).
-    STOVIGLIE = piatti, bicchieri, posate, tazze, pentole, padelle, teglie, vassoi, utensili da cucina.
-    ACCESSORI = attrezzature e apparecchi (forni, frigoriferi, macchina del caffè, affettatrice, lavastoviglie), carrelli, tessili, contenitori e altri oggetti.
-    IT = computer, registratore di cassa, POS, stampanti, tablet, telefoni, router, TV, casse audio.
-- "stato": esattamente uno tra OTTIMO, BUONO, CATTIVO, in base all'usura visibile.
-- "ctm_suggerito": "SI" se è un'attrezzatura, un arredo o un oggetto riutilizzabile nel nuovo ristorante e il suo stato è OTTIMO o BUONO; altrimenti "NO".
-- "scadenza": solo per FOOD e BEVERAGE, la data di scadenza se leggibile sull'etichetta, nel formato AAAA-MM-GG (se c'è solo mese e anno usa l'ultimo giorno del mese); altrimenti null.`;
-
-const SCHEMA = {
-  type: 'OBJECT',
-  properties: {
-    nome: { type: 'STRING' },
-    tipologia: { type: 'STRING', enum: TIPOLOGIE },
-    stato: { type: 'STRING', enum: STATI },
-    ctm_suggerito: { type: 'STRING', enum: CTM },
-    scadenza: { type: 'STRING', nullable: true },
-  },
-  required: ['nome', 'tipologia', 'stato', 'ctm_suggerito'],
-};
-
-class AIError extends Error {
-  constructor(kind, message) { super(message); this.kind = kind; }
-}
-// kind: nokey | offline | quota | badkey | error
-
-const FALLBACK_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite'];
-
-function apiKey() { return (lsGet(LS.key, '') || '').trim(); }
-
-async function geminiFetch(path, init = {}, timeoutMs = 45000) {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    return await fetch(`${GEMINI}/${path}`, {
-      ...init,
-      signal: ctrl.signal,
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey(), ...(init.headers || {}) },
-    });
-  } catch (e) {
-    if (e.name === 'AbortError') throw new AIError('error', 'Gemini non ha risposto in tempo');
-    throw new AIError('offline', 'Connessione assente');
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-/** Elenco dei modelli Flash disponibili per la chiave, dal più recente. */
-async function listModels(force = false) {
-  if (!force) {
-    try {
-      const cached = JSON.parse(lsGet(LS.models, 'null'));
-      if (cached && Date.now() - cached.at < 24 * 3600e3 && cached.list.length) return cached.list;
-    } catch {}
-  }
-  const res = await geminiFetch('models?pageSize=1000', { method: 'GET' }, 20000);
-  if (!res.ok) {
-    const body = await res.text();
-    if (res.status === 400 || res.status === 401 || res.status === 403) throw new AIError('badkey', 'Chiave non valida o non abilitata');
-    throw new AIError('error', `Errore ${res.status}: ${body.slice(0, 120)}`);
-  }
-  const data = await res.json();
-  const ver = (n) => parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/) || [])[1] || '0');
-  const list = (data.models || [])
-    .filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'))
-    .map((m) => m.name.replace(/^models\//, ''))
-    .filter((n) => /flash/.test(n) && !/image|tts|audio|live|embed|thinking|exp|8b|robotics|computer|native/.test(n))
-    .sort((a, b) => {
-      const lite = (n) => (/lite/.test(n) ? 1 : 0);
-      const latest = (n) => (/latest/.test(n) ? 0 : 1);
-      const prev = (n) => (/preview/.test(n) ? 1 : 0);
-      return lite(a) - lite(b) || latest(a) - latest(b) || ver(b) - ver(a) || prev(a) - prev(b) || a.length - b.length;
-    });
-  lsSet(LS.models, JSON.stringify({ at: Date.now(), list }));
-  return list;
-}
-
-function exhaustedMap() { try { return JSON.parse(lsGet(LS.exhausted, '{}')) || {}; } catch { return {}; } }
-function markExhausted(model, msg) {
-  const retry = Number((msg.match(/retry in ([\d.]+)s/i) || [])[1]);
-  const daily = /per.?day|PerDay|daily/i.test(msg);
-  const ms = daily ? 6 * 3600e3 : Number.isFinite(retry) && retry > 0 ? (retry + 3) * 1000 : 5 * 60e3;
-  const map = exhaustedMap();
-  map[model] = Date.now() + ms;
-  lsSet(LS.exhausted, JSON.stringify(map));
-}
-
-async function modelCandidates() {
-  const chosen = lsGet(LS.model, '');
-  if (chosen) return [chosen];
-  let list = [];
-  try { list = await listModels(); } catch (e) { if (e.kind === 'offline' || e.kind === 'badkey') throw e; }
-  if (!list.length) list = FALLBACK_MODELS;
-  const last = lsGet(LS.lastGood, '');
-  return [...new Set([last, ...list].filter(Boolean))].filter((m) => list.includes(m) || m === last);
-}
-
-function parseJSON(text) {
-  const t = String(text || '').replace(/```(?:json)?/gi, '').trim();
-  try { return JSON.parse(t); } catch {}
-  const m = t.match(/\{[\s\S]*\}/);
-  if (m) return JSON.parse(m[0]);
-  throw new Error('Risposta non in JSON');
-}
-
-function normalizeAI(raw) {
-  const up = (v) => String(v ?? '').trim().toUpperCase().replace('Ì', 'I');
-  const pick = (v, list) => (list.includes(up(v)) ? up(v) : '');
-  let scad = String(raw.scadenza ?? '').trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(scad)) scad = '';
-  const tipologia = pick(raw.tipologia, TIPOLOGIE);
-  return {
-    nome: String(raw.nome ?? '').trim().slice(0, 120),
-    tipologia,
-    stato: pick(raw.stato, STATI),
-    ctm: pick(raw.ctm_suggerito ?? raw.ctm, CTM),
-    scadenza: needsExpiry(tipologia) ? scad : '',
-  };
-}
-
-/** Analizza una foto e restituisce i campi suggeriti. */
-async function analyzePhoto(blob) {
-  if (!apiKey()) throw new AIError('nokey', 'Chiave Gemini non impostata');
-  if (!navigator.onLine) throw new AIError('offline', 'Connessione assente');
-  const data = await blobToBase64(blob);
-  const models = await modelCandidates();
-  let lastErr = null;
-  let quotaHits = 0;
-
-  for (const model of models) {
-    if ((exhaustedMap()[model] || 0) > Date.now()) { quotaHits++; continue; }
-    let useSchema = true;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const body = {
-        contents: [{ role: 'user', parts: [{ inline_data: { mime_type: 'image/jpeg', data } }, { text: PROMPT }] }],
-        generationConfig: { temperature: 0.2, responseMimeType: 'application/json', ...(useSchema ? { responseSchema: SCHEMA } : {}) },
-      };
-      const res = await geminiFetch(`models/${encodeURIComponent(model)}:generateContent`, { method: 'POST', body: JSON.stringify(body) });
-      if (res.ok) {
-        const json = await res.json();
-        const text = (json.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('');
-        try {
-          const out = normalizeAI(parseJSON(text));
-          lsSet(LS.lastGood, model);
-          return out;
-        } catch (e) { lastErr = new AIError('error', 'Risposta non valida'); break; }
-      }
-      const msg = await res.text();
-      if (res.status === 429 || /RESOURCE_EXHAUSTED|quota/i.test(msg)) { markExhausted(model, msg); quotaHits++; lastErr = new AIError('quota', 'Quota gratuita esaurita'); break; }
-      if (res.status === 404) { lastErr = new AIError('error', `Modello ${model} non disponibile`); break; }
-      if ((res.status === 400 || res.status === 403) && /API.?key|API_KEY|permission|PERMISSION_DENIED/i.test(msg)) throw new AIError('badkey', 'Chiave Gemini non valida');
-      if (res.status === 400 && useSchema) { useSchema = false; continue; } // modello senza supporto allo schema
-      if (res.status >= 500) { lastErr = new AIError('error', 'Gemini è sovraccarico'); await sleep(1500 * (attempt + 1)); continue; }
-      lastErr = new AIError('error', `Errore ${res.status}`);
-      break;
-    }
-  }
-  if (quotaHits && quotaHits >= models.length) throw new AIError('quota', 'Quota gratuita esaurita');
-  throw lastErr || new AIError('error', 'Analisi non riuscita');
-}
-
-/* =========================================================
    Stato dell'app
    ========================================================= */
 let items = [];
 let activeZone = ZONE.includes(lsGet(LS.zone)) ? lsGet(LS.zone) : 'Sala';
 let filter = lsGet(LS.filter, 'Tutte');
 const urls = new Map();           // id -> objectURL della foto (per la lista)
-const running = new Map();        // id -> promessa di analisi in corso
-const aiResults = new Map();      // id -> ultimo risultato di Gemini
-let form = null;                  // scheda aperta: { id, isNew, photo, createdAt, edited:Set, aiStatus, aiMsg, sugg:Set }
+let form = null;                  // scheda aperta: { id, isNew, photo, createdAt }
+
+/* ---------- Tipologie (modificabili dalle Impostazioni) ---------- */
+function loadTipologie() {
+  try {
+    const list = JSON.parse(lsGet(LS.tipologie, 'null'));
+    if (Array.isArray(list) && list.length) return list.map(normTip).filter(Boolean);
+  } catch {}
+  return TIPOLOGIE_BASE.slice();
+}
+let tipologie = loadTipologie();
+function normTip(t) { return String(t ?? '').trim().replace(/\s+/g, ' ').toUpperCase().slice(0, 30); }
+function saveTipologie() { lsSet(LS.tipologie, JSON.stringify(tipologie)); }
+function addTipologia(t) {
+  t = normTip(t);
+  if (!t) return '';
+  if (!tipologie.includes(t)) { tipologie.push(t); saveTipologie(); }
+  return t;
+}
 
 function photoURL(item) {
   let u = urls.get(item.id);
@@ -724,16 +534,6 @@ $('#zones').addEventListener('click', (e) => {
 function renderHome() {
   const pieces = items.reduce((s, i) => s + (Number(i.qty) || 0), 0);
   $('#counts').textContent = `${items.length} ${items.length === 1 ? 'voce' : 'voci'} · ${pieces} pezzi`;
-  $('#keyBanner').classList.toggle('hidden', !!apiKey());
-
-  const pending = items.filter((i) => i.aiStatus === 'pending' || running.has(i.id)).length;
-  const qb = $('#queueBanner');
-  if (pending) {
-    qb.innerHTML = navigator.onLine
-      ? `<div class="spin"></div><span>${pending} ${pending === 1 ? 'foto' : 'foto'} in analisi…</span>`
-      : `<span>Offline: ${pending} foto in coda, verranno analizzate al ritorno della rete.</span>`;
-    qb.classList.remove('hidden');
-  } else qb.classList.add('hidden');
 
   const filters = ['Tutte', ...ZONE, 'Da completare'];
   if (!filters.includes(filter)) filter = 'Tutte';
@@ -754,7 +554,6 @@ function renderHome() {
   }
   if (!shown.length) { list.innerHTML = `<li class="empty-state">Nessun oggetto con questo filtro.</li>`; return; }
   list.innerHTML = shown.map((i) => {
-    const wait = running.has(i.id) ? '<span class="tag wait">analisi…</span>' : i.aiStatus === 'pending' ? '<span class="tag wait">in coda</span>' : '';
     const u = photoURL(i);
     return `<li><button data-id="${esc(i.id)}">
       ${u ? `<img src="${u}" alt="" loading="lazy">` : '<div class="noimg"></div>'}
@@ -765,7 +564,6 @@ function renderHome() {
           ${i.tipologia ? `<span class="tag">${i.tipologia}</span>` : ''}
           ${i.stato ? `<span class="tag">${i.stato}</span>` : ''}
           ${i.ctm === 'SI' ? '<span class="tag ctm">CTM</span>' : ''}
-          ${wait}
         </div>
       </div>
       <div class="qty">×${Number(i.qty) || 0}</div>
@@ -815,93 +613,10 @@ $('#camera').addEventListener('change', async (e) => {
   const item = {
     id: uid(), createdAt: Date.now(), updatedAt: Date.now(),
     zona: activeZone, nome: '', tipologia: '', stato: '', ctm: '', scadenza: '', qty: 1,
-    photo, aiStatus: 'manual', edited: [],
+    photo,
   };
   openForm(item, true);
-  startAnalysis(item.id, photo);
 });
-
-/* ---------- Analisi di una foto (anche dopo che la scheda è stata salvata) ---------- */
-function startAnalysis(id, photo) {
-  if (!apiKey()) { setFormAI(id, 'nokey'); return; }
-  if (!navigator.onLine) { setFormAI(id, 'pending'); return; }
-  setFormAI(id, 'running');
-  const p = analyzePhoto(photo)
-    .then(async (result) => {
-      aiResults.set(id, result);
-      running.delete(id);
-      await applyAI(id, result);
-    })
-    .catch(async (err) => {
-      running.delete(id);
-      const kind = err.kind || 'error';
-      const status = kind === 'offline' ? 'pending' : 'failed';
-      if (form && form.id === id) setFormAI(id, kind === 'offline' ? 'pending' : kind, err.message);
-      const saved = await dbGet(id);
-      if (saved && saved.aiStatus !== 'done') { saved.aiStatus = status; await dbPut(saved); }
-      await reload();
-    });
-  running.set(id, p);
-  renderHome();
-}
-
-/** Inserisce i suggerimenti di Gemini solo nei campi che non hai già modificato. */
-async function applyAI(id, result) {
-  if (form && form.id === id) {
-    for (const f of AI_FIELDS) {
-      if (form.edited.has(f) || !result[f]) continue;
-      setField(f, result[f]);
-      form.sugg.add(f);
-    }
-    setFormAI(id, 'done');
-    renderFormState();
-  }
-  const saved = await dbGet(id);
-  if (saved) {
-    const edited = new Set(saved.edited || []);
-    for (const f of AI_FIELDS) if (!edited.has(f) && result[f]) saved[f] = result[f];
-    if (!needsExpiry(saved.tipologia)) saved.scadenza = '';
-    saved.aiStatus = 'done';
-    saved.updatedAt = Date.now();
-    await dbPut(saved);
-  }
-  await reload();
-}
-
-/* ---------- Coda: foto salvate senza rete, analizzate quando la rete torna ---------- */
-let queueBusy = false;
-let queuePauseUntil = 0;
-async function processQueue() {
-  if (queueBusy || !navigator.onLine || !apiKey() || Date.now() < queuePauseUntil) return;
-  queueBusy = true;
-  try {
-    const pending = (await dbAll()).filter((i) => i.aiStatus === 'pending' && !running.has(i.id) && !(form && form.id === i.id));
-    for (const item of pending) {
-      if (!navigator.onLine) break;
-      running.set(item.id, true);
-      renderHome();
-      try {
-        const result = await analyzePhoto(item.photo);
-        running.delete(item.id);
-        await applyAI(item.id, result);
-      } catch (err) {
-        running.delete(item.id);
-        if (err.kind === 'offline') break;
-        if (err.kind === 'quota' || err.kind === 'badkey' || err.kind === 'nokey') { queuePauseUntil = Date.now() + 10 * 60e3; break; }
-        const saved = await dbGet(item.id);
-        if (saved) { saved.aiStatus = 'failed'; await dbPut(saved); }
-      }
-      await sleep(4000); // rispetta il limite di richieste al minuto del piano gratuito
-    }
-  } finally {
-    queueBusy = false;
-    await reload();
-  }
-}
-window.addEventListener('online', () => { queuePauseUntil = 0; processQueue(); renderHome(); });
-window.addEventListener('offline', renderHome);
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') processQueue(); });
-setInterval(processQueue, 60e3);
 
 /* =========================================================
    Scheda oggetto
@@ -909,7 +624,13 @@ setInterval(processQueue, 60e3);
 function segButtons(el, values, labels) {
   el.innerHTML = values.map((v, i) => `<button type="button" data-v="${v}">${labels ? labels[i] : v}</button>`).join('');
 }
-segButtons($('#fTipologia'), TIPOLOGIE);
+/** Pulsanti delle tipologie + "Nuova"; `extra` = tipologia dell'oggetto non più in elenco. */
+function renderTipButtons(extra) {
+  const list = extra && !tipologie.includes(extra) ? [...tipologie, extra] : tipologie;
+  $('#fTipologia').innerHTML = list.map((v) => `<button type="button" data-v="${esc(v)}">${esc(v)}</button>`).join('') +
+    '<button type="button" class="add" data-add="1">+ Nuova</button>';
+}
+renderTipButtons();
 segButtons($('#fStato'), STATI);
 segButtons($('#fCtm'), CTM, ['SI · riutilizzo', 'NO']);
 segButtons($('#fZona'), ZONE);
@@ -929,33 +650,26 @@ function getField(f) {
   const on = $(segEl[f]).querySelector('button.on');
   return on ? on.dataset.v : '';
 }
-function markEdited(f) {
-  if (!form) return;
-  form.edited.add(f);
-  form.sugg.delete(f);
-  renderFormState();
-}
-
 Object.entries(segEl).forEach(([f, sel]) => {
   $(sel).addEventListener('click', (e) => {
     const b = e.target.closest('button[data-v]');
-    if (!b) return;
-    setField(f, b.dataset.v);
-    markEdited(f);
+    if (b) setField(f, b.dataset.v);
   });
 });
-$('#fNome').addEventListener('input', () => markEdited('nome'));
-$('#fScadenza').addEventListener('change', () => markEdited('scadenza'));
-$('#fQty').addEventListener('change', () => { setField('qty', getField('qty')); markEdited('qty'); });
-$('#qPlus').addEventListener('click', () => { setField('qty', getField('qty') + 1); markEdited('qty'); });
-$('#qMinus').addEventListener('click', () => { setField('qty', Math.max(0, getField('qty') - 1)); markEdited('qty'); });
+$('#fTipologia').addEventListener('click', async (e) => {
+  if (!e.target.closest('button[data-add]')) return;
+  const current = getField('tipologia');
+  const t = addTipologia(await askText('Nuova tipologia', 'Es. TESSILI, PULIZIA, DECORAZIONI…'));
+  renderTipButtons(current);
+  setField('tipologia', t || current);
+});
+$('#fQty').addEventListener('change', () => setField('qty', getField('qty')));
+$('#qPlus').addEventListener('click', () => setField('qty', getField('qty') + 1));
+$('#qMinus').addEventListener('click', () => setField('qty', Math.max(0, getField('qty') - 1)));
 
 function openForm(item, isNew) {
-  form = {
-    id: item.id, isNew, photo: item.photo, createdAt: item.createdAt,
-    edited: new Set(item.edited || []), sugg: new Set(), aiStatus: item.aiStatus || 'manual', aiMsg: '',
-  };
-  if (running.has(item.id)) form.aiStatus = 'running';
+  form = { id: item.id, isNew, photo: item.photo, createdAt: item.createdAt };
+  renderTipButtons(item.tipologia);
   $('#fTitle').textContent = isNew ? 'Nuovo oggetto' : 'Modifica';
   $('#fPhoto').src = item.photo ? URL.createObjectURL(item.photo) : '';
   for (const f of ['nome', 'qty', 'tipologia', 'stato', 'ctm', 'scadenza', 'zona']) setField(f, item[f] ?? '');
@@ -965,7 +679,6 @@ function openForm(item, isNew) {
   $('#fCancel').textContent = isNew ? 'Scarta' : 'Annulla';
   $('#form').classList.remove('hidden');
   $('#form .body').scrollTop = 0;
-  renderFormState();
 }
 function closeForm() {
   const img = $('#fPhoto');
@@ -975,38 +688,8 @@ function closeForm() {
   $('#form').classList.add('hidden');
 }
 
-function setFormAI(id, status, msg = '') {
-  if (!form || form.id !== id) return;
-  form.aiStatus = status;
-  form.aiMsg = msg;
-  renderFormState();
-}
-function renderFormState() {
-  if (!form) return;
-  document.querySelectorAll('#form .field').forEach((el) => el.classList.toggle('sugg', form.sugg.has(el.dataset.f)));
-  const box = $('#fAi');
-  const retry = '<button id="fRetry">Riprova</button>';
-  const st = form.aiStatus;
-  box.className = 'ai';
-  if (st === 'running') { box.classList.add('run'); box.innerHTML = '<div class="spin"></div><span>Gemini sta riconoscendo l\'oggetto…</span>'; }
-  else if (st === 'done') { box.classList.add('ok'); box.innerHTML = '<span>Compilato da Gemini: controlla e correggi se serve.</span>'; }
-  else if (st === 'pending') box.innerHTML = '<span>Sei offline: salva pure, la foto verrà analizzata quando torna la rete.</span>';
-  else if (st === 'nokey') box.innerHTML = '<span>Nessuna chiave Gemini: compila a mano.</span><button id="fGoKey">Imposta</button>';
-  else if (st === 'quota') box.innerHTML = `<span>Quota gratuita di Gemini esaurita per ora: compila a mano.</span>${retry}`;
-  else if (st === 'badkey') box.innerHTML = '<span>Chiave Gemini non valida: compila a mano.</span><button id="fGoKey">Controlla</button>';
-  else if (st === 'failed' || st === 'error') box.innerHTML = `<span>${esc(form.aiMsg || 'Riconoscimento non riuscito')}: compila a mano.</span>${retry}`;
-  else box.innerHTML = '<span>Compilazione manuale.</span>' + (apiKey() && form.photo ? '<button id="fRetry">Analizza</button>' : '');
-}
-$('#fAi').addEventListener('click', (e) => {
-  if (!form) return;
-  if (e.target.id === 'fRetry') { queuePauseUntil = 0; startAnalysis(form.id, form.photo); }
-  if (e.target.id === 'fGoKey') openSettings();
-});
-
 function collectForm() {
   const tip = getField('tipologia');
-  const map = { running: 'running', done: 'done', pending: 'pending', manual: 'manual', nokey: 'manual' };
-  const aiStatus = running.has(form.id) ? 'running' : map[form.aiStatus] || 'failed';
   return {
     id: form.id,
     createdAt: form.createdAt,
@@ -1019,8 +702,6 @@ function collectForm() {
     scadenza: needsExpiry(tip) ? getField('scadenza') : '',
     qty: getField('qty'),
     photo: form.photo,
-    aiStatus,
-    edited: [...form.edited],
   };
 }
 
@@ -1032,17 +713,7 @@ function saveForm(thenCamera) {
   // la fotocamera va aperta subito, dentro il tocco, altrimenti iPhone la blocca
   if (thenCamera) openCamera();
   dbPut(rec)
-    .then(async () => {
-      // l'analisi può essere finita mentre salvavo: applico il risultato adesso
-      if (rec.aiStatus === 'running' && !running.has(rec.id)) {
-        const result = aiResults.get(rec.id);
-        if (result) await applyAI(rec.id, result);
-        else { rec.aiStatus = 'pending'; await dbPut(rec); }
-      }
-      toast('Salvato');
-      return reload();
-    })
-    .then(() => processQueue())
+    .then(() => { toast('Salvato'); return reload(); })
     .catch((err) => alertBox('Salvataggio non riuscito', String(err && err.message || err)));
 }
 $('#fSave').addEventListener('click', () => saveForm(form && form.isNew));
@@ -1074,19 +745,9 @@ $('#fDelete').addEventListener('click', async () => {
    Impostazioni
    ========================================================= */
 function openSettings() {
-  $('#sKey').value = apiKey();
-  $('#sKeyMsg').textContent = '';
-  fillModelSelect();
+  renderTipSettings();
   storageInfo();
   $('#settings').classList.remove('hidden');
-}
-function fillModelSelect() {
-  let list = [];
-  try { list = (JSON.parse(lsGet(LS.models, 'null')) || {}).list || []; } catch {}
-  const chosen = lsGet(LS.model, '');
-  if (chosen && !list.includes(chosen)) list = [chosen, ...list];
-  $('#sModel').innerHTML = '<option value="">Automatico</option>' + list.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
-  $('#sModel').value = chosen;
 }
 async function storageInfo() {
   const el = $('#sStorage');
@@ -1099,36 +760,39 @@ async function storageInfo() {
   } catch {}
 }
 $('#btnSettings').addEventListener('click', openSettings);
-$('#keyBannerBtn').addEventListener('click', openSettings);
-$('#sClose').addEventListener('click', () => { $('#settings').classList.add('hidden'); renderHome(); processQueue(); });
-$('#sKeyShow').addEventListener('click', () => {
-  const i = $('#sKey');
-  i.type = i.type === 'password' ? 'text' : 'password';
-  $('#sKeyShow').textContent = i.type === 'password' ? 'Mostra' : 'Nascondi';
+$('#sClose').addEventListener('click', () => { $('#settings').classList.add('hidden'); renderHome(); });
+
+function renderTipSettings() {
+  $('#sTipList').innerHTML = tipologie.map((t) =>
+    `<span class="tipchip">${esc(t)}<button data-del="${esc(t)}" aria-label="Elimina ${esc(t)}">×</button></span>`).join('');
+}
+$('#sTipAdd').addEventListener('click', () => {
+  const input = $('#sTipNew');
+  const t = normTip(input.value);
+  if (!t) return;
+  if (tipologie.includes(t)) { toast(`${t} c'è già`); return; }
+  addTipologia(t);
+  input.value = '';
+  renderTipSettings();
+  renderTipButtons();
+  toast(`Aggiunta ${t}`);
 });
-$('#sKeySave').addEventListener('click', async () => {
-  const k = $('#sKey').value.trim();
-  const msg = $('#sKeyMsg');
-  lsSet(LS.key, k);
-  lsSet(LS.models, '');
-  lsSet(LS.exhausted, '{}');
-  queuePauseUntil = 0;
-  if (!k) { msg.className = 'msg'; msg.textContent = 'Chiave rimossa.'; renderHome(); return; }
-  msg.className = 'msg';
-  msg.textContent = 'Verifico la chiave…';
-  try {
-    const list = await listModels(true);
-    fillModelSelect();
-    msg.className = 'msg ok';
-    msg.textContent = list.length ? `Chiave funzionante ✓ (${list.length} modelli Flash disponibili)` : 'Chiave valida, ma nessun modello Flash trovato.';
-    processQueue();
-  } catch (e) {
-    msg.className = 'msg err';
-    msg.textContent = e.kind === 'offline' ? 'Sei offline: la chiave è salvata, la proverò quando torna la rete.' : e.message;
-  }
-  renderHome();
+$('#sTipNew').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#sTipAdd').click(); });
+$('#sTipList').addEventListener('click', async (e) => {
+  const b = e.target.closest('button[data-del]');
+  if (!b) return;
+  const t = b.dataset.del;
+  if (tipologie.length <= 1) { toast('Serve almeno una tipologia'); return; }
+  const used = items.filter((i) => i.tipologia === t).length;
+  const ok = await choose(`Eliminare ${t}?`,
+    used ? `${used} ${used === 1 ? 'oggetto la usa e la mantiene' : 'oggetti la usano e la mantengono'}: sparisce solo dall'elenco delle scelte.` : 'Sparisce dall\'elenco delle scelte.', [
+      { label: 'Elimina', value: true, cls: 'danger' }, { label: 'Annulla', value: false, cls: 'alt' }]);
+  if (!ok) return;
+  tipologie = tipologie.filter((x) => x !== t);
+  saveTipologie();
+  renderTipSettings();
+  renderTipButtons();
 });
-$('#sModel').addEventListener('change', (e) => lsSet(LS.model, e.target.value));
 $('#sExcel').addEventListener('click', chooseExcel);
 $('#btnExcel').addEventListener('click', chooseExcel);
 $('#sBackup').addEventListener('click', exportBackup);
@@ -1215,7 +879,7 @@ async function exportExcel(mode) {
   busy('Creo il file Excel…');
   try {
     if (!window.ExcelJS) await loadScript(EXCELJS_URL);
-    const tipIdx = (t) => (TIPOLOGIE.indexOf(t) + 1) || 99;
+    const tipIdx = (t) => (tipologie.indexOf(t) + 1) || 999;
     const zonaIdx = (z) => (ZONE.indexOf(z) + 1) || 99;
     const rows = all.slice().sort((a, b) =>
       tipIdx(a.tipologia) - tipIdx(b.tipologia) ||
@@ -1509,7 +1173,7 @@ async function exportBackup() {
       const { photo, ...rest } = it;
       out.push({ ...rest, photo: photo ? await blobToDataURL(photo) : null });
     }
-    const json = JSON.stringify({ app: 'inventario-ristorante', version: 1, exportedAt: new Date().toISOString(), items: out });
+    const json = JSON.stringify({ app: 'inventario-ristorante', version: 1, exportedAt: new Date().toISOString(), tipologie, items: out });
     busy(false);
     await offerFile(new Blob([json], { type: 'application/json' }), `inventario-backup-${today()}.json`, 'Backup pronto');
   } catch (e) {
@@ -1538,6 +1202,7 @@ async function importBackup(e) {
   busy('Importo…');
   try {
     if (mode === 'replace') { await dbClear(); urls.forEach((u) => URL.revokeObjectURL(u)); urls.clear(); }
+    if (Array.isArray(data.tipologie)) data.tipologie.forEach(addTipologia);
     let n = 0;
     for (const raw of data.items) {
       const it = {
@@ -1546,14 +1211,12 @@ async function importBackup(e) {
         updatedAt: Number(raw.updatedAt) || Date.now(),
         zona: ZONE.includes(raw.zona) ? raw.zona : 'Altro',
         nome: String(raw.nome || ''),
-        tipologia: TIPOLOGIE.includes(raw.tipologia) ? raw.tipologia : '',
+        tipologia: addTipologia(raw.tipologia),
         stato: STATI.includes(raw.stato) ? raw.stato : '',
         ctm: CTM.includes(raw.ctm) ? raw.ctm : '',
         scadenza: /^\d{4}-\d{2}-\d{2}$/.test(raw.scadenza || '') ? raw.scadenza : '',
         qty: Math.max(0, parseInt(raw.qty, 10) || 0),
         photo: typeof raw.photo === 'string' && raw.photo.startsWith('data:') ? dataURLToBlob(raw.photo) : null,
-        aiStatus: raw.aiStatus === 'pending' ? 'pending' : raw.aiStatus === 'running' ? 'pending' : (raw.aiStatus || 'manual'),
-        edited: Array.isArray(raw.edited) ? raw.edited : [],
       };
       dropURL(it.id);
       await dbPut(it);
@@ -1562,8 +1225,8 @@ async function importBackup(e) {
     busy(false);
     $('#settings').classList.add('hidden');
     await reload();
+    renderTipButtons();
     toast(`Importati ${n} oggetti`);
-    processQueue();
   } catch (err) {
     busy(false);
     alertBox('Importazione non riuscita', String(err && err.message || err));
@@ -1575,6 +1238,7 @@ async function importBackup(e) {
    Finestre, messaggi, attesa
    ========================================================= */
 function choose(title, text, buttons, onTap) {
+  $('#mInput').classList.add('hidden');
   return new Promise((resolve) => {
     $('#mTitle').textContent = title;
     $('#mText').textContent = text || '';
@@ -1593,6 +1257,16 @@ function choose(title, text, buttons, onTap) {
     });
     $('#modal').classList.remove('hidden');
   });
+}
+/** Chiede un testo (es. nuova tipologia); restituisce '' se annullato. */
+async function askText(title, placeholder) {
+  const input = $('#mInput');
+  const p = choose(title, '', [{ label: 'Aggiungi', value: 'ok' }, { label: 'Annulla', value: null, cls: 'alt' }]);
+  input.value = '';
+  input.placeholder = placeholder || '';
+  input.classList.remove('hidden');
+  input.focus();
+  return (await p) === 'ok' ? input.value : '';
 }
 function alertBox(title, text) { return choose(title, text, [{ label: 'OK', value: true }]); }
 let toastTimer = 0;
@@ -1636,14 +1310,11 @@ $('#updateBtn').addEventListener('click', () => location.reload());
   try {
     // Chiede al browser di non cancellare i dati per mancanza di spazio
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-    // Una scheda "running" rimasta da una chiusura improvvisa torna in coda
-    const all = await dbAll();
-    for (const it of all) if (it.aiStatus === 'running') { it.aiStatus = 'pending'; await dbPut(it); }
     await reload();
   } catch (e) {
     alertBox('Archivio non disponibile', 'Il browser non permette di salvare dati (forse sei in navigazione privata).\n' + (e && e.message || ''));
   }
-  processQueue();
+  LS_OLD.forEach((k) => { try { localStorage.removeItem(k); } catch {} });
   $('#sVersion').textContent = `Inventario Ristorante · versione ${APP_VERSION}`;
   registerServiceWorker();
 })();
