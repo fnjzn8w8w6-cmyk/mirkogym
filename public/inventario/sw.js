@@ -1,6 +1,6 @@
 // Service worker: rende l'app apribile anche senza rete.
 // Le chiamate a Gemini non passano di qui (vanno sempre in rete).
-const CACHE = 'inventario-v5';
+const CACHE = 'inventario-v6';
 const EXCELJS = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
 const JSZIP = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
 const LOCAL = ['./', 'index.html', 'manifest.json', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
