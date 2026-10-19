@@ -397,6 +397,7 @@ const STATI = ['OTTIMO', 'BUONO', 'CATTIVO'];
 const CTM = ['SI', 'NO'];
 const AI_FIELDS = ['nome', 'tipologia', 'stato', 'ctm', 'scadenza'];
 const EXCELJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+const JSZIP_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
 const GEMINI = 'https://generativelanguage.googleapis.com/v1beta';
 const LS = {
   key: 'inv.geminiKey',
@@ -1345,12 +1346,57 @@ async function exportExcel() {
     rs.getRow(r - 2).getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCEFE4' } };
 
     const buf = await wb.xlsx.writeBuffer();
-    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    // posizione in pixel dell'angolo di una cella del foglio Inventario (colonna A = 26 px; righe 1-2 = 20 px, riga 3 = 32 px)
+    const cellTopLeft = (col, row) => ({
+      x: col > 0 ? 26 + (col - 1) * COL_PX : 0,
+      y: row < 2 ? row * 20 : row === 2 ? 40 : 72 + (row - 3) * ROW_PX,
+    });
+    const blob = await fixDrawings(buf, cellTopLeft);
     busy(false);
     await offerFile(blob, `inventario-${today()}.xlsx`, 'File Excel pronto');
   } catch (e) {
     busy(false);
     alertBox('Esportazione non riuscita', String(e && e.message || e));
+  }
+}
+
+/**
+ * ExcelJS scrive le foto con dimensione 0×0 nel riquadro della forma (a:xfrm): Excel la ignora,
+ * ma l'anteprima di iPhone (WhatsApp, Mail, File) e Numbers usano proprio quella e non mostrano nulla.
+ * Qui scrivo posizione e dimensione reali, come fa Excel.
+ */
+async function fixDrawings(buf, cellTopLeft) {
+  const type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  try {
+    if (!window.JSZip) await loadScript(JSZIP_URL);
+    const zip = await JSZip.loadAsync(buf);
+    const names = Object.keys(zip.files).filter((n) => /^xl\/drawings\/drawing\d+\.xml$/.test(n));
+    for (const name of names) {
+      let xml = await zip.file(name).async('string');
+      let id = 0;
+      xml = xml.replace(/<xdr:twoCellAnchor[\s\S]*?<\/xdr:twoCellAnchor>/g, (a) => {
+        const part = (p) => (a.match(new RegExp(`<xdr:${p}>([\\s\\S]*?)</xdr:${p}>`)) || [])[1] || '';
+        const val = (b, t) => Number((b.match(new RegExp(`<xdr:${t}>(\\d+)</xdr:${t}>`)) || [])[1] || 0);
+        const from = part('from');
+        const to = part('to');
+        const corner = (b) => {
+          const c = cellTopLeft(val(b, 'col'), val(b, 'row'));
+          return { x: Math.round(c.x * 9525) + val(b, 'colOff'), y: Math.round(c.y * 9525) + val(b, 'rowOff') };
+        };
+        const p1 = corner(from);
+        const p2 = corner(to);
+        id++;
+        return a
+          .replace(/<a:extLst>[\s\S]*?<\/a:extLst>/, '')
+          .replace(/<xdr:cNvPr id="\d+"/, `<xdr:cNvPr id="${id + 1}"`)
+          .replace('<a:off x="0" y="0"/><a:ext cx="0" cy="0"/>',
+            `<a:off x="${p1.x}" y="${p1.y}"/><a:ext cx="${Math.max(1, p2.x - p1.x)}" cy="${Math.max(1, p2.y - p1.y)}"/>`);
+      });
+      zip.file(name, xml);
+    }
+    return await zip.generateAsync({ type: 'blob', mimeType: type, compression: 'DEFLATE' });
+  } catch (e) {
+    return new Blob([buf], { type }); // senza correzione: le foto restano visibili almeno in Excel
   }
 }
 
