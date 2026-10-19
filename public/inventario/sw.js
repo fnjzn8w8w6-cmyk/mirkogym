@@ -1,7 +1,8 @@
 // Service worker: rende l'app apribile anche senza rete.
 // Le chiamate a Gemini non passano di qui (vanno sempre in rete).
-const CACHE = 'inventario-v2';
+const CACHE = 'inventario-v3';
 const EXCELJS = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+const JSZIP = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
 const LOCAL = ['./', 'index.html', 'manifest.json', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -9,7 +10,9 @@ self.addEventListener('install', (event) => {
     const cache = await caches.open(CACHE);
     await cache.addAll(LOCAL);
     // libreria Excel: scaricata subito, così l'export funziona anche offline
-    try { await cache.add(new Request(EXCELJS, { mode: 'cors' })); } catch (e) {}
+    for (const url of [EXCELJS, JSZIP]) {
+      try { await cache.add(new Request(url, { mode: 'cors' })); } catch (e) {}
+    }
     await self.skipWaiting();
   })());
 });
@@ -27,7 +30,7 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   const sameOrigin = url.origin === self.location.origin;
-  if (!sameOrigin && req.url !== EXCELJS) return;
+  if (!sameOrigin && req.url !== EXCELJS && req.url !== JSZIP) return;
 
   // La pagina: prima la rete (così arrivano gli aggiornamenti), poi la copia salvata
   if (req.mode === 'navigate') {
