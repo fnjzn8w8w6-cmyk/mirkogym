@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { addDays, subDays } from 'date-fns';
 import type { Mesocycle, Session } from '@/types';
 import { newMesocycle, saveMesocycle } from '@/lib/firestore';
-import { daysBetween, fromISODate, toISODate } from '@/lib/date-utils';
+import { daysBetween, fromISODate } from '@/lib/date-utils';
 import { useData } from './data-context';
 
 export type WeekDayStatus = 'done' | 'next' | 'pending' | 'missed';
@@ -17,40 +16,83 @@ export interface MesoWeek {
   sessions: Session[];
 }
 
-/** Settimana corrente del mesociclo derivata dalla data di inizio (1..weeks, o >weeks se scaduto). */
+/** Settimana del calendario del mesociclo (dalla data di inizio): solo per i mesocicli senza allenamenti. */
 export function rawWeekOf(meso: Pick<Mesocycle, 'startDate'>, date: Date | number = new Date()): number {
   return Math.floor(daysBetween(date, fromISODate(meso.startDate)) / 7) + 1;
 }
 
-export function useMesocycle() {
-  const { mesocycles, sessions, settings, uid, loaded } = useData();
-  const active = useMemo(() => mesocycles.find((m) => m.status === 'active') ?? null, [mesocycles]);
+const WEEK_MS = 7 * 86400000;
 
-  const raw = active ? rawWeekOf(active) : 1;
-  const currentWeek = active ? Math.min(Math.max(raw, 1), active.weeks) : 1;
-  const isOver = active ? raw > active.weeks : false;
-  const isDeloadWeek = Boolean(
-    active && !isOver && currentWeek === active.weeks && (settings.autoDeload || active.deloadForced),
+/**
+ * Settimane del mesociclo contate sugli allenamenti, non sul calendario: una settimana è un giro completo della scheda
+ * (es. 5 giorni = 5 sessioni). Così una settimana iniziata a metà, un giorno saltato o una settimana di pausa non fanno
+ * partire il deload in anticipo: il deload arriva dopo aver completato i giri previsti.
+ */
+export function mesoProgress(
+  active: Pick<Mesocycle, 'startDate' | 'weeks' | 'deloadForced'> & { createdAt?: number },
+  sessions: Pick<Session, 'date' | 'deload'>[],
+  perWeek: number,
+  autoDeload: boolean,
+) {
+  const n = Math.max(1, perWeek);
+  const from = fromISODate(active.startDate).getTime();
+  const own = sessions.filter((s) => s.date >= from).sort((a, b) => a.date - b.date);
+  const training = own.filter((s) => !s.deload);
+  // le sessioni di scarico dello stesso giorno ma del mesociclo prima (chiuso stamattina) non contano
+  const deloads = own.filter((s) => s.deload && s.date >= (active.createdAt ?? 0));
+  const deloadOn = autoDeload || Boolean(active.deloadForced);
+  const trainingWeeks = deloadOn ? active.weeks - 1 : active.weeks;
+  const doneRotations = Math.floor(training.length / n);
+  let current: number;
+  let isOver: boolean;
+  if (active.deloadForced || (deloadOn && doneRotations >= trainingWeeks)) {
+    current = active.weeks;
+    isOver = deloads.length >= n;
+  } else {
+    current = Math.min(doneRotations + 1, active.weeks);
+    isOver = !deloadOn && doneRotations >= active.weeks;
+  }
+  // sessioni di ogni settimana: i giri della scheda in ordine, l'ultima (se c'è il deload) con le sessioni di scarico
+  const chunks = Array.from({ length: active.weeks }, (_, i) =>
+    deloadOn && i === active.weeks - 1 ? deloads.slice(0, n) : training.slice(i * n, (i + 1) * n),
   );
+  return { current, isOver, chunks, deloadOn, perWeek: n };
+}
+
+export function useMesocycle() {
+  const { mesocycles, sessions, settings, uid, loaded, schedule } = useData();
+  const active = useMemo(() => mesocycles.find((m) => m.status === 'active') ?? null, [mesocycles]);
+  const perWeek = schedule?.days.length || settings.profile?.daysPerWeek || 3;
+
+  const progress = useMemo(
+    () => (active ? mesoProgress(active, sessions, perWeek, settings.autoDeload) : null),
+    [active, sessions, perWeek, settings.autoDeload],
+  );
+  const currentWeek = progress?.current ?? 1;
+  const isOver = progress?.isOver ?? false;
+  const isDeloadWeek = Boolean(active && progress && !isOver && progress.deloadOn && currentWeek === active.weeks);
 
   const weeks = useMemo<MesoWeek[]>(() => {
-    if (!active) return [];
-    const start = fromISODate(active.startDate);
-    return Array.from({ length: active.weeks }, (_, i) => {
-      const wStart = addDays(start, i * 7);
-      const wEnd = addDays(wStart, 7);
+    if (!active || !progress) return [];
+    let cursor = fromISODate(active.startDate).getTime();
+    return progress.chunks.map((chunk, i) => {
       const index = i + 1;
+      // inizio: la prima sessione della settimana (o la fine della precedente); fine: l'inizio della successiva
+      const start = chunk[0] ? chunk[0].date : Math.max(cursor, index === currentWeek ? cursor : Date.now());
+      const nextFirst = progress.chunks[i + 1]?.[0]?.date;
+      const end = nextFirst ?? (chunk.length ? Math.max(chunk[chunk.length - 1].date + 1, index === currentWeek ? Date.now() + WEEK_MS : 0) : start + WEEK_MS);
+      cursor = end;
       return {
         index,
-        start: wStart,
-        end: wEnd,
-        isDeload: index === active.weeks && (settings.autoDeload || Boolean(active.deloadForced)),
+        start: new Date(start),
+        end: new Date(end),
+        isDeload: progress.deloadOn && index === active.weeks,
         isCurrent: index === currentWeek && !isOver,
         isPast: index < currentWeek || isOver,
-        sessions: sessions.filter((s) => s.date >= wStart.getTime() && s.date < wEnd.getTime()),
+        sessions: chunk as Session[],
       };
     });
-  }, [active, sessions, currentWeek, isOver, settings.autoDeload]);
+  }, [active, progress, currentWeek, isOver]);
 
   const persist = useCallback((m: Mesocycle) => (uid ? saveMesocycle(uid, m) : Promise.resolve()), [uid]);
 
@@ -61,11 +103,10 @@ export function useMesocycle() {
     await saveMesocycle(uid, newMesocycle(uid, settings.deloadFrequency));
   }, [uid, active, currentWeek, settings.deloadFrequency]);
 
-  /** Salta direttamente alla settimana di deload (sposta indietro la data di inizio). */
+  /** Passa subito alla settimana di deload. */
   const forceDeload = useCallback(async () => {
     if (!active) return;
-    const startDate = toISODate(subDays(new Date(), (active.weeks - 1) * 7));
-    await persist({ ...active, startDate, currentWeek: active.weeks, deloadForced: true });
+    await persist({ ...active, currentWeek: active.weeks, deloadForced: true });
   }, [active, persist]);
 
   return {
@@ -75,6 +116,7 @@ export function useMesocycle() {
     totalWeeks: active?.weeks ?? settings.deloadFrequency,
     isDeloadWeek,
     weeks,
+    isOver,
     endMesocycle,
     forceDeload,
     loading: !loaded.mesocycles,
@@ -86,17 +128,17 @@ export function useMesocycle() {
  * a mesociclo scaduto, lo chiude aprendone automaticamente uno nuovo.
  */
 export function useMesocycleSync(): void {
-  const { mesocycle, currentWeek, endMesocycle } = useMesocycle();
-  const { uid } = useData();
+  const { mesocycle, currentWeek, endMesocycle, isOver, loading } = useMesocycle();
+  const { uid, loaded } = useData();
   const handled = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!mesocycle || !uid) return;
-    const isOver = rawWeekOf(mesocycle) > mesocycle.weeks;
+    // si aspetta che sessioni e scheda siano caricate: senza, il conteggio partirebbe da zero
+    if (!mesocycle || !uid || loading || !loaded.sessions || !loaded.schedule) return;
     const key = `${mesocycle.id}:${isOver ? 'over' : currentWeek}`;
     if (handled.current === key) return;
     handled.current = key;
     if (isOver) void endMesocycle();
     else if (mesocycle.currentWeek !== currentWeek) void saveMesocycle(uid, { ...mesocycle, currentWeek });
-  }, [mesocycle, uid, currentWeek, endMesocycle]);
+  }, [mesocycle, uid, currentWeek, isOver, loading, loaded.sessions, loaded.schedule, endMesocycle]);
 }

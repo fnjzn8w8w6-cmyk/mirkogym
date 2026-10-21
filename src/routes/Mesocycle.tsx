@@ -121,8 +121,13 @@ export default function Mesocycle() {
                   <div className="flex items-center justify-between">
                     <div className="text-base font-semibold text-fg">
                       Settimana {w.index}
+                      {/* una settimana = un giro della scheda: le date sono quelle degli allenamenti fatti */}
                       <span className="ml-2 text-sm font-medium text-fg-3">
-                        {formatDayMonth(w.start)} – {formatDayMonth(new Date(w.end.getTime() - 86400000))}
+                        {w.sessions.length
+                          ? `${formatDayMonth(w.sessions[0].date)}${w.sessions.length > 1 ? ` – ${formatDayMonth(w.sessions[w.sessions.length - 1].date)}` : ''}`
+                          : w.isCurrent
+                            ? 'in corso'
+                            : 'da fare'}
                       </span>
                     </div>
                     {w.isDeload && <span className="text-sm font-bold text-accent-400">DELOAD -{settings.deloadPercentage}%</span>}

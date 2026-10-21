@@ -35,7 +35,10 @@ export const HELP = {
   'home-weight': { title: 'Peso', body: ['L\'ultima pesata e la variazione degli ultimi 7 giorni. Tocca per aprire la sezione Corpo con i grafici.'] },
   'home-meso': {
     title: 'Mesociclo',
-    body: ['Il blocco di allenamento di alcune settimane (di solito 4). Alla fine il coach ti propone gli aggiustamenti alla scheda nel check-in.'],
+    body: [
+      'Il blocco di allenamento di alcune settimane (di solito 4). Alla fine il coach ti propone gli aggiustamenti alla scheda nel check-in.',
+      'Una settimana conta quando completi un giro della scheda (es. tutti e 5 i giorni), non con il calendario: se inizi a metà settimana o salti dei giorni, il deload non parte in anticipo.',
+    ],
   },
   'home-week': { title: 'Questa settimana', body: ['Sessioni, serie e volume della settimana, e le serie per gruppo muscolare rispetto all\'obiettivo.'] },
   'home-checkin': {
